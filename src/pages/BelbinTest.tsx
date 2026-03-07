@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Brain, ChevronRight, ChevronLeft, CheckCircle, Rocket } from 'lucide-react'
+import { useMutation } from "convex/react"
+import { api } from "../../convex/_generated/api"
+import { Brain, ChevronRight, ChevronLeft, CheckCircle, Rocket, Loader2 } from 'lucide-react'
 
 const PREGUNTAS_BELBIN = [
     {
@@ -54,6 +56,9 @@ export default function BelbinTest() {
     const [currentQ, setCurrentQ] = useState(0)
     const [respuestas, setRespuestas] = useState<string[]>([])
     const [resultado, setResultado] = useState<string | null>(null)
+    const [saving, setSaving] = useState(false)
+    const [resultCategory, setResultCategory] = useState('')
+    const saveBelbin = useMutation(api.users.saveBelbinProfile)
     const navigate = useNavigate()
 
     const handleAnswer = (rol: string) => {
@@ -68,7 +73,24 @@ export default function BelbinTest() {
             nuevas.forEach(r => { conteo[r] = (conteo[r] || 0) + 1 })
             const dominant = Object.entries(conteo).sort((a, b) => b[1] - a[1])[0][0]
             setResultado(dominant)
-            // TODO: Guardar en Convex con mutation
+
+            // Determinar categoría
+            const catMap: Record<string, string> = {
+                'Cerebro': 'Mental', 'Monitor': 'Mental',
+                'Coordinador': 'Social', 'Investigador': 'Social', 'Cohesionador': 'Social',
+                'Impulsor': 'Acción', 'Implementador': 'Acción', 'Finalizador': 'Acción',
+            }
+            const category = catMap[dominant] || 'Especial'
+            setResultCategory(category)
+
+            // Guardar en Convex
+            setSaving(true)
+            saveBelbin({
+                role_dominant: dominant,
+                category,
+                scores: conteo,
+            }).then(() => setSaving(false))
+                .catch(() => setSaving(false))
         }
     }
 
@@ -100,6 +122,13 @@ export default function BelbinTest() {
                     <h1 className="text-4xl font-black text-white mb-2">Tu rol es: {resultado}</h1>
                     <span className="inline-block bg-surface-light text-slate-300 text-sm font-semibold px-3 py-1 rounded-full mb-6">Categoría: {info.category}</span>
                     <p className="text-slate-400 text-lg leading-relaxed mb-10">{info.desc}</p>
+
+                    {saving && (
+                        <div className="flex items-center justify-center gap-2 text-primary-light mb-6">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span className="text-sm">Guardando tu perfil...</span>
+                        </div>
+                    )}
 
                     <button
                         onClick={() => navigate('/alumno')}
