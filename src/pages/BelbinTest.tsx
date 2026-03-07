@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation } from "convex/react"
+import { useMutation, useQuery } from "convex/react"
 import { api } from "../../convex/_generated/api"
 import { Brain, ChevronRight, ChevronLeft, CheckCircle, Rocket, Loader2 } from 'lucide-react'
 
@@ -59,6 +59,7 @@ export default function BelbinTest() {
     const [saving, setSaving] = useState(false)
     const [resultCategory, setResultCategory] = useState('')
     const saveBelbin = useMutation(api.users.saveBelbinProfile)
+    const user = useQuery(api.users.me)
     const navigate = useNavigate()
 
     const handleAnswer = (rol: string) => {
@@ -131,7 +132,7 @@ export default function BelbinTest() {
                     )}
 
                     <button
-                        onClick={() => navigate('/alumno')}
+                        onClick={() => navigate(user?.role === 'teacher' ? '/docente' : '/alumno')}
                         className="bg-primary hover:bg-primary-light text-white font-bold px-8 py-4 rounded-2xl transition-all hover:shadow-lg hover:shadow-primary/25 active:scale-95 flex items-center justify-center gap-2 mx-auto"
                     >
                         <Rocket className="w-5 h-5" />

@@ -24,7 +24,8 @@ export default function LoginPage() {
 
         try {
             await signIn('password', formData)
-            navigate('/alumno')
+            // /dashboard detecta el rol y redirige a /docente o /alumno
+            navigate('/dashboard')
         } catch (err: any) {
             setError('Credenciales inválidas. Verifica tu correo y contraseña.')
         } finally {

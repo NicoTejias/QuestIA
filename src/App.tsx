@@ -52,6 +52,20 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+// Redirige al dashboard correcto según el rol del usuario
+function DashboardRedirect() {
+  const { isLoading, isAuthenticated } = useConvexAuth()
+  const user = useQuery(api.users.me, isAuthenticated ? undefined : "skip")
+
+  if (isLoading) return <LoadingScreen />
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+
+  // Esperar a que se cargue el usuario
+  if (!user) return <LoadingScreen />
+
+  return <Navigate to={user.role === 'teacher' ? '/docente' : '/alumno'} replace />
+}
+
 function App() {
   return (
     <Routes>
@@ -70,7 +84,7 @@ function App() {
       } />
 
       <Route path="/alumno" element={
-        <ProtectedRoute>
+        <ProtectedRoute requiredRole="student">
           <StudentDashboard />
         </ProtectedRoute>
       } />
@@ -91,6 +105,11 @@ function App() {
         <ProtectedRoute>
           <RewardStorePage />
         </ProtectedRoute>
+      } />
+
+      {/* Ruta inteligente que redirige al dashboard correcto según el rol */}
+      <Route path="/dashboard" element={
+        <DashboardRedirect />
       } />
     </Routes>
   )
