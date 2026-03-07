@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as courses from "../courses.js";
+import type * as documents from "../documents.js";
 import type * as http from "../http.js";
 import type * as missions from "../missions.js";
 import type * as rewards from "../rewards.js";
@@ -24,6 +25,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   courses: typeof courses;
+  documents: typeof documents;
   http: typeof http;
   missions: typeof missions;
   rewards: typeof rewards;

@@ -81,4 +81,17 @@ export default defineSchema({
         status: v.union(v.literal("pending"), v.literal("completed")),
         timestamp: v.number(),
     }).index("by_user", ["user_id"]),
+
+    course_documents: defineTable({
+        course_id: v.id("courses"),
+        teacher_id: v.id("users"),
+        file_id: v.id("_storage"),
+        file_name: v.string(),
+        file_type: v.string(), // "pdf" | "docx" | "pptx" | "xlsx"
+        file_size: v.number(), // bytes
+        content_text: v.string(), // Texto extraído del documento
+        uploaded_at: v.number(),
+    })
+        .index("by_course", ["course_id"])
+        .index("by_teacher", ["teacher_id"]),
 });
