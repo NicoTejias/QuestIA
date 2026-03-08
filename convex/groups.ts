@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { requireAuth, requireTeacher } from "./withUser";
 
 // Generar grupos inteligentes basados en perfiles Belbin
 export const generateGroups = mutation({
@@ -9,15 +9,11 @@ export const generateGroups = mutation({
         group_size: v.number(), // Tamaño deseado por grupo (3-6)
     },
     handler: async (ctx, args) => {
-        const userId = await getAuthUserId(ctx);
-        if (!userId) throw new Error("No autenticado");
-
-        const user = await ctx.db.get(userId);
-        if (user?.role !== "teacher") throw new Error("Solo docentes pueden generar grupos");
+        const user = await requireTeacher(ctx);
 
         // Verificar que el curso pertenezca al docente
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== userId) {
+        if (!course || course.teacher_id !== user._id) {
             throw new Error("No autorizado para este ramo");
         }
 
@@ -36,9 +32,13 @@ export const generateGroups = mutation({
         }
 
         // Obtener datos completos de los alumnos (con Belbin)
+        const userIds = new Set(enrollments.map(e => e.user_id));
+        const users = await Promise.all(Array.from(userIds).map(id => ctx.db.get(id)));
+        const userMap = new Map(users.filter(u => u !== null).map(u => [u._id, u]));
+
         const students = [];
         for (const en of enrollments) {
-            const student = await ctx.db.get(en.user_id);
+            const student = userMap.get(en.user_id);
             if (student) {
                 students.push({
                     userId: student._id,
@@ -129,41 +129,48 @@ export const generateGroups = mutation({
 export const getGroups = query({
     args: { course_id: v.id("courses") },
     handler: async (ctx, args) => {
-        const userId = await getAuthUserId(ctx);
-        if (!userId) return [];
+        try {
+            await requireAuth(ctx);
 
-        const enrollments = await ctx.db
-            .query("enrollments")
-            .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
-            .collect();
+            const enrollments = await ctx.db
+                .query("enrollments")
+                .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
+                .collect();
 
-        // Agrupar por group_id
-        const groups: Record<string, { name: string; belbinRole: string; belbinCategory: string; points: number }[]> = {};
+            // Agrupar por group_id
+            const groups: Record<string, { name: string; belbinRole: string; belbinCategory: string; points: number }[]> = {};
 
-        for (const en of enrollments) {
-            const groupName = en.group_id || "Sin grupo";
-            if (!groups[groupName]) groups[groupName] = [];
+            const userIds = new Set(enrollments.map(e => e.user_id));
+            const users = await Promise.all(Array.from(userIds).map(id => ctx.db.get(id)));
+            const userMap = new Map(users.filter(u => u !== null).map(u => [u._id, u]));
 
-            const student = await ctx.db.get(en.user_id);
-            if (student) {
-                groups[groupName].push({
-                    name: student.name || "Sin nombre",
-                    belbinRole: student.belbin_profile?.role_dominant || "Sin determinar",
-                    belbinCategory: student.belbin_profile?.category || "Sin categoría",
-                    points: en.total_points,
-                });
+            for (const en of enrollments) {
+                const groupName = en.group_id || "Sin grupo";
+                if (!groups[groupName]) groups[groupName] = [];
+
+                const student = userMap.get(en.user_id);
+                if (student) {
+                    groups[groupName].push({
+                        name: student.name || "Sin nombre",
+                        belbinRole: student.belbin_profile?.role_dominant || "Sin determinar",
+                        belbinCategory: student.belbin_profile?.category || "Sin categoría",
+                        points: en.ranking_points ?? en.total_points ?? 0,
+                    });
+                }
             }
-        }
 
-        return Object.entries(groups).map(([name, members]) => ({
-            name,
-            members,
-            stats: {
-                mental: members.filter(m => m.belbinCategory === "Mental").length,
-                social: members.filter(m => m.belbinCategory === "Social").length,
-                accion: members.filter(m => m.belbinCategory === "Acción").length,
-                total: members.length,
-            },
-        }));
+            return Object.entries(groups).map(([name, members]) => ({
+                name,
+                members,
+                stats: {
+                    mental: members.filter(m => m.belbinCategory === "Mental").length,
+                    social: members.filter(m => m.belbinCategory === "Social").length,
+                    accion: members.filter(m => m.belbinCategory === "Acción").length,
+                    total: members.length,
+                },
+            }));
+        } catch {
+            return [];
+        }
     },
 });

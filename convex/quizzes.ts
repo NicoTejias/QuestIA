@@ -1,22 +1,24 @@
 import { action, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { requireAuth, requireTeacher } from "./withUser";
 import { api } from "./_generated/api";
 
 // Generar quiz con IA a partir del contenido de un documento
-export const generateQuiz = action({
+export const generateQuiz: any = action({
     args: {
         document_id: v.id("course_documents"),
         num_questions: v.number(), // 5, 10, 15
         difficulty: v.string(), // "facil", "medio", "dificil"
         quiz_type: v.optional(v.string()), // "multiple_choice", "flashcard", "match"
+        max_attempts: v.optional(v.number()),
     },
-    handler: async (ctx, args) => {
-        const userId = await getAuthUserId(ctx);
+    handler: async (ctx: any, args: any) => {
+        // action auth not supported with requireAuth context yet, leaving it as it was if possible:
+        const userId = await ctx.auth.getUserIdentity();
         if (!userId) throw new Error("No autenticado");
 
         // Obtener el documento
-        const doc = await ctx.runQuery(api.documents.getDocumentById, {
+        const doc: any = await ctx.runQuery(api.documents.getDocumentById, {
             document_id: args.document_id,
         });
 
@@ -122,7 +124,7 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, con est
         }
 
         // Guardar el quiz en la BD
-        const quizId = await ctx.runMutation(api.quizzes.saveQuiz, {
+        const quizId: any = await ctx.runMutation(api.quizzes.saveQuiz, {
             course_id: doc.course_id,
             document_id: args.document_id,
             title: quizData.title || `Quiz de ${doc.file_name}`,
@@ -130,6 +132,7 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, con est
             questions: quizData.questions,
             difficulty: args.difficulty,
             num_questions: quizData.questions.length,
+            max_attempts: args.max_attempts ?? 1,
         });
 
         return {
@@ -148,18 +151,37 @@ export const saveQuiz = mutation({
         document_id: v.id("course_documents"),
         title: v.string(),
         quiz_type: v.optional(v.string()),
-        questions: v.any(),
+        questions: v.array(v.union(
+            v.object({
+                question: v.string(),
+                options: v.array(v.string()),
+                correct: v.number(),
+                explanation: v.optional(v.string())
+            }),
+            v.object({
+                front: v.string(),
+                back: v.string()
+            }),
+            v.object({
+                concept: v.string(),
+                definition: v.string()
+            })
+        )),
         difficulty: v.string(),
         num_questions: v.number(),
+        max_attempts: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
-        const userId = await getAuthUserId(ctx);
-        if (!userId) throw new Error("No autenticado");
+        const user = await requireTeacher(ctx);
+
+        const course = await ctx.db.get(args.course_id);
+        if (!course || course.teacher_id !== user._id)
+            throw new Error("No tienes permiso para agregar quizzes a este curso");
 
         return await ctx.db.insert("quizzes", {
             course_id: args.course_id,
             document_id: args.document_id,
-            teacher_id: userId,
+            teacher_id: user._id,
             title: args.title,
             quiz_type: args.quiz_type || "multiple_choice",
             questions: args.questions,
@@ -167,18 +189,47 @@ export const saveQuiz = mutation({
             num_questions: args.num_questions,
             created_at: Date.now(),
             is_active: true,
+            max_attempts: args.max_attempts ?? 1,
         });
     },
 });
 
-// Obtener quizzes de un ramo
+// Obtener quizzes de un ramo con estado de completación
 export const getQuizzesByCourse = query({
     args: { course_id: v.id("courses") },
     handler: async (ctx, args) => {
-        return await ctx.db
+        const quizzes = await ctx.db
             .query("quizzes")
             .filter((q) => q.eq(q.field("course_id"), args.course_id))
             .collect();
+
+        try {
+            const user = await requireAuth(ctx);
+            return await Promise.all(quizzes.map(async (quiz) => {
+                const userSubmissions = await ctx.db
+                    .query("quiz_submissions")
+                    .withIndex("by_quiz_user", (q) => q.eq("quiz_id", quiz._id).eq("user_id", user._id))
+                    .collect();
+
+                const attempts_count = userSubmissions.length;
+                const max_attempts = quiz.max_attempts ?? 1;
+                const best_score = userSubmissions.length > 0
+                    ? Math.max(...userSubmissions.map(s => s.score))
+                    : null;
+
+                return {
+                    ...quiz,
+                    completed: attempts_count > 0,
+                    attempts_count,
+                    max_attempts,
+                    best_score,
+                    can_take: attempts_count < max_attempts,
+                    score: best_score // Para compatibilidad
+                };
+            }));
+        } catch {
+            return quizzes;
+        }
     },
 });
 
@@ -186,10 +237,27 @@ export const getQuizzesByCourse = query({
 export const getQuizzesByDocument = query({
     args: { document_id: v.id("course_documents") },
     handler: async (ctx, args) => {
-        return await ctx.db
+        const quizzes = await ctx.db
             .query("quizzes")
             .filter((q) => q.eq(q.field("document_id"), args.document_id))
             .collect();
+
+        try {
+            const user = await requireAuth(ctx);
+            return await Promise.all(quizzes.map(async (quiz) => {
+                const submission = await ctx.db
+                    .query("quiz_submissions")
+                    .withIndex("by_quiz_user", (q) => q.eq("quiz_id", quiz._id).eq("user_id", user._id))
+                    .unique();
+                return {
+                    ...quiz,
+                    completed: !!submission,
+                    score: submission?.score
+                };
+            }));
+        } catch {
+            return quizzes;
+        }
     },
 });
 
@@ -197,16 +265,151 @@ export const getQuizzesByDocument = query({
 export const deleteQuiz = mutation({
     args: { quiz_id: v.id("quizzes") },
     handler: async (ctx, args) => {
-        const userId = await getAuthUserId(ctx);
-        if (!userId) throw new Error("No autenticado");
-
-        const user = await ctx.db.get(userId);
-        if (!user || user.role !== "teacher")
-            throw new Error("Solo docentes pueden eliminar quizzes");
+        const user = await requireTeacher(ctx);
 
         const quiz = await ctx.db.get(args.quiz_id);
         if (!quiz) throw new Error("Quiz no encontrado");
 
+        // Verificar que el curso del quiz pertenezca al docente
+        const course = await ctx.db.get(quiz.course_id);
+        if (!course || course.teacher_id !== user._id)
+            throw new Error("No autorizado para eliminar este quiz");
+
         await ctx.db.delete(args.quiz_id);
+    },
+});
+
+// Obtener todos los intentos de un quiz (para el docente)
+export const getQuizSubmissions = query({
+    args: { quiz_id: v.id("quizzes") },
+    handler: async (ctx, args) => {
+        const user = await requireTeacher(ctx);
+
+        const quiz = await ctx.db.get(args.quiz_id);
+        if (!quiz) throw new Error("Quiz no encontrado");
+
+        // Solo el docente del curso puede ver esto
+        const course = await ctx.db.get(quiz.course_id);
+        if (!course || course.teacher_id !== user._id) {
+            throw new Error("No autorizado");
+        }
+
+        const submissions = await ctx.db
+            .query("quiz_submissions")
+            .withIndex("by_quiz", (q) => q.eq("quiz_id", args.quiz_id))
+            .collect();
+
+        // Enriquecer con nombres de alumnos
+        const userIds = new Set(submissions.map(s => s.user_id));
+        const users = await Promise.all(Array.from(userIds).map(id => ctx.db.get(id)));
+        const userMap = new Map(users.filter(u => u !== null).map(u => [u._id, u]));
+
+        return submissions.map((s) => {
+            const user = userMap.get(s.user_id);
+            return {
+                ...s,
+                student_name: user?.name || "Alumno desconocido",
+            };
+        });
+    },
+});
+
+// Obtener el intento de un usuario para un quiz específico
+export const getUserQuizAttempt = query({
+    args: { quiz_id: v.id("quizzes") },
+    handler: async (ctx, args) => {
+        try {
+            const user = await requireAuth(ctx);
+            return await ctx.db
+                .query("quiz_submissions")
+                .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
+                .unique();
+        } catch {
+            return null;
+        }
+    },
+});
+
+// Registrar finalización de un quiz y otorgar puntos
+export const submitQuiz = mutation({
+    args: {
+        quiz_id: v.id("quizzes"),
+        score: v.number(), // Puntuación de 0 a 100
+    },
+    handler: async (ctx, args) => {
+        const user = await requireAuth(ctx);
+
+        const quiz = await ctx.db.get(args.quiz_id);
+        if (!quiz) throw new Error("Quiz no encontrado");
+
+        // Obtener historial de intentos
+        const submissions = await ctx.db
+            .query("quiz_submissions")
+            .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
+            .collect();
+
+        const currentAttempts = submissions.length;
+        const maxAttempts = quiz.max_attempts ?? 1;
+
+        if (currentAttempts >= maxAttempts) {
+            throw new Error(`Has alcanzado el límite de ${maxAttempts} intentos permitido para este quiz.`);
+        }
+
+        // Cálculo de puntos base según dificultad y número de preguntas.
+        const basePoints = (quiz.num_questions || 5) * (quiz.difficulty === 'dificil' ? 20 : quiz.difficulty === 'medio' ? 15 : 10);
+        const currentEarnedPoints = Math.round((args.score / 100) * basePoints);
+
+        // Puntos previamente ganados (el mejor intento)
+        const bestPreviousPoints = submissions.length > 0
+            ? Math.max(...submissions.map(s => s.earned_points))
+            : 0;
+
+        // Solo otorgamos la diferencia si el nuevo intento es mejor
+        const pointsToAward = Math.max(0, currentEarnedPoints - bestPreviousPoints);
+
+        // Buscar inscripcion
+        const enrollment = await ctx.db
+            .query("enrollments")
+            .withIndex("by_user", (q) => q.eq("user_id", user._id))
+            .filter((q) => q.eq(q.field("course_id"), quiz.course_id))
+            .unique();
+
+        if (!enrollment) throw new Error("No inscrito");
+
+        // Registrar el intento
+        await ctx.db.insert("quiz_submissions", {
+            quiz_id: args.quiz_id,
+            user_id: user._id,
+            score: args.score,
+            earned_points: currentEarnedPoints,
+            completed_at: Date.now(),
+        });
+
+        if (pointsToAward > 0) {
+            const newRankingPoints = (enrollment.ranking_points ?? enrollment.total_points ?? 0) + pointsToAward;
+            const newSpendablePoints = (enrollment.spendable_points ?? enrollment.total_points ?? 0) + pointsToAward;
+
+            await ctx.db.patch(enrollment._id, {
+                ranking_points: newRankingPoints,
+                spendable_points: newSpendablePoints,
+                total_points: (enrollment.total_points ?? 0) + pointsToAward,
+            });
+
+            return {
+                success: true,
+                earned: pointsToAward,
+                is_improvement: true,
+                total_earned_now: currentEarnedPoints,
+                new_ranking: newRankingPoints,
+                new_spendable: newSpendablePoints
+            };
+        }
+
+        return {
+            success: true,
+            earned: 0,
+            is_improvement: false,
+            total_earned_best: bestPreviousPoints
+        };
     },
 });

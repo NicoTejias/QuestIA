@@ -15,9 +15,14 @@ import type * as documents from "../documents.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as missions from "../missions.js";
+import type * as notifications from "../notifications.js";
+import type * as point_transfers from "../point_transfers.js";
 import type * as quizzes from "../quizzes.js";
 import type * as rewards from "../rewards.js";
+import type * as rutUtils from "../rutUtils.js";
+import type * as transfers from "../transfers.js";
 import type * as users from "../users.js";
+import type * as withUser from "../withUser.js";
 
 import type {
   ApiFromModules,
@@ -33,9 +38,14 @@ declare const fullApi: ApiFromModules<{
   groups: typeof groups;
   http: typeof http;
   missions: typeof missions;
+  notifications: typeof notifications;
+  point_transfers: typeof point_transfers;
   quizzes: typeof quizzes;
   rewards: typeof rewards;
+  rutUtils: typeof rutUtils;
+  transfers: typeof transfers;
   users: typeof users;
+  withUser: typeof withUser;
 }>;
 
 /**

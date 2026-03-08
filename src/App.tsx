@@ -10,6 +10,8 @@ import StudentDashboard from './pages/StudentDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
 import BelbinTest from './pages/BelbinTest'
 import RewardStorePage from './pages/RewardStorePage'
+import NotFoundPage from './pages/NotFoundPage'
+import { Toaster } from 'sonner'
 
 function LoadingScreen() {
   return (
@@ -68,50 +70,56 @@ function DashboardRedirect() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
+    <>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
 
-      <Route path="/login" element={
-        <PublicOnlyRoute>
-          <LoginPage />
-        </PublicOnlyRoute>
-      } />
+        <Route path="/login" element={
+          <PublicOnlyRoute>
+            <LoginPage />
+          </PublicOnlyRoute>
+        } />
 
-      <Route path="/registro" element={
-        <PublicOnlyRoute>
-          <RegisterPage />
-        </PublicOnlyRoute>
-      } />
+        <Route path="/registro" element={
+          <PublicOnlyRoute>
+            <RegisterPage />
+          </PublicOnlyRoute>
+        } />
 
-      <Route path="/alumno" element={
-        <ProtectedRoute requiredRole="student">
-          <StudentDashboard />
-        </ProtectedRoute>
-      } />
+        <Route path="/alumno" element={
+          <ProtectedRoute requiredRole="student">
+            <StudentDashboard />
+          </ProtectedRoute>
+        } />
 
-      <Route path="/docente" element={
-        <ProtectedRoute requiredRole="teacher">
-          <TeacherDashboard />
-        </ProtectedRoute>
-      } />
+        <Route path="/docente" element={
+          <ProtectedRoute requiredRole="teacher">
+            <TeacherDashboard />
+          </ProtectedRoute>
+        } />
 
-      <Route path="/test-belbin" element={
-        <ProtectedRoute>
-          <BelbinTest />
-        </ProtectedRoute>
-      } />
+        <Route path="/test-belbin" element={
+          <ProtectedRoute>
+            <BelbinTest />
+          </ProtectedRoute>
+        } />
 
-      <Route path="/tienda/:courseId" element={
-        <ProtectedRoute>
-          <RewardStorePage />
-        </ProtectedRoute>
-      } />
+        <Route path="/tienda/:courseId" element={
+          <ProtectedRoute>
+            <RewardStorePage />
+          </ProtectedRoute>
+        } />
 
-      {/* Ruta inteligente que redirige al dashboard correcto según el rol */}
-      <Route path="/dashboard" element={
-        <DashboardRedirect />
-      } />
-    </Routes>
+        {/* Ruta inteligente que redirige al dashboard correcto según el rol */}
+        <Route path="/dashboard" element={
+          <DashboardRedirect />
+        } />
+
+        {/* 404 Catch-all route */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      <Toaster position="top-right" theme="dark" richColors />
+    </>
   )
 }
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthActions } from "@convex-dev/auth/react"
 import { Rocket, Mail, Lock, User, GraduationCap, BookOpen, Loader2, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
+import { cleanRut } from '../utils/rutUtils'
 
 export default function RegisterPage() {
     const { signIn } = useAuthActions()
@@ -33,7 +34,7 @@ export default function RegisterPage() {
         fd.append('password', formData.password)
         fd.append('name', formData.name)
         fd.append('role', role!)
-        fd.append('student_id', formData.student_id)
+        fd.append('student_id', role === 'student' ? cleanRut(formData.student_id) : formData.student_id)
         fd.append('flow', 'signUp')
 
         try {
