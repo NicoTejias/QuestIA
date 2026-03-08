@@ -57,7 +57,6 @@ export default function BelbinTest() {
     const [respuestas, setRespuestas] = useState<string[]>([])
     const [resultado, setResultado] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
-    const [resultCategory, setResultCategory] = useState('')
     const saveBelbin = useMutation(api.users.saveBelbinProfile)
     const user = useQuery(api.users.getProfile)
     const navigate = useNavigate()
@@ -82,7 +81,6 @@ export default function BelbinTest() {
                 'Impulsor': 'Acción', 'Implementador': 'Acción', 'Finalizador': 'Acción',
             }
             const category = catMap[dominant] || 'Especial'
-            setResultCategory(category)
 
             // Guardar en Convex
             setSaving(true)

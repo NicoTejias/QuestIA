@@ -1,10 +1,7 @@
-import { useState, useRef } from 'react'
-import { useQuery, useMutation, useAction } from "convex/react"
-import { api } from "../../convex/_generated/api"
-import { Gift, Plus, Loader2, Trash2, Coins, AlertTriangle } from 'lucide-react'
-import Papa from 'papaparse'
-import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '../utils/documentParser'
-import { formatRutWithDV, cleanRut, calculateRutDV } from '../utils/rutUtils'
+import { useState } from 'react'
+import { useMutation, usePaginatedQuery } from "convex/react"
+import { api } from "../../../convex/_generated/api"
+import { Gift, Loader2, Trash2, Sparkles, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function CrearRecompensaPanel({ courses }: { courses: any[] }) {
@@ -15,21 +12,21 @@ export default function CrearRecompensaPanel({ courses }: { courses: any[] }) {
     const [success, setSuccess] = useState('')
     const [subTab, setSubTab] = useState<'recomendadas' | 'manual'>('recomendadas')
 
-    // Obtener recompensas existentes para el ramo seleccionado
-    const existingRewards = useQuery(api.rewards.getRewardsByCourse,
-        formData.course_id ? { course_id: formData.course_id as any } : "skip"
+    // Obtener recompensas existentes para el ramo seleccionado (PAGINADO)
+    const { results: existingRewards, status: rewardsStatus } = usePaginatedQuery(
+        api.rewards.getRewardsByCourse,
+        formData.course_id ? { course_id: formData.course_id as any } : "skip",
+        { initialNumItems: 50 }
     )
 
     const handleDelete = async (e: React.MouseEvent, rewardId: any) => {
         e.preventDefault()
         e.stopPropagation()
-        console.log('--- Intentando eliminar recompensa (panel) ---', rewardId)
         if (window.confirm('¿Estás seguro de que quieres borrar esta recompensa?')) {
             try {
                 await deleteReward({ reward_id: rewardId })
-                console.log('>>> Éxito al eliminar recompensa (panel)')
+                toast.success('Recompensa eliminada')
             } catch (err: any) {
-                console.error('!!! Error al eliminar recompensa (panel):', err)
                 toast.error('Fallo al eliminar: ' + (err.message || String(err)))
             }
         }
@@ -134,6 +131,7 @@ export default function CrearRecompensaPanel({ courses }: { courses: any[] }) {
                     onChange={e => setFormData({ ...formData, course_id: e.target.value })}
                     className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary"
                     aria-label="Selecciona un ramo para agregar recompensas"
+                    title="Seleccionar ramo"
                 >
                     <option value="">Selecciona un ramo</option>
                     {courses.map((c: any) => (
@@ -145,11 +143,11 @@ export default function CrearRecompensaPanel({ courses }: { courses: any[] }) {
                 {formData.course_id && (
                     <div className="mt-6 pt-6 border-t border-white/5">
                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Recompensas actuales en este ramo</h4>
-                        {existingRewards === undefined ? (
+                        {rewardsStatus === "LoadingFirstPage" ? (
                             <div className="flex items-center gap-2 text-slate-500 text-sm">
                                 <Loader2 className="w-4 h-4 animate-spin" /> Cargando premios...
                             </div>
-                        ) : existingRewards.length === 0 ? (
+                        ) : !existingRewards || existingRewards.length === 0 ? (
                             <p className="text-slate-500 text-sm italic">No hay recompensas creadas para este ramo aún.</p>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -180,6 +178,7 @@ export default function CrearRecompensaPanel({ courses }: { courses: any[] }) {
                 <button
                     onClick={() => setSubTab('recomendadas')}
                     className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${subTab === 'recomendadas' ? 'bg-gradient-to-r from-accent to-primary text-white shadow-lg shadow-accent/20' : 'bg-surface-light text-slate-400 border border-white/10 hover:text-white'}`}
+                    title="Ver recompensas recomendadas"
                 >
                     <Sparkles className="w-4 h-4" />
                     Recompensas Recomendadas
@@ -187,6 +186,7 @@ export default function CrearRecompensaPanel({ courses }: { courses: any[] }) {
                 <button
                     onClick={() => setSubTab('manual')}
                     className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${subTab === 'manual' ? 'bg-gradient-to-r from-gold to-gold-light text-surface shadow-lg shadow-gold/20' : 'bg-surface-light text-slate-400 border border-white/10 hover:text-white'}`}
+                    title="Crear recompensa manual"
                 >
                     <Gift className="w-4 h-4" />
                     Crear Recompensa Manual
@@ -244,23 +244,23 @@ export default function CrearRecompensaPanel({ courses }: { courses: any[] }) {
 
                     <div>
                         <label className="text-sm font-medium text-slate-300 mb-2 block">Nombre del Premio</label>
-                        <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="ej. Punto Extra en Prueba" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                        <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="ej. Punto Extra en Prueba" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" title="Nombre del premio" />
                     </div>
                     <div>
                         <label className="text-sm font-medium text-slate-300 mb-2 block">Descripción</label>
-                        <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Detalle del beneficio..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary h-20 resize-none" />
+                        <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Detalle del beneficio..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary h-20 resize-none" title="Descripción" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-sm font-medium text-slate-300 mb-2 block">Costo (pts)</label>
-                            <input type="number" value={formData.cost} onChange={e => setFormData({ ...formData, cost: e.target.value })} placeholder="500" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                            <input type="number" value={formData.cost} onChange={e => setFormData({ ...formData, cost: e.target.value })} placeholder="500" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" title="Costo en puntos" />
                         </div>
                         <div>
                             <label className="text-sm font-medium text-slate-300 mb-2 block">Stock</label>
-                            <input type="number" value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} placeholder="10" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                            <input type="number" value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} placeholder="10" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" title="Stock disponible" />
                         </div>
                     </div>
-                    <button onClick={handleCreate} disabled={creating || !formData.course_id || !formData.name || !formData.cost || !formData.stock} className="bg-gradient-to-r from-gold to-gold-light text-surface font-bold px-6 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={handleCreate} disabled={creating || !formData.course_id || !formData.name || !formData.cost || !formData.stock} className="bg-gradient-to-r from-gold to-gold-light text-surface font-bold px-6 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" title="Crear recompensa">
                         {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Gift className="w-5 h-5" />}
                         {creating ? 'Creando...' : 'Crear Recompensa'}
                     </button>

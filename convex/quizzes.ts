@@ -4,7 +4,7 @@ import { requireAuth, requireTeacher } from "./withUser";
 import { api } from "./_generated/api";
 
 // Generar quiz con IA a partir del contenido de un documento
-export const generateQuiz: any = action({
+export const generateQuiz = action({
     args: {
         document_id: v.id("course_documents"),
         num_questions: v.number(), // 5, 10, 15

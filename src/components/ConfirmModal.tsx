@@ -64,7 +64,7 @@ export default function ConfirmModal({
                             {cancelText}
                         </button>
                         <button
-                            onClick={() => { onConfirm(); onClose() }}
+                            onClick={onConfirm}
                             disabled={loading}
                             className={`px-6 py-3 text-white font-bold rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 ${colors[variant]}`}
                         >

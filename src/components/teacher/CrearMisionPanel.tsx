@@ -1,11 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useAction } from "convex/react"
-import { api } from "../../convex/_generated/api"
-import { Target, Plus, Loader2, Trash2, CheckCircle, Flame, Sparkles, Eye, EyeOff, AlertTriangle, Trophy } from 'lucide-react'
-import Papa from 'papaparse'
-import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '../utils/documentParser'
-import { formatRutWithDV, cleanRut, calculateRutDV } from '../utils/rutUtils'
+import { api } from "../../../convex/_generated/api"
+import { Target, Loader2, CheckCircle, Flame, Sparkles, AlertTriangle, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
+import { getFileIcon, formatFileSize } from '../../utils/documentParser'
 
 export default function CrearMisionPanel({ courses }: { courses: any[] }) {
     const createMission = useMutation(api.missions.createMission)
@@ -101,6 +99,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                 <button
                     onClick={() => setSubTab('quiz')}
                     className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${subTab === 'quiz' ? 'bg-gradient-to-r from-accent to-primary text-white shadow-lg shadow-accent/20' : 'bg-surface-light text-slate-400 border border-white/10 hover:text-white'}`}
+                    title="Crear quiz con IA"
                 >
                     <Sparkles className="w-4 h-4" />
                     🤖 Quiz con IA
@@ -108,6 +107,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                 <button
                     onClick={() => setSubTab('manual')}
                     className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${subTab === 'manual' ? 'bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/20' : 'bg-surface-light text-slate-400 border border-white/10 hover:text-white'}`}
+                    title="Crear misión manual"
                 >
                     <Flame className="w-4 h-4" />
                     Misión Manual
@@ -134,6 +134,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                                 onChange={e => { setQuizCourse(e.target.value); setSelectedDoc('') }}
                                 className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accent"
                                 aria-label="Selecciona un ramo para generar quiz"
+                                title="Seleccionar ramo"
                             >
                                 <option value="">Selecciona un ramo</option>
                                 {courses.map((c: any) => (
@@ -156,6 +157,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                                                     ? 'bg-accent/10 border-accent/40 text-white'
                                                     : 'bg-surface border-white/10 text-slate-300 hover:bg-white/5'
                                                     }`}
+                                                title={`Seleccionar documento: ${doc.file_name}`}
                                             >
                                                 <span className="text-2xl">{getFileIcon(doc.file_type)}</span>
                                                 <div className="flex-1 min-w-0">
@@ -179,15 +181,15 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                             <div>
                                 <label className="text-sm font-medium text-slate-300 mb-2 block">3. Tipo de Juego</label>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <button onClick={() => setQuizType('multiple_choice')} className={`p-4 rounded-xl border transition-all text-left ${quizType === 'multiple_choice' ? 'bg-accent/20 border-accent text-white' : 'bg-surface border-white/10 text-slate-400 hover:text-white'}`}>
+                                    <button onClick={() => setQuizType('multiple_choice')} className={`p-4 rounded-xl border transition-all text-left ${quizType === 'multiple_choice' ? 'bg-accent/20 border-accent text-white' : 'bg-surface border-white/10 text-slate-400 hover:text-white'}`} title="Seleccionar Quiz Clásico">
                                         <div className="font-semibold text-sm flex items-center gap-2"><Sparkles className="w-4 h-4" /> Quiz Clásico</div>
                                         <div className="text-xs opacity-70 mt-1">Opción múltiple con 4 alternativas</div>
                                     </button>
-                                    <button onClick={() => setQuizType('flashcard')} className={`p-4 rounded-xl border transition-all text-left ${quizType === 'flashcard' ? 'bg-blue-500/20 border-blue-500 text-white' : 'bg-surface border-white/10 text-slate-400 hover:text-white'}`}>
+                                    <button onClick={() => setQuizType('flashcard')} className={`p-4 rounded-xl border transition-all text-left ${quizType === 'flashcard' ? 'bg-blue-500/20 border-blue-500 text-white' : 'bg-surface border-white/10 text-slate-400 hover:text-white'}`} title="Seleccionar Flashcards">
                                         <div className="font-semibold text-sm flex items-center gap-2"><BookOpen className="w-4 h-4" /> Flashcards</div>
                                         <div className="text-xs opacity-70 mt-1">Tarjetas de memoria (concepto/definición)</div>
                                     </button>
-                                    <button onClick={() => setQuizType('match')} className={`p-4 rounded-xl border transition-all text-left ${quizType === 'match' ? 'bg-purple-500/20 border-purple-500 text-white' : 'bg-surface border-white/10 text-slate-400 hover:text-white'}`}>
+                                    <button onClick={() => setQuizType('match')} className={`p-4 rounded-xl border transition-all text-left ${quizType === 'match' ? 'bg-purple-500/20 border-purple-500 text-white' : 'bg-surface border-white/10 text-slate-400 hover:text-white'}`} title="Seleccionar Relacionar Parejas">
                                         <div className="font-semibold text-sm flex items-center gap-2"><Target className="w-4 h-4" /> Relacionar Parejas</div>
                                         <div className="text-xs opacity-70 mt-1">Unir conceptos con sus definiciones</div>
                                     </button>
@@ -206,6 +208,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                                                 key={n}
                                                 onClick={() => setNumQuestions(n)}
                                                 className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${numQuestions === n ? 'bg-accent text-white' : 'bg-surface border border-white/10 text-slate-400 hover:text-white'}`}
+                                                title={`Seleccionar ${n} preguntas`}
                                             >
                                                 {n} preguntas
                                             </button>
@@ -221,6 +224,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                                                 key={opt.value}
                                                 onClick={() => setDifficulty(opt.value)}
                                                 className={`p-3 rounded-xl text-center transition-all ${difficulty === opt.value ? 'bg-accent/20 border-2 border-accent text-white' : 'bg-surface border border-white/10 text-slate-400 hover:text-white'}`}
+                                                title={`Seleccionar dificultad: ${opt.label}`}
                                             >
                                                 <p className="font-semibold text-sm">{opt.label}</p>
                                                 <p className="text-xs mt-0.5 opacity-70">{opt.desc}</p>
@@ -237,6 +241,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                                                 key={n}
                                                 onClick={() => setMaxAttempts(n)}
                                                 className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all border ${maxAttempts === n ? 'bg-gold/20 border-gold text-gold shadow-lg shadow-gold/10' : 'bg-surface border-white/10 text-slate-400 hover:text-white'}`}
+                                                title={n === 99 ? 'Intentos ilimitados' : `${n} intentos`}
                                             >
                                                 {n === 99 ? '∞ Ilimitado' : `${n} ${n === 1 ? 'intento' : 'intentos'}`}
                                             </button>
@@ -253,6 +258,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                                     onClick={handleGenerateQuiz}
                                     disabled={generating}
                                     className="w-full bg-gradient-to-r from-accent to-primary text-white font-bold px-6 py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-accent/20"
+                                    title="Generar quiz con IA"
                                 >
                                     {generating ? (
                                         <>
@@ -327,7 +333,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                     <div className="bg-surface-light border border-white/5 rounded-2xl p-6 space-y-4">
                         <div>
                             <label className="text-sm font-medium text-slate-300 mb-2 block">Ramo</label>
-                            <select value={formData.course_id} onChange={e => setFormData({ ...formData, course_id: e.target.value })} className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary" aria-label="Selecciona un ramo para crear misión">
+                            <select value={formData.course_id} onChange={e => setFormData({ ...formData, course_id: e.target.value })} className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary" aria-label="Selecciona un ramo para crear misión" title="Seleccionar ramo">
                                 <option value="">Selecciona un ramo</option>
                                 {courses.map((c: any) => (
                                     <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
@@ -336,17 +342,17 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                         </div>
                         <div>
                             <label className="text-sm font-medium text-slate-300 mb-2 block">Título de la Misión</label>
-                            <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="ej. Quiz de Leyes de Kirchhoff" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                            <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="ej. Quiz de Leyes de Kirchhoff" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" title="Título de la misión" />
                         </div>
                         <div>
                             <label className="text-sm font-medium text-slate-300 mb-2 block">Descripción</label>
-                            <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Describe la misión..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary h-24 resize-none" />
+                            <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Describe la misión..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary h-24 resize-none" title="Descripción" />
                         </div>
                         <div>
                             <label className="text-sm font-medium text-slate-300 mb-2 block">Puntos</label>
-                            <input type="number" value={formData.points} onChange={e => setFormData({ ...formData, points: e.target.value })} placeholder="100" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                            <input type="number" value={formData.points} onChange={e => setFormData({ ...formData, points: e.target.value })} placeholder="100" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" title="Puntos" />
                         </div>
-                        <button onClick={handleCreate} disabled={creating || !formData.course_id || !formData.title || !formData.points} className="bg-primary hover:bg-primary-light text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button onClick={handleCreate} disabled={creating || !formData.course_id || !formData.title || !formData.points} className="bg-primary hover:bg-primary-light text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" title="Crear misión manual">
                             {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Flame className="w-5 h-5" />}
                             {creating ? 'Creando...' : 'Crear Misión'}
                         </button>

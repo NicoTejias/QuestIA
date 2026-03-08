@@ -109,10 +109,6 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                         .filter(e => e.id.length > 3)
                     setParsedData(entries)
                 }
-
-                if (parsedData.length === 0 && dataRows.length > 0) {
-                    // Re-check after state update
-                }
             } catch (err: any) {
                 setError(`Error al leer el archivo Excel: ${err.message}`)
             }
@@ -142,7 +138,7 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                         .filter(e => e.id.length > 3)
                     setParsedData(entries)
                 },
-                error: () => setError('Error al leer el archivo CSV. Verifica el formato.')
+                error: (err) => setError('Error al leer el archivo CSV: ' + err.message)
             })
         }
     }
@@ -197,6 +193,7 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                         onChange={e => setSelectedCourse(e.target.value)}
                         className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary"
                         aria-label="Selecciona un ramo para la whitelist"
+                        title="Seleccionar ramo"
                     >
                         <option value="">Selecciona un ramo</option>
                         {courses.map((c: any) => (
@@ -207,14 +204,14 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
 
                 <div>
                     <label className="text-sm font-medium text-slate-300 mb-2 block">Archivo XLSX o CSV</label>
-                    <label className="flex flex-col items-center justify-center w-full h-36 bg-surface border-2 border-dashed border-white/10 rounded-2xl cursor-pointer hover:border-accent/40 transition-all group">
+                    <label className="flex flex-col items-center justify-center w-full h-36 bg-surface border-2 border-dashed border-white/10 rounded-2xl cursor-pointer hover:border-accent/40 transition-all group" title="Haz clic para subir el listado de alumnos">
                         <div className="flex gap-2 mb-2">
                             <span className="text-2xl">📗</span>
                             <span className="text-2xl">📄</span>
                         </div>
                         <span className="text-slate-400 text-sm font-medium">{fileName || 'Haz clic para subir el listado de alumnos'}</span>
                         <span className="text-slate-500 text-xs mt-1">.xlsx o .csv — se detectará el RUT y calculará el dígito verificador</span>
-                        <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} />
+                        <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} title="Subir archivo" />
                     </label>
                 </div>
 
@@ -242,7 +239,7 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                                         <button
                                             onClick={() => setParsedData(parsedData.filter((_, idx) => idx !== i))}
                                             className="w-8 flex justify-center text-slate-600 hover:text-red-400 transition-colors"
-                                            title="Eliminar alumno"
+                                            title="Eliminar alumno de la lista"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>
@@ -254,6 +251,7 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                             onClick={handleUpload}
                             disabled={uploading || !selectedCourse}
                             className="mt-4 bg-accent hover:bg-accent-light text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95 w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Confirmar carga de whitelist"
                         >
                             {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
                             {uploading ? 'Cargando...' : `Cargar Whitelist (${parsedData.length} alumnos)`}

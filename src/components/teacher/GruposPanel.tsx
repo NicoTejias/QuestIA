@@ -1,11 +1,7 @@
-import { useState, useRef } from 'react'
-import { useQuery, useMutation, useAction } from "convex/react"
-import { api } from "../../convex/_generated/api"
-import { Users, Plus, Trash2, Loader2, Sparkles } from 'lucide-react'
-import Papa from 'papaparse'
-import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '../utils/documentParser'
-import { formatRutWithDV, cleanRut, calculateRutDV } from '../utils/rutUtils'
-import { toast } from 'sonner'
+import { useState } from 'react'
+import { useQuery, useMutation } from "convex/react"
+import { api } from "../../../convex/_generated/api"
+import { Users, Loader2, CheckCircle } from 'lucide-react'
 
 export default function GruposPanel() {
     const courses = useQuery(api.courses.getMyCourses)
@@ -77,6 +73,7 @@ export default function GruposPanel() {
                             onChange={e => { setSelectedCourse(e.target.value); setResult(null) }}
                             className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary"
                             aria-label="Selecciona un ramo para generar grupos"
+                            title="Seleccionar ramo"
                         >
                             <option value="">Selecciona un ramo</option>
                             {(courses || []).map((c: any) => (
@@ -93,6 +90,7 @@ export default function GruposPanel() {
                             min={2} max={8}
                             className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary"
                             aria-label="Cantidad de alumnos por grupo"
+                            title="Cantidad de alumnos por grupo"
                         />
                     </div>
                 </div>
@@ -100,6 +98,7 @@ export default function GruposPanel() {
                     onClick={handleGenerate}
                     disabled={generating || !selectedCourse}
                     className="bg-gradient-to-r from-primary to-accent text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Generar grupos inteligentes"
                 >
                     {generating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Users className="w-5 h-5" />}
                     {generating ? 'Generando...' : 'Generar Grupos Inteligentes'}

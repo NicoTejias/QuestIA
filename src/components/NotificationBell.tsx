@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, usePaginatedQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
-import { Bell, CheckCircle, Info, Trophy, AlertTriangle, X, ChevronDown } from 'lucide-react'
+import { Bell, CheckCircle, Info, Trophy, AlertTriangle, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function NotificationBell() {

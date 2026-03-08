@@ -966,7 +966,10 @@ function QuizPlayer({ quiz, onClose }: { quiz: any, onClose: () => void }) {
                                 {quiz.quiz_type}
                             </span>
                             <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden border border-white/5 relative mx-4">
-                                <div className="h-full bg-accent transition-all duration-500 rounded-full" style={{ width: progressWidth }}></div>
+                                <div
+                                    className="h-full bg-accent transition-all duration-500 rounded-full"
+                                    style={({ width: progressWidth } as React.CSSProperties)}
+                                ></div>
                             </div>
                             <span className="text-slate-500 font-bold text-sm tracking-widest">{currentIdx + 1} / {questions.length}</span>
                         </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { BookOpen, Plus, Loader2, ChevronRight, CheckCircle, Edit3, Trash2 } from 'lucide-react'
+import { Plus, Loader2, ChevronRight, CheckCircle, Edit3, Trash2, Search } from 'lucide-react'
 import CourseDetail from './CourseDetail'
 import { toast } from 'sonner'
 import ConfirmModal from '../ConfirmModal'
@@ -19,6 +19,12 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
     const [editingCourse, setEditingCourse] = useState<any>(null)
     const [courseToDelete, setCourseToDelete] = useState<any>(null)
     const [deleting, setDeleting] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
+
+    const filteredCourses = (courses || []).filter(c =>
+        (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.code || '').toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
     const handleCreate = async () => {
         if (!formData.name || !formData.code) return
@@ -56,11 +62,21 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
-                <p className="text-slate-400">Gestiona tus ramos activos.</p>
-                <button onClick={() => setShowCreate(!showCreate)} className="bg-accent hover:bg-accent-light text-white font-semibold px-5 py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-2 text-sm">
-                    <Plus className="w-4 h-4" />
-                    Nuevo Ramo
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div className="flex-1 w-full max-w-md relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-accent transition-colors" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nombre o código..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-surface-light border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-accent transition-all placeholder:text-slate-600 shadow-inner"
+                        title="Buscar ramos"
+                    />
+                </div>
+                <button onClick={() => setShowCreate(!showCreate)} className="bg-accent hover:bg-accent-light text-white font-black px-6 py-3 rounded-2xl transition-all active:scale-95 flex items-center gap-2 text-sm shadow-lg shadow-accent/20" title="Crear nuevo ramo">
+                    <Plus className="w-5 h-5" />
+                    NUEVO RAMO
                 </button>
             </div>
 
@@ -74,25 +90,25 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
             {showCreate && (
                 <div className="bg-surface-light border border-accent/20 rounded-2xl p-6 mb-6 space-y-4">
                     <h3 className="text-white font-bold">Crear Ramo</h3>
-                    <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre del ramo (ej. Electrotecnia I)" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-accent" />
-                    <input value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="Código (ej. ELT-101)" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-accent" />
-                    <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Descripción del ramo..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-accent h-24 resize-none" />
-                    <button onClick={handleCreate} disabled={creating || !formData.name || !formData.code} className="bg-accent text-white font-bold px-6 py-3 rounded-xl hover:bg-accent-light transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                    <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Nombre del ramo (ej. Electrotecnia I)" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-accent" title="Nombre del ramo" />
+                    <input value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} placeholder="Código (ej. ELT-101)" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-accent" title="Código del ramo" />
+                    <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Descripción del ramo..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-accent h-24 resize-none" title="Descripción" />
+                    <button onClick={handleCreate} disabled={creating || !formData.name || !formData.code} className="bg-accent text-white font-bold px-6 py-3 rounded-xl hover:bg-accent-light transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" title="Confirmar creación de ramo">
                         {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                         {creating ? 'Creando...' : 'Crear Ramo'}
                     </button>
                 </div>
             )}
 
-            {courses.length === 0 && !showCreate ? (
+            {filteredCourses.length === 0 && !showCreate ? (
                 <div className="bg-surface-light border border-dashed border-white/10 rounded-2xl p-10 text-center">
-                    <BookOpen className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                    <h4 className="text-white font-semibold mb-2">Sin ramos aún</h4>
-                    <p className="text-slate-400 text-sm">Crea tu primer ramo con el botón de arriba.</p>
+                    <Search className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                    <h4 className="text-white font-semibold mb-2">No se encontraron ramos</h4>
+                    <p className="text-slate-400 text-sm">Prueba con otro término de búsqueda o crea uno nuevo.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {courses.map((c: any) => (
+                    {filteredCourses.map((c: any) => (
                         <div key={c._id} className="bg-surface-light border border-white/5 rounded-2xl p-6 hover:border-accent/30 transition-all group relative cursor-pointer" onClick={() => setSelectedCourse(c)}>
                             <div className="flex justify-between items-start">
                                 <div className="flex-1 min-w-0">

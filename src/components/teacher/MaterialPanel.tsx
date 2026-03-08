@@ -1,11 +1,8 @@
 import { useState, useRef } from 'react'
-import { useQuery, useMutation, useAction } from "convex/react"
+import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { FileText, Upload, Trash2, Loader2, X, CheckCircle, Eye, EyeOff, BookOpen } from 'lucide-react'
-import Papa from 'papaparse'
 import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '../../utils/documentParser'
-import { formatRutWithDV, cleanRut, calculateRutDV } from '../../utils/rutUtils'
-import { toast } from 'sonner'
 
 export default function MaterialPanel({ courses }: { courses: any[] }) {
     const generateUploadUrl = useMutation(api.documents.generateUploadUrl)
@@ -147,6 +144,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                         onChange={e => setSelectedCourse(e.target.value)}
                         className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accent"
                         aria-label="Selecciona un ramo para subir material"
+                        title="Seleccionar ramo"
                     >
                         <option value="">Selecciona un ramo</option>
                         {courses.map((c: any) => (
@@ -166,6 +164,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                             ? 'border-accent bg-accent/10 scale-[1.02]'
                             : 'border-white/10 bg-surface hover:border-accent/40 hover:bg-surface-lighter'
                         } ${uploading ? 'pointer-events-none opacity-70' : ''}`}
+                    title="Arrastra archivos aquí o haz clic para seleccionar"
                 >
                     {uploading ? (
                         <div className="text-center">
@@ -191,6 +190,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                         multiple
                         className="hidden"
                         onChange={e => handleUpload(e.target.files)}
+                        title="Subir archivos"
                     />
                 </div>
             </div>

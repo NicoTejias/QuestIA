@@ -121,6 +121,7 @@ export default function TraspasosPanel() {
                                         disabled={!!submitting}
                                         onClick={() => handleProcess(req._id, true)}
                                         className="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-95 transition-all disabled:opacity-50"
+                                        title="Aprobar traspaso"
                                     >
                                         {submitting === `${req._id}-ap` ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <><CheckCircle className="w-4 h-4" /> APROBAR</>}
                                     </button>
@@ -128,6 +129,7 @@ export default function TraspasosPanel() {
                                         disabled={!!submitting}
                                         onClick={() => handleProcess(req._id, false)}
                                         className="flex-1 px-6 py-3 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                                        title="Rechazar traspaso"
                                     >
                                         {submitting === `${req._id}-rj` ? <Loader2 className="w-4 h-4 animate-spin" /> : <><X className="w-4 h-4" /> RECHAZAR</>}
                                     </button>

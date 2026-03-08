@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { normalizeRut } from "../src/utils/rutUtils";
-import { requireAuth, requireTeacher } from "./withUser";
+import { normalizeRut } from "./rutUtils";
+import { requireAuth } from "./withUser";
 
 // Obtener el perfil del usuario actual autenticado
 export const getProfile = query({
