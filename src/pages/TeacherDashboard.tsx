@@ -1054,6 +1054,8 @@ function MaterialPanel({ courses }: { courses: any[] }) {
         if (!files || files.length === 0) return
         if (!selectedCourse) {
             setError('Selecciona un ramo antes de subir archivos.')
+            // Limpiar el input para que se pueda volver a seleccionar archivos
+            if (fileRef.current) fileRef.current.value = ''
             return
         }
 

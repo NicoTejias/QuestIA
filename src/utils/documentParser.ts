@@ -3,12 +3,15 @@
  * Se ejecuta en el navegador (client-side parsing)
  */
 
+// Worker de PDF.js - Vite lo sirve como asset estático
+import PdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+
 // ===== PDF =====
 async function parsePDF(file: File): Promise<string> {
     const pdfjsLib = await import('pdfjs-dist')
 
-    // Configurar worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+    // Usar el worker local servido por Vite
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorkerUrl
 
     const arrayBuffer = await file.arrayBuffer()
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
@@ -41,14 +44,10 @@ async function parseDOCX(file: File): Promise<string> {
 // ===== PPTX =====
 async function parsePPTX(file: File): Promise<string> {
     // PPTX es un ZIP con archivos XML dentro
-    // Usamos JSZip para extraer las diapositivas
-    const JSZip = (await import('xlsx')).default
-
-    // Alternativa: parsear manualmente el PPTX usando la API nativa de Blob
+    // Parseamos manualmente usando la API nativa del navegador
     const arrayBuffer = await file.arrayBuffer()
 
     try {
-        // PPTX es un ZIP, intentamos usar la API de compresión del navegador
         const blob = new Blob([arrayBuffer])
         const zip = await loadZip(blob)
 
