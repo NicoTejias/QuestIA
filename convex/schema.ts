@@ -94,4 +94,18 @@ export default defineSchema({
     })
         .index("by_course", ["course_id"])
         .index("by_teacher", ["teacher_id"]),
+
+    quizzes: defineTable({
+        course_id: v.id("courses"),
+        document_id: v.id("course_documents"),
+        teacher_id: v.id("users"),
+        title: v.string(),
+        questions: v.any(), // Array de { question, options[], correct, explanation }
+        difficulty: v.string(), // "facil" | "medio" | "dificil"
+        num_questions: v.number(),
+        created_at: v.number(),
+        is_active: v.boolean(),
+    })
+        .index("by_course", ["course_id"])
+        .index("by_document", ["document_id"]),
 });

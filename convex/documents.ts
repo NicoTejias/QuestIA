@@ -107,3 +107,11 @@ export const deleteDocument = mutation({
         await ctx.db.delete(args.document_id);
     },
 });
+
+// Obtener un documento por ID (usado por el sistema de quizzes)
+export const getDocumentById = query({
+    args: { document_id: v.id("course_documents") },
+    handler: async (ctx, args) => {
+        return await ctx.db.get(args.document_id);
+    },
+});

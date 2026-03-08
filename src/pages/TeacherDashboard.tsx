@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react'
-import { useQuery, useMutation } from "convex/react"
+import { useQuery, useMutation, useAction } from "convex/react"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { useNavigate } from 'react-router-dom'
 import { api } from "../../convex/_generated/api"
-import { BookOpen, Target, Trophy, Gift, Users, Upload, Plus, BarChart3, LogOut, Menu, X, Settings, FileSpreadsheet, Coins, ChevronRight, Flame, Trash2, CheckCircle, Loader2, Sparkles, FileText, Eye, EyeOff } from 'lucide-react'
+import { BookOpen, Target, Trophy, Gift, Users, Upload, Plus, BarChart3, LogOut, Menu, X, Settings, FileSpreadsheet, ChevronRight, Flame, Trash2, CheckCircle, Loader2, Sparkles, FileText, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import Papa from 'papaparse'
 import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '../utils/documentParser'
 
@@ -292,13 +292,28 @@ function RamosPanel({ courses }: { courses: any[] }) {
     )
 }
 
-// ======== MISIONES con creación real ========
+// ======== MISIONES con creación real + Quiz IA ========
 
 function CrearMisionPanel({ courses }: { courses: any[] }) {
     const createMission = useMutation(api.missions.createMission)
+    const generateQuiz = useAction(api.quizzes.generateQuiz)
+    const [subTab, setSubTab] = useState<'manual' | 'quiz'>('quiz')
     const [formData, setFormData] = useState({ course_id: '', title: '', description: '', points: '' })
     const [creating, setCreating] = useState(false)
     const [success, setSuccess] = useState('')
+    const [error, setError] = useState('')
+
+    // Quiz IA state
+    const [quizCourse, setQuizCourse] = useState('')
+    const documents = useQuery(
+        api.documents.getDocumentsByCourse,
+        quizCourse ? { course_id: quizCourse as any } : "skip"
+    )
+    const [selectedDoc, setSelectedDoc] = useState('')
+    const [numQuestions, setNumQuestions] = useState(5)
+    const [difficulty, setDifficulty] = useState('medio')
+    const [generating, setGenerating] = useState(false)
+    const [quizPreview, setQuizPreview] = useState<any>(null)
 
     const handleCreate = async () => {
         if (!formData.course_id || !formData.title || !formData.points) return
@@ -310,7 +325,7 @@ function CrearMisionPanel({ courses }: { courses: any[] }) {
                 description: formData.description,
                 points: parseInt(formData.points),
             })
-            setSuccess(`Misión "${formData.title}" creada.`)
+            setSuccess(`✅ Misión "${formData.title}" creada.`)
             setFormData({ course_id: formData.course_id, title: '', description: '', points: '' })
             setTimeout(() => setSuccess(''), 4000)
         } catch (err: any) {
@@ -320,42 +335,250 @@ function CrearMisionPanel({ courses }: { courses: any[] }) {
         }
     }
 
+    const handleGenerateQuiz = async () => {
+        if (!selectedDoc) return
+        setGenerating(true)
+        setError('')
+        setQuizPreview(null)
+        try {
+            const result = await generateQuiz({
+                document_id: selectedDoc as any,
+                num_questions: numQuestions,
+                difficulty,
+            })
+            setQuizPreview(result)
+            setSuccess(`✅ Quiz "${result.title}" generado con ${result.numQuestions} preguntas.`)
+            setTimeout(() => setSuccess(''), 5000)
+        } catch (err: any) {
+            setError(err.message || 'Error al generar el quiz')
+        } finally {
+            setGenerating(false)
+        }
+    }
+
+    const difficultyOptions = [
+        { value: 'facil', label: '🟢 Fácil', desc: 'Conceptos básicos' },
+        { value: 'medio', label: '🟡 Medio', desc: 'Aplicación de conceptos' },
+        { value: 'dificil', label: '🔴 Difícil', desc: 'Análisis y Síntesis' },
+    ]
+
     return (
-        <div className="max-w-2xl">
-            <p className="text-slate-400 mb-6">Crea misiones gamificadas para motivar a tus alumnos.</p>
+        <div>
+            <p className="text-slate-400 mb-6">Crea misiones gamificadas o genera quizzes automáticos con IA a partir del material que subiste.</p>
+
             {success && (
                 <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 mb-6 flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-400" />
                     <p className="text-green-400 text-sm font-medium">{success}</p>
                 </div>
             )}
-            <div className="bg-surface-light border border-white/5 rounded-2xl p-6 space-y-4">
-                <div>
-                    <label className="text-sm font-medium text-slate-300 mb-2 block">Ramo</label>
-                    <select value={formData.course_id} onChange={e => setFormData({ ...formData, course_id: e.target.value })} className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary">
-                        <option value="">Selecciona un ramo</option>
-                        {courses.map((c: any) => (
-                            <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
-                        ))}
-                    </select>
+            {error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 flex items-center gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                    <p className="text-red-400 text-sm font-medium">{error}</p>
                 </div>
-                <div>
-                    <label className="text-sm font-medium text-slate-300 mb-2 block">Título de la Misión</label>
-                    <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="ej. Quiz de Leyes de Kirchhoff" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
-                </div>
-                <div>
-                    <label className="text-sm font-medium text-slate-300 mb-2 block">Descripción</label>
-                    <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Describe la misión..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary h-24 resize-none" />
-                </div>
-                <div>
-                    <label className="text-sm font-medium text-slate-300 mb-2 block">Puntos</label>
-                    <input type="number" value={formData.points} onChange={e => setFormData({ ...formData, points: e.target.value })} placeholder="100" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
-                </div>
-                <button onClick={handleCreate} disabled={creating || !formData.course_id || !formData.title || !formData.points} className="bg-primary hover:bg-primary-light text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Flame className="w-5 h-5" />}
-                    {creating ? 'Creando...' : 'Crear Misión'}
+            )}
+
+            {/* Sub-tabs */}
+            <div className="flex gap-2 mb-6">
+                <button
+                    onClick={() => setSubTab('quiz')}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${subTab === 'quiz' ? 'bg-gradient-to-r from-accent to-primary text-white shadow-lg shadow-accent/20' : 'bg-surface-light text-slate-400 border border-white/10 hover:text-white'}`}
+                >
+                    <Sparkles className="w-4 h-4" />
+                    🤖 Quiz con IA
+                </button>
+                <button
+                    onClick={() => setSubTab('manual')}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all ${subTab === 'manual' ? 'bg-gradient-to-r from-primary to-primary-light text-white shadow-lg shadow-primary/20' : 'bg-surface-light text-slate-400 border border-white/10 hover:text-white'}`}
+                >
+                    <Flame className="w-4 h-4" />
+                    Misión Manual
                 </button>
             </div>
+
+            {/* Quiz IA tab */}
+            {subTab === 'quiz' && (
+                <div className="space-y-6">
+                    <div className="bg-gradient-to-br from-accent/10 to-primary/10 border border-accent/20 rounded-2xl p-6">
+                        <h3 className="text-white font-bold mb-1 flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-accent-light" />
+                            Genera Quizzes Automáticos con IA
+                        </h3>
+                        <p className="text-slate-400 text-sm">Selecciona un documento subido y la IA generará preguntas de opción múltiple basadas en el contenido.</p>
+                    </div>
+
+                    <div className="bg-surface-light border border-white/5 rounded-2xl p-6 space-y-5">
+                        {/* Selector de ramo */}
+                        <div>
+                            <label className="text-sm font-medium text-slate-300 mb-2 block">1. Selecciona el Ramo</label>
+                            <select
+                                value={quizCourse}
+                                onChange={e => { setQuizCourse(e.target.value); setSelectedDoc('') }}
+                                className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accent"
+                                aria-label="Selecciona un ramo para generar quiz"
+                            >
+                                <option value="">Selecciona un ramo</option>
+                                {courses.map((c: any) => (
+                                    <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Selector de documento */}
+                        {quizCourse && (
+                            <div>
+                                <label className="text-sm font-medium text-slate-300 mb-2 block">2. Selecciona el Documento</label>
+                                {documents && documents.length > 0 ? (
+                                    <div className="grid gap-2">
+                                        {documents.map((doc: any) => (
+                                            <button
+                                                key={doc._id}
+                                                onClick={() => setSelectedDoc(doc._id)}
+                                                className={`w-full text-left p-4 rounded-xl border transition-all flex items-center gap-3 ${selectedDoc === doc._id
+                                                    ? 'bg-accent/10 border-accent/40 text-white'
+                                                    : 'bg-surface border-white/10 text-slate-300 hover:bg-white/5'
+                                                    }`}
+                                            >
+                                                <span className="text-2xl">{getFileIcon(doc.file_type)}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium truncate">{doc.file_name}</p>
+                                                    <p className="text-xs text-slate-500">{formatFileSize(doc.file_size)} · {doc.content_text?.length?.toLocaleString()} chars</p>
+                                                </div>
+                                                {selectedDoc === doc._id && <CheckCircle className="w-5 h-5 text-accent-light shrink-0" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="bg-surface border border-dashed border-white/10 rounded-xl p-6 text-center">
+                                        <p className="text-slate-500 text-sm">No hay documentos en este ramo. Sube material en la pestaña <strong className="text-slate-300">Material</strong> primero.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Configuración del quiz */}
+                        {selectedDoc && (
+                            <>
+                                <div>
+                                    <label className="text-sm font-medium text-slate-300 mb-2 block">3. Número de Preguntas</label>
+                                    <div className="flex gap-3">
+                                        {[5, 10, 15].map(n => (
+                                            <button
+                                                key={n}
+                                                onClick={() => setNumQuestions(n)}
+                                                className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${numQuestions === n ? 'bg-accent text-white' : 'bg-surface border border-white/10 text-slate-400 hover:text-white'}`}
+                                            >
+                                                {n} preguntas
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-slate-300 mb-2 block">4. Dificultad</label>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {difficultyOptions.map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => setDifficulty(opt.value)}
+                                                className={`p-3 rounded-xl text-center transition-all ${difficulty === opt.value ? 'bg-accent/20 border-2 border-accent text-white' : 'bg-surface border border-white/10 text-slate-400 hover:text-white'}`}
+                                            >
+                                                <p className="font-semibold text-sm">{opt.label}</p>
+                                                <p className="text-xs mt-0.5 opacity-70">{opt.desc}</p>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleGenerateQuiz}
+                                    disabled={generating}
+                                    className="w-full bg-gradient-to-r from-accent to-primary text-white font-bold px-6 py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-accent/20"
+                                >
+                                    {generating ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Generando quiz con IA... (esto puede tardar ~15 segundos)
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-5 h-5" />
+                                            🚀 Generar Quiz con IA
+                                        </>
+                                    )}
+                                </button>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Preview del quiz generado */}
+                    {quizPreview && (
+                        <div className="bg-surface-light border border-accent/20 rounded-2xl p-6 mt-6">
+                            <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+                                <CheckCircle className="w-5 h-5 text-green-400" />
+                                {quizPreview.title}
+                            </h3>
+                            <p className="text-slate-400 text-sm mb-6">{quizPreview.numQuestions} preguntas generadas · Guardado automáticamente</p>
+
+                            <div className="space-y-6">
+                                {quizPreview.questions.map((q: any, i: number) => (
+                                    <div key={i} className="bg-surface border border-white/5 rounded-xl p-5">
+                                        <p className="text-white font-semibold mb-3">
+                                            <span className="text-accent-light mr-2">P{i + 1}.</span>
+                                            {q.question}
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                                            {q.options.map((opt: string, oi: number) => (
+                                                <div key={oi} className={`px-4 py-2.5 rounded-lg text-sm flex items-center gap-2 ${oi === q.correct ? 'bg-green-500/15 border border-green-500/30 text-green-300' : 'bg-white/5 border border-white/5 text-slate-400'}`}>
+                                                    <span className="font-bold text-xs w-5">{String.fromCharCode(65 + oi)}.</span>
+                                                    {opt}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {q.explanation && (
+                                            <p className="text-sm text-slate-500 italic border-t border-white/5 pt-2 mt-2">💡 {q.explanation}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Manual mission tab */}
+            {subTab === 'manual' && (
+                <div className="max-w-2xl">
+                    <div className="bg-surface-light border border-white/5 rounded-2xl p-6 space-y-4">
+                        <div>
+                            <label className="text-sm font-medium text-slate-300 mb-2 block">Ramo</label>
+                            <select value={formData.course_id} onChange={e => setFormData({ ...formData, course_id: e.target.value })} className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary" aria-label="Selecciona un ramo para crear misión">
+                                <option value="">Selecciona un ramo</option>
+                                {courses.map((c: any) => (
+                                    <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-slate-300 mb-2 block">Título de la Misión</label>
+                            <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="ej. Quiz de Leyes de Kirchhoff" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-slate-300 mb-2 block">Descripción</label>
+                            <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Describe la misión..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary h-24 resize-none" />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-slate-300 mb-2 block">Puntos</label>
+                            <input type="number" value={formData.points} onChange={e => setFormData({ ...formData, points: e.target.value })} placeholder="100" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                        </div>
+                        <button onClick={handleCreate} disabled={creating || !formData.course_id || !formData.title || !formData.points} className="bg-primary hover:bg-primary-light text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Flame className="w-5 h-5" />}
+                            {creating ? 'Creando...' : 'Crear Misión'}
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -367,6 +590,66 @@ function CrearRecompensaPanel({ courses }: { courses: any[] }) {
     const [formData, setFormData] = useState({ course_id: '', name: '', description: '', cost: '', stock: '' })
     const [creating, setCreating] = useState(false)
     const [success, setSuccess] = useState('')
+    const [showCustom, setShowCustom] = useState(false)
+
+    // Catálogo de recompensas recomendadas
+    const REWARD_TEMPLATES = [
+        {
+            category: '🎓 Académicas',
+            color: 'from-blue-500/20 to-blue-600/10 border-blue-500/20',
+            items: [
+                { name: 'Punto Extra en Prueba', description: 'Obtén 1 punto extra en tu próxima evaluación parcial.', cost: 500, stock: 10, emoji: '📝' },
+                { name: 'Extensión de Plazo (24h)', description: 'Extiende la fecha de entrega de una tarea en 24 horas.', cost: 300, stock: 15, emoji: '⏰' },
+                { name: 'Pregunta Eliminada', description: 'Elimina la pregunta con menor puntaje de tu última prueba.', cost: 800, stock: 5, emoji: '❌' },
+                { name: 'Nota Mínima 4.0', description: 'Garantiza nota mínima 4.0 en un control sorpresa.', cost: 1000, stock: 3, emoji: '🛡️' },
+                { name: 'Revisión Extra de Trabajo', description: 'El docente revisa tu borrador antes de la entrega final.', cost: 400, stock: 8, emoji: '🔍' },
+                { name: 'Material de Estudio Extra', description: 'Acceso a material complementario exclusivo del ramo.', cost: 200, stock: 20, emoji: '📚' },
+            ]
+        },
+        {
+            category: '🎉 Sociales',
+            color: 'from-green-500/20 to-green-600/10 border-green-500/20',
+            items: [
+                { name: 'Elegir Compañero de Grupo', description: 'Elige un compañero para el próximo trabajo grupal.', cost: 350, stock: 10, emoji: '👥' },
+                { name: 'Presentar Tema Libre (5 min)', description: 'Presenta un tema de tu interés durante 5 minutos en clase.', cost: 250, stock: 5, emoji: '🎤' },
+                { name: 'Skip de Asistencia', description: 'Una inasistencia justificada sin necesidad de certificado.', cost: 600, stock: 5, emoji: '🏠' },
+                { name: 'Privilegio de Asiento', description: 'Elige tu puesto en la sala durante una semana.', cost: 150, stock: 8, emoji: '💺' },
+            ]
+        },
+        {
+            category: '⚡ Experiencias',
+            color: 'from-purple-500/20 to-purple-600/10 border-purple-500/20',
+            items: [
+                { name: 'Café con el Profe', description: 'Sesión de mentoría informal de 15 min con el docente.', cost: 450, stock: 5, emoji: '☕' },
+                { name: 'Insignia Digital "Top Student"', description: 'Badge exclusivo visible en tu perfil del ramo.', cost: 700, stock: 10, emoji: '🏆' },
+                { name: 'Certificado de Excelencia', description: 'Certificado digital de destacado rendimiento en gamificación.', cost: 1500, stock: 3, emoji: '🎖️' },
+                { name: 'Tutor por un Día', description: 'Ayuda a un compañero como tutor oficial con reconocimiento.', cost: 300, stock: 8, emoji: '🧑‍🏫' },
+            ]
+        },
+    ]
+
+    const handleAddTemplate = async (template: any) => {
+        if (!formData.course_id) {
+            alert('Selecciona un ramo primero.')
+            return
+        }
+        setCreating(true)
+        try {
+            await createReward({
+                course_id: formData.course_id as any,
+                name: template.name,
+                description: template.description,
+                cost: template.cost,
+                stock: template.stock,
+            })
+            setSuccess(`✅ "${template.name}" agregada al ramo.`)
+            setTimeout(() => setSuccess(''), 3000)
+        } catch (err: any) {
+            alert(err.message || 'Error al crear la recompensa')
+        } finally {
+            setCreating(false)
+        }
+    }
 
     const handleCreate = async () => {
         if (!formData.course_id || !formData.name || !formData.cost || !formData.stock) return
@@ -379,7 +662,7 @@ function CrearRecompensaPanel({ courses }: { courses: any[] }) {
                 cost: parseInt(formData.cost),
                 stock: parseInt(formData.stock),
             })
-            setSuccess(`Recompensa "${formData.name}" creada.`)
+            setSuccess(`✅ Recompensa "${formData.name}" creada.`)
             setFormData({ course_id: formData.course_id, name: '', description: '', cost: '', stock: '' })
             setTimeout(() => setSuccess(''), 4000)
         } catch (err: any) {
@@ -390,46 +673,107 @@ function CrearRecompensaPanel({ courses }: { courses: any[] }) {
     }
 
     return (
-        <div className="max-w-2xl">
-            <p className="text-slate-400 mb-6">Define premios que tus alumnos podrán canjear con sus puntos.</p>
+        <div>
+            <p className="text-slate-400 mb-6">Define premios que tus alumnos podrán canjear con sus puntos. Usa las recompensas recomendadas o crea las tuyas.</p>
+
             {success && (
                 <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 mb-6 flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-400" />
                     <p className="text-green-400 text-sm font-medium">{success}</p>
                 </div>
             )}
-            <div className="bg-surface-light border border-white/5 rounded-2xl p-6 space-y-4">
-                <div>
-                    <label className="text-sm font-medium text-slate-300 mb-2 block">Ramo</label>
-                    <select value={formData.course_id} onChange={e => setFormData({ ...formData, course_id: e.target.value })} className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary">
-                        <option value="">Selecciona un ramo</option>
-                        {courses.map((c: any) => (
-                            <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
-                        ))}
-                    </select>
-                </div>
-                <div>
-                    <label className="text-sm font-medium text-slate-300 mb-2 block">Nombre del Premio</label>
-                    <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="ej. Punto Extra en Prueba" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
-                </div>
-                <div>
-                    <label className="text-sm font-medium text-slate-300 mb-2 block">Descripción</label>
-                    <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Detalle del beneficio..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary h-20 resize-none" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="text-sm font-medium text-slate-300 mb-2 block">Costo (pts)</label>
-                        <input type="number" value={formData.cost} onChange={e => setFormData({ ...formData, cost: e.target.value })} placeholder="500" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+
+            {/* Selector de ramo (global para todo el panel) */}
+            <div className="bg-surface-light border border-white/5 rounded-2xl p-6 mb-6">
+                <label className="text-sm font-medium text-slate-300 mb-2 block">Ramo destino</label>
+                <select
+                    value={formData.course_id}
+                    onChange={e => setFormData({ ...formData, course_id: e.target.value })}
+                    className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary"
+                    aria-label="Selecciona un ramo para agregar recompensas"
+                >
+                    <option value="">Selecciona un ramo</option>
+                    {courses.map((c: any) => (
+                        <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Catálogo de recompensas recomendadas */}
+            <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-accent-light" />
+                Recompensas Recomendadas
+            </h3>
+            <p className="text-slate-500 text-sm mb-6">Haz clic en <strong className="text-slate-300">+ Agregar</strong> para añadir una recompensa al ramo seleccionado.</p>
+
+            <div className="space-y-6 mb-8">
+                {REWARD_TEMPLATES.map((cat, ci) => (
+                    <div key={ci}>
+                        <h4 className="text-white font-semibold mb-3">{cat.category}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {cat.items.map((item, ii) => (
+                                <div key={ii} className={`bg-gradient-to-br ${cat.color} border rounded-xl p-4 flex items-start gap-3 group hover:scale-[1.01] transition-all`}>
+                                    <span className="text-2xl shrink-0 mt-0.5">{item.emoji}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-white font-medium text-sm">{item.name}</p>
+                                        <p className="text-slate-400 text-xs mt-0.5 line-clamp-2">{item.description}</p>
+                                        <div className="flex gap-3 mt-2 text-xs">
+                                            <span className="text-accent-light font-semibold">{item.cost} pts</span>
+                                            <span className="text-slate-500">Stock: {item.stock}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleAddTemplate(item)}
+                                        disabled={creating || !formData.course_id}
+                                        className="shrink-0 bg-accent/20 hover:bg-accent/40 text-accent-light text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                        title={`Agregar "${item.name}" al ramo`}
+                                    >
+                                        + Agregar
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <div>
-                        <label className="text-sm font-medium text-slate-300 mb-2 block">Stock</label>
-                        <input type="number" value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} placeholder="10" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
-                    </div>
-                </div>
-                <button onClick={handleCreate} disabled={creating || !formData.course_id || !formData.name || !formData.cost || !formData.stock} className="bg-gradient-to-r from-gold to-gold-light text-surface font-bold px-6 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Gift className="w-5 h-5" />}
-                    {creating ? 'Creando...' : 'Crear Recompensa'}
+                ))}
+            </div>
+
+            {/* Toggle crear personalizada */}
+            <div className="border-t border-white/10 pt-6">
+                <button
+                    onClick={() => setShowCustom(!showCustom)}
+                    className="text-slate-400 hover:text-white text-sm font-medium flex items-center gap-2 transition-colors"
+                >
+                    <Gift className="w-4 h-4" />
+                    {showCustom ? 'Ocultar formulario personalizado' : '¿No encuentras lo que buscas? Crear recompensa personalizada'}
+                    <ChevronRight className={`w-4 h-4 transition-transform ${showCustom ? 'rotate-90' : ''}`} />
                 </button>
+
+                {showCustom && (
+                    <div className="bg-surface-light border border-white/5 rounded-2xl p-6 space-y-4 mt-4">
+                        <div>
+                            <label className="text-sm font-medium text-slate-300 mb-2 block">Nombre del Premio</label>
+                            <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="ej. Punto Extra en Prueba" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-slate-300 mb-2 block">Descripción</label>
+                            <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Detalle del beneficio..." className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary h-20 resize-none" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium text-slate-300 mb-2 block">Costo (pts)</label>
+                                <input type="number" value={formData.cost} onChange={e => setFormData({ ...formData, cost: e.target.value })} placeholder="500" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-slate-300 mb-2 block">Stock</label>
+                                <input type="number" value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} placeholder="10" className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary" />
+                            </div>
+                        </div>
+                        <button onClick={handleCreate} disabled={creating || !formData.course_id || !formData.name || !formData.cost || !formData.stock} className="bg-gradient-to-r from-gold to-gold-light text-surface font-bold px-6 py-3 rounded-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Gift className="w-5 h-5" />}
+                            {creating ? 'Creando...' : 'Crear Recompensa'}
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )

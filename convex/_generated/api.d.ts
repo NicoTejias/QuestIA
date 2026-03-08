@@ -15,6 +15,7 @@ import type * as documents from "../documents.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as missions from "../missions.js";
+import type * as quizzes from "../quizzes.js";
 import type * as rewards from "../rewards.js";
 import type * as users from "../users.js";
 
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   groups: typeof groups;
   http: typeof http;
   missions: typeof missions;
+  quizzes: typeof quizzes;
   rewards: typeof rewards;
   users: typeof users;
 }>;
