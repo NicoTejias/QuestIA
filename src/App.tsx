@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useConvexAuth } from "convex/react"
 import { useQuery } from "convex/react"
 import { api } from "../convex/_generated/api"
@@ -11,6 +11,7 @@ import TeacherDashboard from './pages/TeacherDashboard'
 import BelbinTest from './pages/BelbinTest'
 import RewardStorePage from './pages/RewardStorePage'
 import NotFoundPage from './pages/NotFoundPage'
+import ProfilePage from './pages/ProfilePage'
 import { Toaster } from 'sonner'
 
 function LoadingScreen() {
@@ -27,23 +28,31 @@ function LoadingScreen() {
 // Componente que protege rutas que requieren autenticación
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode, requiredRole?: string }) {
   const { isLoading, isAuthenticated } = useConvexAuth()
-  const user = useQuery(api.users.getProfile)
-
-  console.log("ProtectedRoute:", { isLoading, isAuthenticated, user: user ? "doc" : user });
+  const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
+  const location = useLocation()
 
   if (isLoading) return <LoadingScreen />
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />
 
-  // Si estamos autenticados pero el perfil no carga, esperamos.
-  // Si carga como null (no encontrado en DB), mandamos a login.
+  // Wait for profile
   if (user === undefined) return <LoadingScreen />
-  if (user === null) return <Navigate to="/login" replace />
+
+  if (user === null) {
+    if (location.pathname !== "/login") {
+      return <Navigate to="/login" replace />
+    }
+    return <>{children}</>
+  }
+
+  const userRole = (user as any)?.role || 'student';
 
   // Si se requiere un rol específico, verificar
-  if (requiredRole && (user as any).role !== requiredRole) {
-    const target = (user as any).role === 'teacher' ? '/docente' : '/alumno'
-    // console.log("ProtectedRoute redirect to:", target);
-    return <Navigate to={target} replace />
+  if (requiredRole && userRole !== requiredRole) {
+    const target = userRole === 'teacher' ? '/docente' : '/alumno'
+
+    if (location.pathname !== target) {
+      return <Navigate to={target} replace />
+    }
   }
 
   return <>{children}</>
@@ -53,18 +62,17 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useConvexAuth()
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
-
-  console.log("PublicOnlyRoute:", { isLoading, isAuthenticated, user: user ? "doc" : user });
+  const location = useLocation()
 
   if (isLoading) return <LoadingScreen />
 
-  // Si está autenticado, esperamos el perfil para saber a dónde mandarlo
-  if (isAuthenticated && user === undefined) return <LoadingScreen />
-
+  // If user is logged in, redirect them away from public pages *if* we know where they should go
   if (isAuthenticated && user) {
-    const target = (user as any).role === 'teacher' ? '/docente' : '/alumno'
-    // console.log("PublicOnlyRoute redirecting to:", target);
-    return <Navigate to={target} replace />
+    const userRole = (user as any)?.role || 'student';
+    const target = userRole === 'teacher' ? '/docente' : '/alumno'
+    if (location.pathname !== target) {
+      return <Navigate to={target} replace />
+    }
   }
 
   return <>{children}</>
@@ -73,9 +81,7 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 // Redirige al dashboard correcto según el rol del usuario
 function DashboardRedirect() {
   const { isLoading, isAuthenticated } = useConvexAuth()
-  const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
-
-  console.log("DashboardRedirect:", { isLoading, isAuthenticated, user: user ? "doc" : user });
+  const user = useQuery(api.users.getProfile)
 
   if (isLoading) return <LoadingScreen />
   if (!isAuthenticated) return <Navigate to="/login" replace />
@@ -83,7 +89,8 @@ function DashboardRedirect() {
   if (user === undefined) return <LoadingScreen />
   if (user === null) return <Navigate to="/login" replace />
 
-  const target = (user as any).role === 'teacher' ? '/docente' : '/alumno'
+  const userRole = (user as any)?.role || 'student';
+  const target = userRole === 'teacher' ? '/docente' : '/alumno'
   return <Navigate to={target} replace />
 }
 
@@ -126,6 +133,12 @@ function App() {
         <Route path="/tienda/:courseId" element={
           <ProtectedRoute>
             <RewardStorePage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/perfil" element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         } />
 

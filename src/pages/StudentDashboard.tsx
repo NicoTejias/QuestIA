@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react"
 import { useAuthActions } from "@convex-dev/auth/react"
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { api } from "../../convex/_generated/api"
 import {
     BookOpen, Target, Trophy, Gift, User, LogOut, Menu, X,
     BarChart3, Brain, Coins, ChevronRight, Flame,
     Star, Loader2, ArrowRightLeft,
-    AlertCircle, PlayCircle, Bell, BellOff, Info
+    AlertCircle, PlayCircle, Bell, BellOff, Info, Settings, Sparkles, Mail
 } from 'lucide-react'
 import { toast } from 'sonner'
 import NotificationBell from '../components/NotificationBell'
@@ -429,6 +429,10 @@ function CourseDetailView({ courseId, onBack, onPlayQuiz }: { courseId: any, onB
                                             <span className={`text-[10px] font-bold uppercase ${q.difficulty === 'dificil' ? 'text-red-400' : q.difficulty === 'medio' ? 'text-orange-400' : 'text-green-400'}`}>
                                                 {q.difficulty}
                                             </span>
+                                            <span className="text-[10px] font-bold text-gold flex items-center gap-1 bg-gold/10 px-1.5 py-0.5 rounded-md border border-gold/20">
+                                                <Star className="w-3 h-3 fill-gold" />
+                                                HASTA {(q.num_questions || 5) * (q.difficulty === 'dificil' ? 20 : q.difficulty === 'medio' ? 15 : 10)} PTS
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -815,44 +819,8 @@ function TiendaPanel({ courses }: { courses: any[] }) {
     )
 }
 
-function PerfilPanel({ user, totalPoints, belbinRole }: { user: any, totalPoints: number, belbinRole: string }) {
-    return (
-        <div className="max-w-4xl mx-auto space-y-8">
-            <div className="bg-surface-light border border-white/10 rounded-[2.5rem] p-12 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary animate-gradient-x"></div>
-                <div className="w-32 h-32 bg-gradient-to-br from-primary/20 to-accent/20 rounded-[2.5rem] flex items-center justify-center text-6xl mx-auto mb-8 shadow-2xl">
-                    {belbinRole === 'Cerebro' ? '🧠' : '🎓'}
-                </div>
-                <h2 className="text-4xl font-black text-white mb-2">{user.name}</h2>
-                <div className="flex items-center justify-center gap-3 mb-8">
-                    <span className="text-slate-500 font-mono text-xs">{user.student_id}</span>
-                    <span className="w-1.5 h-1.5 bg-slate-700 rounded-full"></span>
-                    <span className="text-slate-500 font-medium text-xs">{user.email}</span>
-                </div>
 
-                <div className="inline-flex items-center gap-3 bg-primary/10 border border-primary/20 px-8 py-4 rounded-3xl text-primary-light font-bold shadow-lg shadow-primary/10 transition-transform hover:scale-105">
-                    <Brain className="w-6 h-6" />
-                    Rol en el Equipo: {belbinRole}
-                </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-8 mt-12 pt-12 border-t border-white/5">
-                    <div>
-                        <p className="text-3xl font-black text-gold">{totalPoints.toLocaleString()}</p>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Puntos Totales</p>
-                    </div>
-                    <div>
-                        <p className="text-3xl font-black text-primary-light">DOC+</p>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Suscripción</p>
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                        <p className="text-3xl font-black text-white">#42</p>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Ranking Global</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
 
 function QuizPlayer({ quiz, onClose }: { quiz: any, onClose: () => void }) {
     const submitQuiz = useMutation(api.quizzes.submitQuiz)
@@ -1098,10 +1066,11 @@ function QuizPlayer({ quiz, onClose }: { quiz: any, onClose: () => void }) {
                                     </div>
                                 </div>
 
-                                {!quizResult?.is_improvement && quizResult?.total_earned_best > 0 && (
-                                    <p className="text-xs text-slate-500 mb-8 font-medium italic">
-                                        No se otorgaron puntos adicionales porque tu mejor score previo es superior o igual.
-                                    </p>
+                                {quizResult?.daily_bonus_applied && (
+                                    <div className="bg-gold/10 border border-gold/20 rounded-2xl p-4 mb-8 text-gold flex items-center justify-center gap-2 animate-bounce">
+                                        <Sparkles className="w-4 h-4" />
+                                        <span className="text-xs font-black uppercase tracking-widest">+20 PTS BONO DIARIO APLICADO</span>
+                                    </div>
                                 )}
 
                                 <div>
@@ -1118,7 +1087,6 @@ function QuizPlayer({ quiz, onClose }: { quiz: any, onClose: () => void }) {
     )
 }
 
-// ======== Modales Auxiliares ========
 
 function TransferModal({ onClose, courses }: { onClose: () => void, courses: any[] }) {
     const requestTransfer = useMutation(api.point_transfers.requestTransfer)
@@ -1283,4 +1251,63 @@ function TransferModal({ onClose, courses }: { onClose: () => void, courses: any
     )
 }
 
+
+
+function PerfilPanel({ user, totalPoints, belbinRole }: { user: any, totalPoints: number, belbinRole: string }) {
+    const navigate = useNavigate()
+    return (
+        <div className="max-w-4xl mx-auto py-10 space-y-8">
+            <div className="bg-surface-light border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8">
+                <div className="w-32 h-32 bg-gradient-to-br from-primary to-accent rounded-[2.5rem] flex items-center justify-center text-4xl shadow-2xl shadow-primary/20">
+                    {belbinRole === 'Cerebro' ? '🧠' : belbinRole === 'Impulsor' ? '⚡' : '🎓'}
+                </div>
+                <div className="text-center md:text-left flex-1">
+                    <h2 className="text-3xl font-black text-white mb-1">{user.name}</h2>
+                    <p className="text-primary-light font-bold uppercase tracking-widest text-sm mb-4">{belbinRole}</p>
+                    <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                        <div className="bg-black/20 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
+                            <Trophy className="w-4 h-4 text-gold" />
+                            <span className="text-white font-bold">{totalPoints.toLocaleString()} PTS Totales</span>
+                        </div>
+                        <div className="bg-black/20 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
+                            <Mail className="w-4 h-4 text-slate-500" />
+                            <span className="text-slate-400 text-sm">{user.email}</span>
+                        </div>
+                    </div>
+                </div>
+                <button
+                    onClick={() => navigate('/perfil')}
+                    className="bg-white/5 hover:bg-white/10 text-white font-bold px-6 py-3 rounded-xl border border-white/10 transition-all flex items-center gap-2"
+                >
+                    <Settings className="w-4 h-4" />
+                    Configurar Perfil
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/20 rounded-3xl p-8">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-indigo-400" />
+                        Tu Perfil Belbin
+                    </h3>
+                    <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                        Tu rol dominante es <strong>{belbinRole}</strong>. Esto significa que aportas valor al equipo mediante tu capacidad de {belbinRole === 'Cerebro' ? 'generar ideas creativas y resolver problemas complejos.' : 'impulsar la acción y superar obstáculos con determinación.'}
+                    </p>
+                    <Link to="/test-belbin" className="text-indigo-400 hover:text-indigo-300 font-bold text-sm">Repetir Test →</Link>
+                </div>
+
+                <div className="bg-gradient-to-br from-gold/10 to-transparent border border-gold/20 rounded-3xl p-8">
+                    <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                        <Coins className="w-5 h-5 text-gold" />
+                        Beneficios Diarios
+                    </h3>
+                    <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                        Recuerda que cada día, al realizar tu primer quiz, recibirás un bono de <strong>20 puntos extra</strong> solo por participar. ¡Mantente activo!
+                    </p>
+                    <div className="text-[10px] text-gold font-black uppercase tracking-widest bg-gold/10 px-3 py-1 rounded-full inline-block">Bono Disponible hoy</div>
+                </div>
+            </div>
+        </div>
+    )
+}
 

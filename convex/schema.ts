@@ -18,6 +18,7 @@ export default defineSchema({
         role: v.optional(v.string()),  // "student" | "teacher" | "admin"
         is_verified: v.optional(v.boolean()),
         student_id: v.optional(v.string()), // RUT o Matrícula
+        last_daily_bonus_at: v.optional(v.number()), // Timestamp del último bono diario
         belbin_profile: v.optional(v.object({
             role_dominant: v.string(),
             category: v.string(),
@@ -30,7 +31,8 @@ export default defineSchema({
                 Finalizador: v.optional(v.number()),
                 Coordinador: v.optional(v.number()),
                 Investigador: v.optional(v.number()),
-                Cohesionador: v.optional(v.number())
+                Cohesionador: v.optional(v.number()),
+                Monitor: v.optional(v.number())
             }),
         })),
     })

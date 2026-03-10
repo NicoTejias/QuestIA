@@ -355,6 +355,20 @@ export const submitQuiz = mutation({
             throw new Error(`Has alcanzado el límite de ${maxAttempts} intentos permitido para este quiz.`);
         }
 
+        // --- Lógica de Bono Diario ---
+        const now = Date.now();
+        const lastBonus = user.last_daily_bonus_at || 0;
+
+        const lastDate = new Date(lastBonus).toLocaleDateString('es-CL');
+        const currentDate = new Date(now).toLocaleDateString('es-CL');
+
+        let dailyBonus = 0;
+        if (lastDate !== currentDate) {
+            dailyBonus = 20; // Bono de 20 puntos por primer quiz del día
+            await ctx.db.patch(user._id, { last_daily_bonus_at: now });
+        }
+        // -----------------------------
+
         // Cálculo de puntos base según dificultad y número de preguntas.
         const basePoints = (quiz.num_questions || 5) * (quiz.difficulty === 'dificil' ? 20 : quiz.difficulty === 'medio' ? 15 : 10);
         const currentEarnedPoints = Math.round((args.score / 100) * basePoints);
@@ -365,7 +379,8 @@ export const submitQuiz = mutation({
             : 0;
 
         // Solo otorgamos la diferencia si el nuevo intento es mejor
-        const pointsToAward = Math.max(0, currentEarnedPoints - bestPreviousPoints);
+        // El bono diario se suma siempre si aplica, independiente de si el score mejora
+        const pointsToAward = Math.max(0, currentEarnedPoints - bestPreviousPoints) + dailyBonus;
 
         // Buscar inscripcion
         const enrollment = await ctx.db
@@ -398,10 +413,30 @@ export const submitQuiz = mutation({
             return {
                 success: true,
                 earned: pointsToAward,
-                is_improvement: true,
+                is_improvement: pointsToAward > dailyBonus,
                 total_earned_now: currentEarnedPoints,
-                new_ranking: newRankingPoints,
-                new_spendable: newSpendablePoints
+                new_rank: newRankingPoints,
+                new_spendable: newSpendablePoints,
+                daily_bonus_applied: dailyBonus > 0
+            };
+        }
+
+        // Si no hubo mejora pero sí hubo bono diario, igual actualizamos los puntos
+        if (dailyBonus > 0) {
+            const newPoints = (enrollment.ranking_points ?? 0) + dailyBonus;
+            const newSpendable = (enrollment.spendable_points ?? 0) + dailyBonus;
+            await ctx.db.patch(enrollment._id, {
+                ranking_points: newPoints,
+                spendable_points: newSpendable,
+                total_points: (enrollment.total_points ?? 0) + dailyBonus,
+            });
+            return {
+                success: true,
+                earned: dailyBonus,
+                is_improvement: false,
+                daily_bonus_applied: true,
+                new_rank: newPoints,
+                new_spendable: newSpendable
             };
         }
 

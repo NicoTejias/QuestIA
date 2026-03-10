@@ -4,7 +4,7 @@ import { api } from "../../../convex/_generated/api"
 import {
     ChevronRight, BookOpen, FileText, Gift,
     Trash2, Target, Flame, Sparkles, Loader2,
-    Users, Trophy, Coins, CheckCircle, Edit3, X, Search
+    Users, Trophy, Coins, CheckCircle, Edit3, X, Search, Star
 } from 'lucide-react'
 import { formatRutWithDV } from "../../utils/rutUtils"
 import { toast } from 'sonner'
@@ -212,8 +212,13 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                             {expandedQuiz === q._id && (
                                                 <div className="mt-3 pt-3 border-t border-white/5 text-sm space-y-4">
                                                     <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                                        <span>Tipo: <strong className="text-white capitalize">{q.quiz_type || 'multiple_choice'}</strong></span>
-                                                        <span>Dificultad: <strong className="text-white capitalize">{q.difficulty}</strong></span>
+                                                        <div className="flex gap-4">
+                                                            <span>Tipo: <strong className="text-white capitalize">{q.quiz_type || 'multiple_choice'}</strong></span>
+                                                            <span>Dificultad: <strong className="text-white capitalize">{q.difficulty}</strong></span>
+                                                        </div>
+                                                        <span className="text-gold font-bold bg-gold/10 px-2 py-0.5 rounded border border-gold/20 flex items-center gap-1">
+                                                            <Star className="w-3 h-3 fill-gold" /> HASTA {(q.num_questions || 5) * (q.difficulty === 'dificil' ? 20 : q.difficulty === 'medio' ? 15 : 10)} PTS
+                                                        </span>
                                                     </div>
                                                     <div className="flex gap-2 mb-4">
                                                         <button

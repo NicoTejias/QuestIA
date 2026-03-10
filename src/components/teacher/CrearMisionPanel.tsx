@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useAction } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { Target, Loader2, CheckCircle, Flame, Sparkles, AlertTriangle, BookOpen } from 'lucide-react'
+import { Target, Loader2, CheckCircle, Flame, Sparkles, AlertTriangle, BookOpen, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import { getFileIcon, formatFileSize } from '../../utils/documentParser'
 
@@ -252,6 +252,27 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                                             ? 'Los alumnos podrán repetir el quiz infinitas veces.'
                                             : `Los alumnos solo podrán realizar este quiz ${maxAttempts} ${maxAttempts === 1 ? 'vez' : 'veces'}.`}
                                     </p>
+                                </div>
+
+                                {/* Resumen de Puntos Proyectados */}
+                                <div className="bg-black/20 border border-gold/20 rounded-xl p-4 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-gold/10 rounded-lg flex items-center justify-center text-gold">
+                                            <Star className="w-5 h-5 fill-gold" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Recompensa Estimada</p>
+                                            <p className="text-white font-bold">
+                                                {difficulty === 'dificil' ? 20 : difficulty === 'medio' ? 15 : 10} pts <span className="text-slate-500 font-normal text-xs">por cada respuesta correcta</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total Máximo</p>
+                                        <p className="text-gold font-black text-xl">
+                                            {numQuestions * (difficulty === 'dificil' ? 20 : difficulty === 'medio' ? 15 : 10)} PTS
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <button

@@ -113,3 +113,23 @@ export const autoEnroll = mutation({
         return { enrolled };
     },
 });
+
+export const updateProfile = mutation({
+    args: {
+        name: v.optional(v.string()),
+        student_id: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const user = await requireAuth(ctx);
+        const patch: any = {};
+        if (args.name !== undefined) patch.name = args.name;
+        if (args.student_id !== undefined) patch.student_id = args.student_id;
+
+        if (Object.keys(patch).length > 0) {
+            await ctx.db.patch(user._id, patch);
+        }
+        return { success: true };
+    },
+});
+
+

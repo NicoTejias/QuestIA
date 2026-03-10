@@ -3,7 +3,7 @@ import { useQuery } from "convex/react"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { useNavigate } from 'react-router-dom'
 import { api } from "../../convex/_generated/api"
-import { BookOpen, Target, Trophy, Gift, Users, BarChart3, LogOut, Menu, X, Settings, FileSpreadsheet, ArrowRightLeft, Sparkles, Loader2, FileText } from 'lucide-react'
+import { BookOpen, Target, Trophy, Gift, Users, BarChart3, LogOut, Menu, X, Settings, FileSpreadsheet, ArrowRightLeft, Sparkles, Loader2, FileText, User, Mail } from 'lucide-react'
 import RamosPanel from '../components/teacher/RamosPanel'
 import CrearMisionPanel from '../components/teacher/CrearMisionPanel'
 import CrearRecompensaPanel from '../components/teacher/CrearRecompensaPanel'
@@ -55,6 +55,7 @@ export default function TeacherDashboard() {
         { id: 'whitelist', label: 'Whitelist (CSV)', icon: <FileSpreadsheet className="w-5 h-5" /> },
         { id: 'traspasos', label: 'Gestión de Traspasos', icon: <ArrowRightLeft className="w-5 h-5" /> },
         { id: 'analiticas', label: 'Analíticas', icon: <BarChart3 className="w-5 h-5" /> },
+        { id: 'perfil', label: 'Mi Perfil', icon: <User className="w-5 h-5" /> },
     ]
 
     if (!user) {
@@ -171,6 +172,7 @@ export default function TeacherDashboard() {
                     {activeTab === 'traspasos' && <TraspasosPanel />}
                     {activeTab === 'ranking' && <RankingDocentePanel />}
                     {activeTab === 'analiticas' && <AnaliticasPanel />}
+                    {activeTab === 'perfil' && <PerfilPanel user={user} coursesCount={coursesCount} />}
                 </div>
             </main>
         </div>
@@ -271,4 +273,49 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
 // Extracted: MaterialPanel
 
 // Extracted: TraspasosPanel
+
+
+function PerfilPanel({ user, coursesCount }: { user: any, coursesCount: number }) {
+    const navigate = useNavigate()
+    return (
+        <div className="max-w-4xl mx-auto py-10 space-y-8">
+            <div className="bg-surface-light border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8">
+                <div className="w-32 h-32 bg-gradient-to-br from-accent to-primary rounded-[2.5rem] flex items-center justify-center text-4xl shadow-2xl shadow-accent/20">
+                    👩‍🏫
+                </div>
+                <div className="text-center md:text-left flex-1">
+                    <h2 className="text-3xl font-black text-white mb-1">{user.name}</h2>
+                    <p className="text-accent-light font-bold uppercase tracking-widest text-sm mb-4">Docente del Sistema</p>
+                    <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                        <div className="bg-black/20 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-accent" />
+                            <span className="text-white font-bold">{coursesCount} Ramos Activos</span>
+                        </div>
+                        <div className="bg-black/20 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
+                            <Mail className="w-4 h-4 text-slate-500" />
+                            <span className="text-slate-400 text-sm">{user.email}</span>
+                        </div>
+                    </div>
+                </div>
+                <button
+                    onClick={() => navigate('/perfil')}
+                    className="bg-white/5 hover:bg-white/10 text-white font-bold px-6 py-3 rounded-xl border border-white/10 transition-all flex items-center gap-2"
+                >
+                    <Settings className="w-4 h-4" />
+                    Configurar Perfil
+                </button>
+            </div>
+
+            <div className="bg-accent/5 border border-accent/20 rounded-3xl p-8">
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-accent" />
+                    Panel de Administración
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                    Como docente, tienes acceso a herramientas avanzadas para la creación de misiones, gestión de recompensas y análisis de desempeño de tus alumnos mediante IA.
+                </p>
+            </div>
+        </div>
+    )
+}
 
