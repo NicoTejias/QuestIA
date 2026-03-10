@@ -123,13 +123,80 @@ export const updateProfile = mutation({
         const user = await requireAuth(ctx);
         const patch: any = {};
         if (args.name !== undefined) patch.name = args.name;
-        if (args.student_id !== undefined) patch.student_id = args.student_id;
+
+        if (args.student_id !== undefined) {
+            // Normalizar si es alumno
+            patch.student_id = (user.role === "student")
+                ? normalizeRut(args.student_id)
+                : args.student_id;
+        }
 
         if (Object.keys(patch).length > 0) {
             await ctx.db.patch(user._id, patch);
         }
         return { success: true };
     },
+});
+
+// Mutación de utilidad para corregir IDs no normalizados y sincronizar inscripciones
+export const fixAllStudentIds = mutation({
+    args: {},
+    handler: async (ctx) => {
+        // Obtenemos todos los usuarios y whitelists
+        const users = await ctx.db.query("users").collect();
+        const whitelists = await ctx.db.query("whitelists").collect();
+
+        let fixed = 0;
+        let enrolled = 0;
+
+        for (const u of users) {
+            // Solo normalizamos e inscribimos si es alumno y tiene ID
+            if (u.role === "student" && u.student_id) {
+                let currentId = u.student_id;
+                const normalized = normalizeRut(u.student_id);
+
+                // 1. Corregir formato del ID
+                if (normalized && normalized !== u.student_id) {
+                    await ctx.db.patch(u._id, { student_id: normalized });
+                    currentId = normalized;
+                    fixed++;
+                }
+
+                // 2. Sincronizar con Whitelist
+                const cleanId = currentId.replace(/[^\dkK]/g, '').toUpperCase();
+
+                for (const w of whitelists) {
+                    const wNormalized = w.student_identifier ? normalizeRut(w.student_identifier) : null;
+                    const wClean = w.student_identifier ? w.student_identifier.replace(/[^\dkK]/g, '').toUpperCase() : "";
+
+                    if (
+                        (wNormalized && wNormalized === currentId) ||
+                        (wClean && wClean === cleanId) ||
+                        (w.student_identifier === currentId)
+                    ) {
+                        // Coinciden los IDs. Verificar si ya existe inscripción (enrollment)
+                        const existing = await ctx.db
+                            .query("enrollments")
+                            .withIndex("by_user", (q) => q.eq("user_id", u._id))
+                            .filter((q) => q.eq(q.field("course_id"), w.course_id))
+                            .unique();
+
+                        if (!existing) {
+                            await ctx.db.insert("enrollments", {
+                                user_id: u._id,
+                                course_id: w.course_id,
+                                ranking_points: 0,
+                                spendable_points: 0,
+                                total_points: 0,
+                            });
+                            enrolled++;
+                        }
+                    }
+                }
+            }
+        }
+        return { fixed, enrolled };
+    }
 });
 
 

@@ -3,7 +3,7 @@ import { useQuery, useMutation, usePaginatedQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import {
     ChevronRight, BookOpen, FileText, Gift,
-    Trash2, Target, Flame, Sparkles, Loader2,
+    Trash2, Target, Flame, Sparkles, Loader2, RefreshCw,
     Users, Trophy, Coins, CheckCircle, Edit3, X, Search, Star
 } from 'lucide-react'
 import { formatRutWithDV } from "../../utils/rutUtils"
@@ -12,6 +12,7 @@ import ConfirmModal from '../ConfirmModal'
 import { EditMissionModal, EditRewardModal } from './EditModals'
 
 export default function CourseDetail({ course, onBack }: { course: any, onBack: () => void }) {
+    const fixAllIds = useMutation(api.users.fixAllStudentIds)
     const documents = useQuery(api.documents.getDocumentsByCourse, { course_id: course._id })
     const { results: rewards } = usePaginatedQuery(
         api.rewards.getRewardsByCourse,
@@ -268,15 +269,36 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                 <span>Alumnos</span>
                                 <span className="text-xs bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full">{students?.length || 0}</span>
                             </h3>
-                            <button
-                                onClick={() => setConfirmDelete({ type: 'cleanup', id: course._id })}
-                                disabled={processing && confirmDelete?.type === 'cleanup'}
-                                className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-lg border border-white/5 transition-all flex items-center gap-1.5 font-medium uppercase tracking-wider text-[10px]"
-                                title="Limpiar lista"
-                            >
-                                {processing && confirmDelete?.type === 'cleanup' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                                Limpiar
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={async () => {
+                                        setProcessing(true);
+                                        try {
+                                            const res = await fixAllIds();
+                                            toast.success(`Sincronización completa: ${res.fixed} corregidos, ${res.enrolled} matriculados automáticamente.`);
+                                        } catch (e: any) {
+                                            toast.error("Error al sincronizar");
+                                        } finally {
+                                            setProcessing(false);
+                                        }
+                                    }}
+                                    disabled={processing}
+                                    className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-lg border border-white/5 transition-all flex items-center gap-1.5 font-medium uppercase tracking-wider text-[10px]"
+                                    title="Normalizar IDs de alumnos registrados"
+                                >
+                                    {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                    Sincronizar
+                                </button>
+                                <button
+                                    onClick={() => setConfirmDelete({ type: 'cleanup', id: course._id })}
+                                    disabled={processing && confirmDelete?.type === 'cleanup'}
+                                    className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-lg border border-white/5 transition-all flex items-center gap-1.5 font-medium uppercase tracking-wider text-[10px]"
+                                    title="Limpiar lista"
+                                >
+                                    {processing && confirmDelete?.type === 'cleanup' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                    Limpiar
+                                </button>
+                            </div>
                         </div>
                         <div className="relative group">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />

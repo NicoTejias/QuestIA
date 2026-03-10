@@ -212,12 +212,35 @@ export const getCourseStudents = query({
 
             // Paso A: Buscar usuarios que tengan estos IDs
             const users = await Promise.all(
-                identifiers.map(id =>
-                    ctx.db
+                identifiers.map(async (id) => {
+                    const normalized = normalizeRut(id);
+                    if (!normalized) return null;
+
+                    // 1. Intentar búsqueda por ID normalizado
+                    const userByNormalized = await ctx.db
                         .query("users")
-                        .withIndex("by_student_id", q => q.eq("student_id", id))
-                        .unique()
-                )
+                        .withIndex("by_student_id", q => q.eq("student_id", normalized))
+                        .unique();
+
+                    if (userByNormalized) return userByNormalized;
+
+                    // 2. Intentar por ID limpio (sin puntos ni guion)
+                    const clean = normalized.replace(/[^\dkK]/g, '').toUpperCase();
+                    const userByClean = await ctx.db
+                        .query("users")
+                        .withIndex("by_student_id", q => q.eq("student_id", clean))
+                        .unique();
+
+                    if (userByClean) return userByClean;
+
+                    // 3. Si el ID original era limpio, intentar normalizarlo
+                    const userByRaw = await ctx.db
+                        .query("users")
+                        .withIndex("by_student_id", q => q.eq("student_id", id.toUpperCase()))
+                        .unique();
+
+                    return userByRaw;
+                })
             );
 
             const idToUserMap = new Map();
