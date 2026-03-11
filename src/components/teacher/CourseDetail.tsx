@@ -24,7 +24,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
     const { results: students, status: studentsStatus, loadMore: loadMoreStudents } = usePaginatedQuery(
         api.courses.getCourseStudents,
         { course_id: course._id },
-        { initialNumItems: 20 }
+        { initialNumItems: 500 }
     )
 
     const [expandedMission, setExpandedMission] = useState<string | null>(null)
@@ -416,22 +416,6 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                             </div>
                                         ))}
                                     </div>
-
-                                    {studentsStatus === "CanLoadMore" && (
-                                        <div className="py-2 mt-4">
-                                            <button
-                                                onClick={() => loadMoreStudents(50)}
-                                                className="w-full py-4 bg-surface-light hover:bg-white/5 text-slate-400 text-xs font-black uppercase tracking-[0.2em] rounded-2xl transition-all border border-white/5 hover:border-white/10"
-                                            >
-                                                Cargar más alumnos globalmente
-                                            </button>
-                                        </div>
-                                    )}
-                                    {studentsStatus === "LoadingMore" && (
-                                        <div className="py-4 text-center mt-4">
-                                            <Loader2 className="w-6 h-6 animate-spin text-slate-500 mx-auto" />
-                                        </div>
-                                    )}
                                 </>
                             );
                         })()
