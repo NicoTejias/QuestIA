@@ -489,15 +489,16 @@ function CourseDetailView({ courseId, onBack, onPlayQuiz }: { courseId: any, onB
                                         <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary-light">
                                             <Flame className="w-6 h-6" />
                                         </div>
-                                        <div>
+                                        <div className="flex flex-col">
                                             <h4 className="font-bold text-white group-hover:text-primary-light transition-colors">{m.title}</h4>
-                                            <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{m.description}</p>
+                                            <p className="text-xs text-slate-500 mt-0.5 line-clamp-1 max-w-[200px]">{m.description}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="flex items-center gap-1 text-gold font-black">
-                                            <Star className="w-4 h-4 fill-gold" />
-                                            <span>+{m.points}</span>
+                                    <div className="flex flex-col items-end gap-1">
+                                        <span className="text-[9px] uppercase font-black tracking-widest text-slate-500">Recompensa</span>
+                                        <div className="flex items-center gap-1 text-gold font-black bg-gold/10 px-2.5 py-1 rounded-lg border border-gold/20 shadow-sm">
+                                            <Star className="w-3.5 h-3.5 fill-gold" />
+                                            <span className="text-xs">+{m.points} PTS</span>
                                         </div>
                                     </div>
                                 </div>

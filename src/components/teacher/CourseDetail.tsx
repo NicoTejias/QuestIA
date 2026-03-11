@@ -162,28 +162,34 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                     {missions.map((m: any) => (
                                         <li key={m._id} className="bg-white/5 border border-white/5 p-3 rounded-xl hover:bg-white/10 transition-all cursor-pointer" onClick={() => setExpandedMission(expandedMission === m._id ? null : m._id)}>
                                             <div className="flex items-center justify-between">
-                                                <span className="font-medium text-white text-sm truncate pr-2">{m.title}</span>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-primary-light font-mono text-xs shrink-0 bg-primary/10 px-2 py-0.5 rounded-md mr-1">{m.points} pts</span>
+                                                <div className="flex flex-col truncate pr-2">
+                                                    <span className="font-bold text-white text-sm truncate">{m.title}</span>
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        <span className="text-[10px] font-black text-gold bg-gold/10 border border-gold/20 px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
+                                                            <Star className="w-3 h-3 fill-gold" /> {m.points} PTS
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 shrink-0">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setEditingMission(m) }}
-                                                        className="p-1.5 text-slate-500 hover:text-white hover:bg-white/10 rounded-md"
+                                                        className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors border border-transparent hover:border-white/10"
                                                         title="Editar"
                                                     >
-                                                        <Edit3 className="w-3.5 h-3.5" />
+                                                        <Edit3 className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'mission', id: m._id }) }}
                                                         title="Eliminar"
-                                                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-md"
+                                                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
                                                     >
-                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                        <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             </div>
                                             {expandedMission === m._id && (
-                                                <div className="mt-3 pt-3 border-t border-white/5 text-sm text-slate-300">
-                                                    <p>{m.description}</p>
+                                                <div className="mt-4 pt-3 border-t border-white/5 text-sm text-slate-400">
+                                                    <p className="leading-relaxed">{m.description}</p>
                                                 </div>
                                             )}
                                         </li>
@@ -331,68 +337,70 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                     {/* Cajas por Sección */}
                     {students === undefined ? <Loader2 className="w-5 h-5 animate-spin text-slate-500" /> : students.length === 0 ? <p className="text-slate-500 text-sm">No hay alumnos cargados</p> : (
                         <>
-                            {Object.entries(
-                                students.filter((s: any) =>
-                                    (s.name || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
-                                    (s.identifier || s.student_id || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
-                                    (s.section || '').toLowerCase().includes(studentSearch.toLowerCase())
-                                ).reduce((acc: any, student: any) => {
-                                    const sec = student.section || 'Sin Sección Asignada';
-                                    if (!acc[sec]) acc[sec] = [];
-                                    acc[sec].push(student);
-                                    return acc;
-                                }, {})
-                            ).sort((a: any, b: any) => a[0].localeCompare(b[0])).map(([sectionName, sectionStudents]: [string, any]) => (
-                                <div key={sectionName} className="bg-surface-light border border-white/5 rounded-2xl p-6 hover:border-blue-500/20 transition-all">
-                                    <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                        <span>{sectionName === 'Sin Sección Asignada' ? sectionName : `Alumnos ${sectionName.toLowerCase().includes('secci') ? '' : 'Sección '}${sectionName}`}</span>
-                                        <span className="text-xs bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full shrink-0">{sectionStudents.length}</span>
-                                    </h3>
-                                    <ul className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {sectionStudents.map((s: any) => (
-                                            <li key={s._id} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center justify-between group hover:bg-white/10 transition-all">
-                                                <div className="flex items-center gap-3 truncate">
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 ${s.status === 'registered' ? 'bg-accent/20 text-accent-light' : 'bg-slate-700/50 text-slate-400'}`}>
-                                                        {s.name ? s.name[0].toUpperCase() : (s.identifier || s.student_id || '?')[0].toUpperCase()}
-                                                    </div>
-                                                    <div className="flex flex-col truncate">
-                                                        <span className="text-white font-medium truncate uppercase">
-                                                            {s.name || (s.identifier ? formatRutWithDV(s.identifier.replace(/[^\d]/g, '')) : (s.student_id ? (s.student_id.includes('-') ? s.student_id : formatRutWithDV(s.student_id.replace(/[^\d]/g, ''))) : 'Alumno'))}
-                                                        </span>
-                                                        <div className="flex gap-4 mt-1">
-                                                            <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1 uppercase tracking-wider">
-                                                                <Trophy className="w-3 h-3 text-gold" /> Ranking: {s.ranking_points || 0}
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+                                {Object.entries(
+                                    students.filter((s: any) =>
+                                        (s.name || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+                                        (s.identifier || s.student_id || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+                                        (s.section || '').toLowerCase().includes(studentSearch.toLowerCase())
+                                    ).reduce((acc: any, student: any) => {
+                                        const sec = student.section || 'Sin Sección Asignada';
+                                        if (!acc[sec]) acc[sec] = [];
+                                        acc[sec].push(student);
+                                        return acc;
+                                    }, {})
+                                ).sort((a: any, b: any) => a[0].localeCompare(b[0])).map(([sectionName, sectionStudents]: [string, any]) => (
+                                    <div key={sectionName} className="bg-surface-light border border-white/5 rounded-2xl p-6 hover:border-blue-500/20 transition-all flex flex-col h-full max-h-[500px]">
+                                        <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6 shrink-0">
+                                            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
+                                            <span>{sectionName === 'Sin Sección Asignada' ? sectionName : `Alumnos ${sectionName.toLowerCase().includes('secci') ? '' : 'Sección '}${sectionName}`}</span>
+                                            <span className="text-xs bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full shrink-0 ml-auto">{sectionStudents.length}</span>
+                                        </h3>
+                                        <ul className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
+                                            {sectionStudents.map((s: any) => (
+                                                <li key={s._id} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center justify-between group hover:bg-white/10 transition-all cursor-default">
+                                                    <div className="flex items-center gap-3 truncate">
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 shadow-lg ${s.status === 'registered' ? 'bg-gradient-to-br from-accent to-accent-light text-white' : 'bg-slate-700/50 text-slate-400'}`}>
+                                                            {s.name ? s.name[0].toUpperCase() : (s.identifier || s.student_id || '?')[0].toUpperCase()}
+                                                        </div>
+                                                        <div className="flex flex-col truncate">
+                                                            <span className="text-white text-sm font-semibold truncate uppercase">
+                                                                {s.name || (s.identifier ? formatRutWithDV(s.identifier.replace(/[^\d]/g, '')) : (s.student_id ? (s.student_id.includes('-') ? s.student_id : formatRutWithDV(s.student_id.replace(/[^\d]/g, ''))) : 'Alumno'))}
                                                             </span>
-                                                            <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1 uppercase tracking-wider">
-                                                                <Coins className="w-3 h-3 text-gold/60" /> Canjeable: {s.spendable_points || 0}
+                                                            <div className="flex gap-4 mt-1">
+                                                                <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1 uppercase tracking-wider">
+                                                                    <Trophy className="w-3 h-3 text-gold" />: {s.ranking_points || 0}
+                                                                </span>
+                                                                <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1 uppercase tracking-wider">
+                                                                    <Coins className="w-3 h-3 text-gold/60" />: {s.spendable_points || 0}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-1.5 shrink-0 ml-4">
+                                                        <div className="flex items-center gap-2">
+                                                            {s.status === 'registered' ? (
+                                                                <span className="flex items-center gap-1 text-[9px] font-bold text-green-400 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                                    <CheckCircle className="w-2.5 h-2.5" /> Ok
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[9px] font-bold text-orange-400 bg-orange-400/10 border border-orange-400/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                                    Falta Registro
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider truncate max-w-[80px]">
+                                                                {s.belbin}
                                                             </span>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className="flex flex-col items-end gap-1.5 shrink-0 ml-4">
-                                                    <div className="flex items-center gap-2">
-                                                        {s.status === 'registered' ? (
-                                                            <span className="flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                                                <CheckCircle className="w-3 h-3" /> Registrado
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-[10px] font-bold text-orange-400 bg-orange-400/10 border border-orange-400/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                                                Pendiente
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                                                            {s.belbin}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))}
+                            </div>
 
                             {studentsStatus === "CanLoadMore" && (
                                 <div className="py-2">
