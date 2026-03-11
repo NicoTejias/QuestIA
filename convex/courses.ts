@@ -299,6 +299,7 @@ export const getCourseStudents = query({
                         belbin: userDoc.belbin_profile?.role_dominant || "Sin determinar",
                         section: enDoc.section || item.section || undefined,
                         daily_streak: userDoc.daily_streak || 0,
+                        ice_cubes: userDoc.ice_cubes || 0,
                         status: "registered"
                     };
                 } else {

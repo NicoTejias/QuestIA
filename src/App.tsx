@@ -94,22 +94,12 @@ function DashboardRedirect() {
   return <Navigate to={target} replace />
 }
 
-function BetaBanner() {
-  return (
-    <div className="fixed bottom-4 left-4 z-[9999] bg-accent/20 border border-accent/30 text-accent-light px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold font-mono shadow-lg shadow-accent/20 backdrop-blur-md flex items-center gap-2 pointer-events-none">
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
-      </span>
-      BETA VERSION
-    </div>
-  )
-}
+
 
 function App() {
   return (
     <>
-      <BetaBanner />
+
       <Routes>
         <Route path="/" element={<LandingPage />} />
 

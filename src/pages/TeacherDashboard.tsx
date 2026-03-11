@@ -14,6 +14,7 @@ import RankingDocentePanel from '../components/teacher/RankingDocentePanel'
 import TraspasosPanel from '../components/teacher/TraspasosPanel'
 import GruposPanel from '../components/teacher/GruposPanel'
 import NotificationBell from '../components/NotificationBell'
+import BetaBanner from '../components/BetaBanner'
 
 function getGreeting(): string {
     const h = new Date().getHours()
@@ -141,6 +142,7 @@ export default function TeacherDashboard() {
                         <h1 className="text-xl font-bold text-white">{tabs.find(t => t.id === activeTab)?.label}</h1>
                     </div>
                     <div className="flex items-center gap-4">
+                        <BetaBanner className="hidden sm:flex" />
                         <NotificationBell />
                     </div>
                 </header>

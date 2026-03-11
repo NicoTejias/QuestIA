@@ -83,12 +83,22 @@ export const redeemReward = mutation({
         });
 
         // Registrar canje
+        const isIceCube = reward.name.toLowerCase().includes("congelar la racha");
+        
         await ctx.db.insert("redemptions", {
             user_id: user._id,
             reward_id: reward._id,
-            status: "pending",
+            status: isIceCube ? "completed" : "pending",
             timestamp: Date.now(),
         });
+
+        // Si es un congelador de racha, lo aplicamos directamente al inventario del usuario
+        if (isIceCube) {
+            const currentCubes = user.ice_cubes || 0;
+            await ctx.db.patch(user._id, {
+                ice_cubes: currentCubes + 1
+            });
+        }
 
         return { success: true };
     },

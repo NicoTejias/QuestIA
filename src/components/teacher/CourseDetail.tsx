@@ -354,9 +354,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
 
                             const numSections = sectionsEntries.length;
                             const gridClass = numSections === 1 ? 'grid-cols-1 xl:w-1/2' :
-                                              numSections === 2 ? 'grid-cols-1 xl:grid-cols-2' :
-                                              numSections === 4 ? 'grid-cols-1 xl:grid-cols-2' :
-                                              'grid-cols-1 xl:grid-cols-3';
+                                              'grid-cols-1 xl:grid-cols-2';
 
                             return (
                                 <>
@@ -381,6 +379,11 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                                                         <span className={`text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold shadow-sm ${s.daily_streak > 0 ? 'text-orange-400 bg-orange-400/10 border border-orange-400/20' : 'text-slate-500 bg-white/5 border border-white/10'}`} title={`Racha de ${s.daily_streak || 0} días`}>
                                                                             <Flame className={`w-3 h-3 ${s.daily_streak > 0 ? 'fill-orange-500' : 'text-slate-500'}`} /> {s.daily_streak || 0}
                                                                         </span>
+                                                                        {s.ice_cubes > 0 && (
+                                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold shadow-sm text-cyan-400 bg-cyan-400/10 border border-cyan-400/20" title={`${s.ice_cubes} Congeladores disponibles`}>
+                                                                                <div className="w-2.5 h-2.5 bg-cyan-400 rounded-sm rotate-45 shadow-[0_0_5px_rgba(34,211,238,0.5)]"></div> {s.ice_cubes}
+                                                                            </span>
+                                                                        )}
                                                                     </span>
                                                                     <div className="flex gap-4 mt-1">
                                                                         <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1 uppercase tracking-wider">

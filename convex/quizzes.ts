@@ -359,6 +359,7 @@ export const submitQuiz = mutation({
         const now = Date.now();
         const lastBonus = user.last_daily_bonus_at || 0;
         const currentStreak = user.daily_streak || 0;
+        const currentIceCubes = user.ice_cubes || 0;
 
         // Validar rachas usando la zona horaria chilena
         const todayDateStr = new Date(now).toLocaleDateString('es-CL', { timeZone: 'America/Santiago' });
@@ -367,14 +368,21 @@ export const submitQuiz = mutation({
 
         let dailyBonus = 0;
         let newStreak = currentStreak;
+        let usedFreeze = false;
 
         if (lastBonusDateStr !== todayDateStr) {
-            if (lastBonusDateStr === yesterdayDateStr) {
-                // Continúa la racha
+            if (lastBonusDateStr === yesterdayDateStr || lastBonus === 0) {
+                // Continúa la racha o es la primera vez
                 newStreak += 1;
             } else {
-                // Empieza de nuevo
-                newStreak = 1;
+                // Se rompió la racha cronológicamente. 
+                // ¿Tiene hielos para salvarla?
+                if (currentIceCubes > 0) {
+                    newStreak += 1; // Mantenemos la racha
+                    usedFreeze = true;
+                } else {
+                    newStreak = 1; // Reinicia
+                }
             }
             
             // 5pts por día de racha, tope de 50pts máximos diarios
@@ -382,7 +390,8 @@ export const submitQuiz = mutation({
             
             await ctx.db.patch(user._id, { 
                 last_daily_bonus_at: now,
-                daily_streak: newStreak
+                daily_streak: newStreak,
+                ice_cubes: usedFreeze ? currentIceCubes - 1 : currentIceCubes
             });
         }
         // ----------------------------------------

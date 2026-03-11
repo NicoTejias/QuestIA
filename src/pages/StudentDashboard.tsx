@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import NotificationBell from '../components/NotificationBell'
+import BetaBanner from '../components/BetaBanner'
 
 // Utilidad para el saludo
 function getGreeting(): string {
@@ -130,6 +131,16 @@ export default function StudentDashboard() {
                             </div>
                             <span className="text-sm font-black text-orange-400">{user.daily_streak || 0} 🔥</span>
                         </div>
+
+                        {user?.ice_cubes !== undefined && user.ice_cubes > 0 && (
+                            <div className="mt-2 bg-cyan-500/10 rounded-xl p-2.5 border border-cyan-500/20 flex items-center justify-between shadow-sm animate-in zoom-in duration-300">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-cyan-400 rounded-sm rotate-45 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+                                    <span className="text-[10px] text-cyan-400 font-bold uppercase">Escudos Racha</span>
+                                </div>
+                                <span className="text-sm font-black text-cyan-400">x{user.ice_cubes}</span>
+                            </div>
+                        )}
                     </div>
 
                     <nav className="space-y-1">
@@ -191,6 +202,7 @@ export default function StudentDashboard() {
                     </div>
 
                     <div className="flex items-center gap-4">
+                        <BetaBanner className="hidden md:flex" />
                         <NotificationBell />
                         <div className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-2 border border-white/10">
                             <div className="flex flex-col items-end">

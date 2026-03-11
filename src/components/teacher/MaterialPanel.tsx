@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { FileText, Upload, Trash2, Loader2, X, CheckCircle, Eye, EyeOff, BookOpen } from 'lucide-react'
+import { FileText, Upload, Trash2, Loader2, X, CheckCircle, Eye, EyeOff, BookOpen, Database } from 'lucide-react'
 import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '../../utils/documentParser'
+import { useGooglePicker } from '../../hooks/useGooglePicker'
 
 export default function MaterialPanel({ courses }: { courses: any[] }) {
     const generateUploadUrl = useMutation(api.documents.generateUploadUrl)
@@ -10,6 +11,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
     const deleteDocument = useMutation(api.documents.deleteDocument)
     const documents = useQuery(api.documents.getMyDocuments)
     const fileRef = useRef<HTMLInputElement>(null)
+    const { openPicker, downloadFile, isLoaded } = useGooglePicker()
 
     const [selectedCourse, setSelectedCourse] = useState('')
     const [uploading, setUploading] = useState(false)
@@ -21,6 +23,45 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
 
     const ACCEPTED_TYPES = '.pdf,.docx,.pptx,.xlsx,.xls'
     const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20MB
+
+    const processAndUploadFile = async (file: File) => {
+        const fileType = getFileType(file.name)
+        if (!fileType) {
+            throw new Error(`Archivo no soportado: ${file.name}. Usa PDF, DOCX, PPTX o XLSX.`)
+        }
+
+        if (file.size > MAX_FILE_SIZE && file.size > 0) { // Google Drive native docs might have size 0 before export
+            throw new Error(`El archivo "${file.name}" excede el límite de 20MB.`)
+        }
+
+        // Paso 1: Extraer texto del documento
+        setUploadProgress(`📖 Leyendo "${file.name}"...`)
+        const contentText = await extractTextFromFile(file)
+
+        // Paso 2: Subir archivo a Convex Storage
+        setUploadProgress(`📤 Subiendo "${file.name}"...`)
+        const uploadUrl = await generateUploadUrl()
+        const result = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': file.type || 'application/octet-stream' },
+            body: file,
+        })
+        const responseJson = await result.json()
+        const storageId = responseJson.storageId
+
+        // Paso 3: Guardar metadata + contenido en la BD
+        setUploadProgress(`💾 Guardando "${file.name}"...`)
+        await saveDocument({
+            course_id: selectedCourse as any,
+            file_id: storageId,
+            file_name: file.name,
+            file_type: fileType,
+            file_size: file.size,
+            content_text: contentText,
+        })
+
+        return contentText.length
+    }
 
     const handleUpload = async (files: FileList | null) => {
         if (!files || files.length === 0) return
@@ -35,45 +76,10 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
         setSuccess('')
 
         for (const file of Array.from(files)) {
-            const fileType = getFileType(file.name)
-            if (!fileType) {
-                setError(`Archivo no soportado: ${file.name}. Usa PDF, DOCX, PPTX o XLSX.`)
-                continue
-            }
-
-            if (file.size > MAX_FILE_SIZE) {
-                setError(`El archivo "${file.name}" excede el límite de 20MB.`)
-                continue
-            }
-
             setUploading(true)
             try {
-                // Paso 1: Extraer texto del documento
-                setUploadProgress(`📖 Leyendo "${file.name}"...`)
-                const contentText = await extractTextFromFile(file)
-
-                // Paso 2: Subir archivo a Convex Storage
-                setUploadProgress(`📤 Subiendo "${file.name}"...`)
-                const uploadUrl = await generateUploadUrl()
-                const result = await fetch(uploadUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': file.type || 'application/octet-stream' },
-                    body: file,
-                })
-                const { storageId } = await result.json()
-
-                // Paso 3: Guardar metadata + contenido en la BD
-                setUploadProgress(`💾 Guardando "${file.name}"...`)
-                await saveDocument({
-                    course_id: selectedCourse as any,
-                    file_id: storageId,
-                    file_name: file.name,
-                    file_type: fileType,
-                    file_size: file.size,
-                    content_text: contentText,
-                })
-
-                setSuccess(`✅ "${file.name}" subido y procesado exitosamente. (${contentText.length.toLocaleString()} caracteres extraídos)`)
+                const charCount = await processAndUploadFile(file)
+                setSuccess(`✅ "${file.name}" subido y procesado exitosamente. (${charCount.toLocaleString()} caracteres extraídos)`)
             } catch (err: any) {
                 setError(`Error con "${file.name}": ${err.message}`)
             }
@@ -192,6 +198,51 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                         onChange={e => handleUpload(e.target.files)}
                         title="Subir archivos"
                     />
+
+                    <div className="flex justify-center pt-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (!selectedCourse) {
+                                    setError('Selecciona un ramo antes de importar de Drive.');
+                                    return;
+                                }
+                                openPicker(async (file, token) => {
+                                    try {
+                                        setUploading(true);
+                                        setUploadProgress(`📥 Descargando "${file.name}" desde Drive...`);
+                                        
+                                        const blob = await downloadFile(file.id, token);
+                                        const driveFile = new File([blob], file.name, { type: file.mimeType });
+                                        
+                                        // Reutilizar la lógica de upload enviando un FileList simulado o llamando a una lógica compartida
+                                        // Para simplicidad, invocamos el proceso directamente para este archivo
+                                        await processAndUploadFile(driveFile);
+                                        
+                                        setSuccess(`✅ "${file.name}" importado exitosamente desde Google Drive.`);
+                                    } catch (err: any) {
+                                        setError(`Error al importar de Drive: ${err.message}`);
+                                    } finally {
+                                        setUploading(false);
+                                        setUploadProgress('');
+                                    }
+                                });
+                            }}
+                            disabled={!isLoaded || uploading}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all
+                                ${!selectedCourse 
+                                    ? 'bg-white/5 text-white/20 cursor-not-allowed' 
+                                    : 'bg-[#4285F4]/20 text-[#4285F4] hover:bg-[#4285F4]/30 border border-[#4285F4]/50'}
+                            `}
+                        >
+                            {uploading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Database className="w-5 h-5" />
+                            )}
+                            Importar desde Google Drive
+                        </button>
+                    </div>
                 </div>
             </div>
 
