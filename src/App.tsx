@@ -28,25 +28,30 @@ function LoadingScreen() {
 
 // Componente que protege rutas que requieren autenticación
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode, requiredRole?: string }) {
-  const { isLoading, isAuthenticated } = useConvexAuth()
+  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
   const location = useLocation()
 
-  if (isLoading) return <LoadingScreen />
-  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />
-  
-  // Esperar a que el perfil se cargue para saber el rol
+  // 1. Si Convex aún está verificando el token, esperamos.
+  if (isAuthLoading) return <LoadingScreen />
+
+  // 2. Si definitivamente NO hay sesión, al Login.
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  // 3. Si hay sesión, pero el perfil aún no llega de la DB, esperamos (No expulsamos).
   if (user === undefined) return <LoadingScreen />
 
+  // 4. Si el perfil llegó como null (error raro de DB), al login.
+  if (user === null) return <Navigate to="/login" replace />
+
+  // 5. Verificación de Rol
   const userRole = (user as any)?.role || 'student';
 
-  // Si se requiere un rol específico, verificar
   if (requiredRole && userRole !== requiredRole) {
     const target = userRole === 'teacher' ? '/docente' : '/alumno'
-
-    if (location.pathname !== target) {
-      return <Navigate to={target} replace />
-    }
+    return <Navigate to={target} replace />
   }
 
   return <>{children}</>
@@ -74,14 +79,14 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 
 // Redirige al dashboard correcto según el rol del usuario
 function DashboardRedirect() {
-  const { isLoading, isAuthenticated } = useConvexAuth()
-  const user = useQuery(api.users.getProfile)
+  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
+  const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
 
-  if (isLoading) return <LoadingScreen />
-  if (!isAuthenticated) return <Navigate to="/login" replace />
-
-  if (user === undefined) return <LoadingScreen />
-  if (user === null) return <Navigate to="/login" replace />
+  if (isAuthLoading || user === undefined) return <LoadingScreen />
+  
+  if (!isAuthenticated || user === null) {
+    return <Navigate to="/login" replace />
+  }
 
   const userRole = (user as any)?.role || 'student';
   const target = userRole === 'teacher' ? '/docente' : '/alumno'
