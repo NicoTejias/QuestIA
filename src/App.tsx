@@ -83,17 +83,19 @@ function DashboardRedirect() {
   // 1. Esperar estado de auth
   if (isAuthLoading) return <LoadingScreen />
   
-  // 2. Si no hay sesión, fuera.
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  // 2. Si definitivamente no hay sesión, al login
+  if (!isAuthenticated) {
+    console.log("DashboardRedirect: No auth session");
+    return <Navigate to="/login" replace />
+  }
 
-  // 3. Si hay sesión, esperar perfil.
+  // 3. Si hay sesión, esperar perfil de DB
   if (user === undefined) return <LoadingScreen />
   
-  // 4. Si el perfil es null pero estamos autenticados, es un error de sincronización
-  // o el usuario se acaba de borrar. Reintentamos o mandamos a login.
+  // 4. Si autenticado pero perfil es null (error de DB)
   if (user === null) {
-      console.error("User is authenticated but profile is null");
-      return <Navigate to="/login" replace />
+      console.error("DashboardRedirect: Auth OK but Profile NULL");
+      return <Navigate to="/login?error=ProfileNotFound" replace />
   }
 
   const userRole = (user as any)?.role || 'student';
