@@ -1,5 +1,9 @@
-import { Link } from 'react-router-dom'
-import { Rocket, Trophy, Users, BookOpen, Shield, ChevronRight, Sparkles, Target, Gift, BarChart3 } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Rocket, Trophy, Users, BookOpen, Shield, ChevronRight, Sparkles, Target, Gift, BarChart3, LogOut } from 'lucide-react'
+import { useConvexAuth } from "convex/react"
+import { useAuthActions } from "@convex-dev/auth/react"
+import { useEffect } from 'react'
+import { toast } from 'sonner'
 
 const features = [
     {
@@ -35,6 +39,24 @@ const features = [
 ]
 
 export default function LandingPage() {
+    const { isAuthenticated, isLoading } = useConvexAuth()
+    const { signOut } = useAuthActions()
+    const location = useLocation()
+    const navigate = useNavigate()
+
+    // Manejar errores de Auth que vienen por URL
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const error = params.get("error");
+        if (error) {
+            navigate("/auth-error?error=" + encodeURIComponent(error));
+        }
+    }, [location, navigate]);
+
+    const handleLogout = async () => {
+        await signOut()
+        toast.info("Sesión cerrada. Puedes intentar con otra cuenta.")
+    }
     return (
         <div className="min-h-screen bg-surface">
             {/* Navbar */}
@@ -47,12 +69,23 @@ export default function LandingPage() {
                         <span className="text-xl font-bold text-white">GestiónDocente</span>
                     </div>
                     <div className="flex items-center gap-4">
-                        <Link to="/login" className="text-slate-400 hover:text-white transition-colors font-medium px-4 py-2">
-                            Iniciar Sesión
-                        </Link>
-                        <Link to="/registro" className="bg-primary hover:bg-primary-light text-white font-semibold px-6 py-2.5 rounded-xl transition-all hover:shadow-lg hover:shadow-primary/25 active:scale-95">
-                            Registrarse
-                        </Link>
+                        {!isLoading && isAuthenticated ? (
+                            <button 
+                                onClick={handleLogout}
+                                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-medium px-4 py-2"
+                            >
+                                <LogOut className="w-4 h-4" /> Cerrar Sesión
+                            </button>
+                        ) : (
+                            <>
+                                <Link to="/login" className="text-slate-400 hover:text-white transition-colors font-medium px-4 py-2">
+                                    Iniciar Sesión
+                                </Link>
+                                <Link to="/registro" className="bg-primary hover:bg-primary-light text-white font-semibold px-6 py-2.5 rounded-xl transition-all hover:shadow-lg hover:shadow-primary/25 active:scale-95">
+                                    Registrarse
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </div>
             </nav>

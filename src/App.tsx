@@ -12,6 +12,7 @@ import BelbinTest from './pages/BelbinTest'
 import RewardStorePage from './pages/RewardStorePage'
 import NotFoundPage from './pages/NotFoundPage'
 import ProfilePage from './pages/ProfilePage'
+import AuthErrorPage from './pages/AuthErrorPage'
 import { Toaster } from 'sonner'
 
 function LoadingScreen() {
@@ -150,6 +151,9 @@ function App() {
         <Route path="/dashboard" element={
           <DashboardRedirect />
         } />
+
+        {/* Ruta para manejar errores de autenticación */}
+        <Route path="/auth-error" element={<AuthErrorPage />} />
 
         {/* 404 Catch-all route */}
         <Route path="*" element={<NotFoundPage />} />
