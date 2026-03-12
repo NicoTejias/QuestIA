@@ -32,7 +32,7 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
   const location = useLocation()
 
-  // 1. Si Convex aún está verificando el token, esperamos.
+  // 1. Si Convex aún está verificando si hay sesión, esperamos.
   if (isAuthLoading) return <LoadingScreen />
 
   // 2. Si definitivamente NO hay sesión, al Login.
@@ -40,10 +40,11 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // 3. Si hay sesión, pero el perfil aún no llega de la DB, esperamos (No expulsamos).
+  // 3. Si hay sesión, esperamos a que el perfil llegue de la DB.
+  // (Solo esperamos si isAuthenticated es true, para evitar el Loading eterno)
   if (user === undefined) return <LoadingScreen />
 
-  // 4. Si el perfil llegó como null (error raro de DB), al login.
+  // 4. Si el perfil llegó como null, algo falló, al login.
   if (user === null) return <Navigate to="/login" replace />
 
   // 5. Verificación de Rol
@@ -57,21 +58,19 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
   return <>{children}</>
 }
 
-// Componente que redirige a usuarios ya autenticados
+// Componente que redirige a usuarios ya autenticados (Login/Registro)
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { isLoading, isAuthenticated } = useConvexAuth()
+  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
   const location = useLocation()
 
-  if (isLoading) return <LoadingScreen />
+  if (isAuthLoading) return <LoadingScreen />
 
-  // If user is logged in, redirect them away from public pages *if* we know where they should go
+  // Si ya está logueado y tenemos su perfil, lo sacamos de las páginas públicas
   if (isAuthenticated && user) {
     const userRole = (user as any)?.role || 'student';
     const target = userRole === 'teacher' ? '/docente' : '/alumno'
-    if (location.pathname !== target) {
-      return <Navigate to={target} replace />
-    }
+    return <Navigate to={target} replace />
   }
 
   return <>{children}</>
@@ -82,11 +81,15 @@ function DashboardRedirect() {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
 
-  if (isAuthLoading || user === undefined) return <LoadingScreen />
+  // 1. Esperar estado de auth
+  if (isAuthLoading) return <LoadingScreen />
   
-  if (!isAuthenticated || user === null) {
-    return <Navigate to="/login" replace />
-  }
+  // 2. Si no hay sesión, fuera.
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+
+  // 3. Si hay sesión, esperar perfil.
+  if (user === undefined) return <LoadingScreen />
+  if (user === null) return <Navigate to="/login" replace />
 
   const userRole = (user as any)?.role || 'student';
   const target = userRole === 'teacher' ? '/docente' : '/alumno'
