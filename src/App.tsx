@@ -34,16 +34,9 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
 
   if (isLoading) return <LoadingScreen />
   if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />
-
-  // Wait for profile
+  
+  // Esperar a que el perfil se cargue para saber el rol
   if (user === undefined) return <LoadingScreen />
-
-  if (user === null) {
-    if (location.pathname !== "/login") {
-      return <Navigate to="/login" replace />
-    }
-    return <>{children}</>
-  }
 
   const userRole = (user as any)?.role || 'student';
 

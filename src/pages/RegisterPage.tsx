@@ -138,7 +138,7 @@ export default function RegisterPage() {
                     </div>
 
                     <button
-                        onClick={() => signIn('google', { redirectTo: window.location.origin + '/dashboard' })}
+                        onClick={() => signIn('google', { redirectTo: '/dashboard' })}
                         className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-4 rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-3 active:scale-[0.98] mb-4 shadow-xl"
                     >
                         <svg className="w-6 h-6" viewBox="0 0 24 24">
