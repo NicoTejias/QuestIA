@@ -7,7 +7,7 @@ import {
     BookOpen, Target, Trophy, Gift, User, LogOut, Menu, X,
     BarChart3, Brain, Coins, ChevronRight, Flame,
     Star, Loader2, ArrowRightLeft,
-    AlertCircle, PlayCircle, Bell, BellOff, Info, Settings, Sparkles, Mail
+    AlertCircle, PlayCircle, Bell, BellOff, Info, Settings, Sparkles, Mail, GraduationCap
 } from 'lucide-react'
 import { toast } from 'sonner'
 import NotificationBell from '../components/NotificationBell'
