@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Rocket, Trophy, Users, BookOpen, Shield, ChevronRight, Sparkles, Target, Gift, BarChart3, LogOut } from 'lucide-react'
 import { useConvexAuth, useQuery } from "convex/react"
 import { useClerk } from "@clerk/clerk-react"
@@ -42,12 +42,9 @@ const features = [
 export default function LandingPage() {
     const { isAuthenticated, isLoading } = useConvexAuth()
     const { signOut } = useClerk()
-    const location = useLocation()
     const navigate = useNavigate()
 
     const userProfile = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
-    const params = new URLSearchParams(location.search);
-    const errorParam = params.get("error");
 
     // 1. Redirigir al dashboard si ya está autenticado y tenemos su perfil
     useEffect(() => {
