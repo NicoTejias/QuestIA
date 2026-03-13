@@ -48,7 +48,7 @@ export default function AnaliticasPanel() {
                 <div className="bg-surface-light border border-white/5 rounded-2xl p-5 flex items-center justify-between">
                     <div>
                         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Misiones por Alumno</p>
-                        <p className="text-2xl font-black text-primary-light">{stats.avgMissionsPerStudent.toFixed(1)}</p>
+                        <p className="text-2xl font-black text-primary-light">{(stats.avgMissionsPerStudent || 0).toFixed(1)}</p>
                     </div>
                     <div className="text-3xl">📊</div>
                 </div>

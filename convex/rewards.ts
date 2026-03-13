@@ -87,7 +87,6 @@ export const redeemReward = mutation({
         const isIceCube = rewardName.includes("congelar racha");
         const isMultiplierX2 = rewardName.includes("x2");
         const isMultiplierX15 = rewardName.includes("x1.5");
-        const isGradeBump = rewardName.includes("subir nota");
         
         await ctx.db.insert("redemptions", {
             user_id: user._id,
@@ -100,7 +99,6 @@ export const redeemReward = mutation({
         if (isIceCube) {
             // Lógica de recuperación de racha si falló
             const now = Date.now();
-            const lastBonus = user.last_daily_bonus_at || 0;
             const yesterday = now - 1000 * 60 * 60 * 24;
             
             // Si la racha se rompió (el último bono fue hace más de un día), la restauramos

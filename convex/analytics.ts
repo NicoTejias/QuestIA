@@ -26,6 +26,7 @@ export const getTeacherStats = query({
                     totalCourses: 0, 
                     totalMissionsCreated: 0,
                     avgQuizScore: 0,
+                    avgMissionsPerStudent: 0,
                     totalDocuments: 0,
                     belbinDistribution: {}, 
                     courseStats: []
