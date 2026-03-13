@@ -45,6 +45,7 @@ export default function RegisterPage() {
                             }
                         }}
                         signInUrl="/login"
+                        forceRedirectUrl="/dashboard"
                     />
                 </div>
 

@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Rocket, Trophy, Users, BookOpen, Shield, ChevronRight, Sparkles, Target, Gift, BarChart3, LogOut } from 'lucide-react'
-import { useConvexAuth } from "convex/react"
+import { useConvexAuth, useQuery } from "convex/react"
 import { useClerk } from "@clerk/clerk-react"
+import { api } from "../convex/_generated/api"
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -44,14 +45,26 @@ export default function LandingPage() {
     const location = useLocation()
     const navigate = useNavigate()
 
-    // Manejar errores de Auth que vienen por URL
+    const userProfile = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
+    const params = new URLSearchParams(location.search);
+    const errorParam = params.get("error");
+
+    // 1. Manejar errores de Auth que vienen por URL
     useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const error = params.get("error");
-        if (error) {
-            navigate("/auth-error?error=" + encodeURIComponent(error));
+        if (errorParam) {
+            // Usamos window.location.href para romper cualquier bucle de React Router si es necesario
+            // y asegurar una carga limpia de la página de error.
+            window.location.href = "/auth-error?error=" + encodeURIComponent(errorParam);
         }
-    }, [location, navigate]);
+    }, [errorParam]);
+
+    // 2. Redirigir al dashboard si ya está autenticado y tenemos su perfil
+    useEffect(() => {
+        if (isAuthenticated && userProfile) {
+            const target = (userProfile as any).role === 'teacher' ? '/docente' : '/alumno'
+            navigate(target, { replace: true })
+        }
+    }, [isAuthenticated, userProfile, navigate]);
 
     const handleLogout = async () => {
         await signOut()

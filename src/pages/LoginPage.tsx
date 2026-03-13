@@ -63,6 +63,7 @@ export default function LoginPage() {
                             }
                         }}
                         signUpUrl="/registro"
+                        forceRedirectUrl="/dashboard"
                     />
                 </div>
 
