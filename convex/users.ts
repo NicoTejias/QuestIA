@@ -2,7 +2,6 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { normalizeRut } from "./rutUtils";
 import { requireAuth } from "./withUser";
-import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Sincroniza el usuario de Clerk con nuestra tabla de users
 export const storeUser = mutation({
