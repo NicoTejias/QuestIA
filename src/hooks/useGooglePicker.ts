@@ -10,15 +10,24 @@ export function useGooglePicker() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  // Debug logs (Safe)
+  // Debug logs (Safe & Detailed)
   useEffect(() => {
-    console.log("🔍 Google Client ID exists:", !!CLIENT_ID);
-    if (CLIENT_ID) console.log("🔍 ID starts with:", CLIENT_ID.substring(0, 10));
-    console.log("🔍 API Key exists:", !!API_KEY);
+    if (CLIENT_ID) {
+      const maskedId = `${CLIENT_ID.substring(0, 12)}...${CLIENT_ID.slice(-15)}`;
+      console.log("🔍 Google Client ID Status:", {
+        exists: true,
+        length: CLIENT_ID.length,
+        format: maskedId,
+        endsWithDotCom: CLIENT_ID.endsWith('.com'),
+        fullEnd: CLIENT_ID.slice(-25)
+      });
+    } else {
+      console.error("❌ ERROR: VITE_GOOGLE_CLIENT_ID no está definido en Vercel.");
+    }
   }, []);
 
   useEffect(() => {
-    // Cargar librerías de Google
+    // Cargar librerías de Google... (sin cambios en la carga de scripts)
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
@@ -37,6 +46,7 @@ export function useGooglePicker() {
       const client = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
+        prompt: 'select_account',
         callback: (response: any) => {
           if (response.error) {
             reject(response);
