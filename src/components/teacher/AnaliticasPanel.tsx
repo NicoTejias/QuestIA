@@ -28,20 +28,47 @@ export default function AnaliticasPanel() {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 {[
-                    { label: 'Alumnos Totales', value: stats.totalStudents, color: 'text-accent-light', icon: '👥' },
-                    { label: 'Misiones Completadas', value: stats.totalMissionsCompleted, color: 'text-primary-light', icon: '🎯' },
-                    { label: 'Canjes Realizados', value: stats.totalRedemptions, color: 'text-gold', icon: '🎁' },
-                    { label: 'Puntos Otorgados', value: stats.totalPoints.toLocaleString(), color: 'text-accent-light', icon: '⭐' },
+                    { label: 'Alumnos Inscritos', value: stats.totalStudents, color: 'text-accent-light', icon: '👥', detail: `${stats.totalUniqueStudents} alumnos únicos` },
+                    { label: 'Misiones Completadas', value: stats.totalMissionsCompleted, color: 'text-primary-light', icon: '🎯', detail: `${stats.totalMissionsCreated} creadas` },
+                    { label: 'Rendimiento Promedio', value: `${Math.round(stats.avgQuizScore)}%`, color: 'text-gold', icon: '📈', detail: 'En quizzes IA' },
+                    { label: 'Material de Apoyo', value: stats.totalDocuments, color: 'text-emerald-400', icon: '📄', detail: 'Docs subidos' },
                 ].map((s, i) => (
-                    <div key={i} className="bg-surface-light border border-white/5 rounded-2xl p-5">
+                    <div key={i} className="bg-surface-light border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-all">
                         <div className="flex items-center justify-between mb-3">
-                            <p className="text-slate-400 text-xs uppercase tracking-wider">{s.label}</p>
+                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{s.label}</p>
                             <span className="text-2xl">{s.icon}</span>
                         </div>
-                        <p className={`text-3xl font-black ${s.color}`}>{s.value}</p>
+                        <p className={`text-3xl font-black ${s.color} mb-1`}>{s.value}</p>
+                        <p className="text-[10px] text-slate-500 font-medium">{s.detail}</p>
                     </div>
                 ))}
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="bg-surface-light border border-white/5 rounded-2xl p-5 flex items-center justify-between">
+                    <div>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Misiones por Alumno</p>
+                        <p className="text-2xl font-black text-primary-light">{stats.avgMissionsPerStudent.toFixed(1)}</p>
+                    </div>
+                    <div className="text-3xl">📊</div>
+                </div>
+                <div className="bg-surface-light border border-white/5 rounded-2xl p-5 flex items-center justify-between">
+                    <div>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Canjes Realizados</p>
+                        <p className="text-2xl font-black text-gold">{stats.totalRedemptions}</p>
+                    </div>
+                    <div className="text-3xl">🎁</div>
+                </div>
+                <div className="bg-surface-light border border-white/5 rounded-2xl p-5 flex items-center justify-between">
+                    <div>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Puntos Otorgados</p>
+                        <p className="text-2xl font-black text-accent-light">{stats.totalPoints.toLocaleString()}</p>
+                    </div>
+                    <div className="text-3xl">⭐</div>
+                </div>
+            </div>
+
+
 
             {/* Distribución Belbin */}
             {Object.keys(stats.belbinDistribution).length > 0 && (

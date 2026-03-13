@@ -123,9 +123,10 @@ export const autoEnroll = mutation({
 
         // Normalizar el RUT del alumno para que matchee con la whitelist
         const normalizedId = normalizeRut(user.student_id);
-        const rawId = user.student_id.trim();
+        const bodyOnly = user.student_id.replace(/[^\d]/g, '');
 
-        // Buscar por RUT normalizado Y por RUT sin normalizar (para backwards compatibility)
+        // Obtener TODAS las whitelists del sistema (si crecemos mucho habría que filtrar por índices, pero por ahora está bien)
+        // O mejor: buscar por el identificador normalizado y por una búsqueda de prefijo si es posible.
         const byNormalized = normalizedId
             ? await ctx.db
                 .query("whitelists")
@@ -135,20 +136,32 @@ export const autoEnroll = mutation({
                 .collect()
             : [];
 
-        const byRaw = await ctx.db
+        // Buscar por RUT limpio (solo números)
+        const byBody = await ctx.db
             .query("whitelists")
             .withIndex("by_identifier", (q) =>
-                q.eq("student_identifier", rawId)
+                q.eq("student_identifier", bodyOnly)
             )
             .collect();
 
-        // Combinar sin duplicados
+        // Combinar
         const seen = new Set<string>();
         const matchingWhitelists = [];
-        for (const item of [...byNormalized, ...byRaw]) {
+        for (const item of [...byNormalized, ...byBody]) {
             if (!seen.has(item._id)) {
                 seen.add(item._id);
                 matchingWhitelists.push(item);
+            }
+        }
+
+        // Búsqueda profunda de fallback: Si no encontramos nada, buscar por coincidencia de cuerpo
+        if (matchingWhitelists.length === 0 && bodyOnly.length >= 7) {
+            const allWhitelists = await ctx.db.query("whitelists").collect();
+            for (const w of allWhitelists) {
+                const wBody = w.student_identifier.replace(/[^\d]/g, '');
+                if (wBody === bodyOnly || wBody.startsWith(bodyOnly) || bodyOnly.startsWith(wBody)) {
+                    matchingWhitelists.push(w);
+                }
             }
         }
 
@@ -167,7 +180,8 @@ export const autoEnroll = mutation({
                     course_id: item.course_id,
                     ranking_points: 0,
                     spendable_points: 0,
-                    total_points: 0, // Legacy compatibility
+                    total_points: 0,
+                    section: item.section || undefined,
                 });
                 enrolled++;
             }
@@ -181,6 +195,8 @@ export const autoEnroll = mutation({
 export const checkWhitelist = query({
     args: { student_id: v.string() },
     handler: async (ctx, args) => {
+        if (!args.student_id || args.student_id.length < 3) return { allowed: false };
+
         const normalized = normalizeRut(args.student_id);
         const bodyOnly = args.student_id.replace(/[^\d]/g, '');
 
@@ -198,7 +214,20 @@ export const checkWhitelist = query({
             .withIndex("by_identifier", (q) => q.eq("student_identifier", bodyOnly))
             .first();
 
-        return { allowed: !!entryBody };
+        if (entryBody) return { allowed: true };
+
+        // 3. Búsqueda de Texto: Buscar si el cuerpo del RUT ingresado coincide con el inicio de algún identificador en la whitelist
+        // Útil si en la whitelist está "12345678-9" y el alumno ingresa "12345678"
+        if (bodyOnly.length >= 7) {
+            const allWhitelists = await ctx.db.query("whitelists").collect(); // Nota: Esto es pesado si hay miles, pero para una institución está bien por ahora
+            const match = allWhitelists.find(w => 
+                w.student_identifier.replace(/[^\d]/g, '').startsWith(bodyOnly) ||
+                bodyOnly.startsWith(w.student_identifier.replace(/[^\d]/g, ''))
+            );
+            if (match) return { allowed: true };
+        }
+
+        return { allowed: false };
     },
 });
 

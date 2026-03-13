@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { Users, Loader2, CheckCircle } from 'lucide-react'
+import { Users, Loader2, CheckCircle, X } from 'lucide-react'
 
 export default function GruposPanel() {
     const courses = useQuery(api.courses.getMyCourses)
@@ -53,9 +53,80 @@ export default function GruposPanel() {
     // Determinar qué grupos mostrar: resultado fresco o existentes
     const displayGroups = result ? result.groups : (existingGroups || []).filter((g: any) => g.name !== 'Sin grupo')
 
+    // --- Lógica de Ruleta ---
+    const [showRoulette, setShowRoulette] = useState(false)
+    const [sortedGroups, setSortedGroups] = useState<any[]>([])
+    const [spinning, setSpinning] = useState(false)
+
+    const startRoulette = () => {
+        if (displayGroups.length === 0) return
+        setShowRoulette(true)
+        setSpinning(true)
+        // Simular giro
+        setTimeout(() => {
+            const shuffled = [...displayGroups].sort(() => Math.random() - 0.5)
+            setSortedGroups(shuffled)
+            setSpinning(false)
+        }, 3000)
+    }
+    // ------------------------
+
     return (
         <div>
-            <p className="text-slate-400 mb-6">Genera grupos equilibrados automáticamente basándose en los perfiles Belbin de tus alumnos.</p>
+            <div className="flex items-center justify-between mb-6">
+                <p className="text-slate-400">Genera grupos equilibrados automáticamente basándose en los perfiles Belbin de tus alumnos.</p>
+                {displayGroups.length > 0 && (
+                    <button
+                        onClick={startRoulette}
+                        className="bg-white/5 border border-white/10 text-white font-bold px-4 py-2 rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"
+                        title="Sortear orden de exposición"
+                    >
+                        🎡 Ruleta de Presentación
+                    </button>
+                )}
+            </div>
+
+            {/* Modal de Ruleta */}
+            {showRoulette && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+                    <div className="bg-slate-900 border border-white/10 w-full max-w-2xl rounded-[2.5rem] shadow-2xl p-10 text-center animate-in zoom-in-95 duration-300">
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-2xl font-black text-white">Sorteo de Presentaciones</h2>
+                            <button onClick={() => setShowRoulette(false)} className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                                <X className="w-5 h-5 text-slate-400" />
+                            </button>
+                        </div>
+
+                        {spinning ? (
+                            <div className="py-20 flex flex-col items-center">
+                                <div className="w-32 h-32 border-8 border-primary border-t-transparent rounded-full animate-spin mb-8 shadow-[0_0_50px_rgba(34,211,238,0.3)]"></div>
+                                <p className="text-xl font-black text-white animate-pulse uppercase tracking-widest">Girando la ruleta...</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                                <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-6">Orden de Presentación Resultante</p>
+                                {sortedGroups.map((group, i) => (
+                                    <div key={i} className="flex items-center gap-6 bg-white/5 p-5 rounded-2xl border border-white/5 animate-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${i * 100}ms` }}>
+                                        <span className="w-12 h-12 bg-primary/20 text-primary-light rounded-2xl flex items-center justify-center font-black text-xl">
+                                            {i + 1}
+                                        </span>
+                                        <div className="text-left flex-1">
+                                            <h4 className="font-bold text-white text-lg">{group.name}</h4>
+                                            <p className="text-slate-500 text-sm">{group.members.length} integrantes</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                <button
+                                    onClick={startRoulette}
+                                    className="mt-8 w-full py-4 bg-primary text-white font-black rounded-2xl shadow-xl hover:bg-primary-light transition-all"
+                                >
+                                    VOLVER A SORTEAR
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {error && (
                 <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">

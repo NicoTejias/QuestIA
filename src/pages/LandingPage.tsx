@@ -103,8 +103,9 @@ export default function LandingPage() {
                         Plataforma Educativa del Futuro
                     </div>
 
-                    <h1 className="text-5xl md:text-7xl font-black text-white leading-tight mb-8">
+                    <h1 className="text-4xl md:text-7xl font-black text-white leading-tight mb-8">
                         Gestiona tus ramos.{' '}
+                        <br className="hidden sm:block" />
                         <span className="bg-gradient-to-r from-primary-light to-accent bg-clip-text text-transparent">
                             Motiva a tus alumnos.
                         </span>

@@ -9,12 +9,29 @@ export const createCourse = mutation({
     handler: async (ctx, args) => {
         const user = await requireTeacher(ctx);
 
-        return await ctx.db.insert("courses", {
+        const courseId = await ctx.db.insert("courses", {
             name: args.name,
             code: args.code,
             description: args.description,
             teacher_id: user._id,
         });
+
+        // Agregar recompensas recomendadas por defecto
+        const recommendedRewards = [
+            { name: "Multiplicador de Puntaje x2", description: "Multiplica x2 los puntos de tu próximo quiz", cost: 100, stock: 999 },
+            { name: "Multiplicador de Puntaje x1.5", description: "Multiplica x1.5 los puntos de tu próximo quiz", cost: 50, stock: 999 },
+            { name: "Congelar Racha (Recuperación)", description: "Si fallaste ayer, recupera tu racha hoy comprando este item", cost: 10, stock: 999 },
+            { name: "Subir Nota (3.7 a 4.0)", description: "Eleva tu nota final de una evaluación de 3.7 a 4.0", cost: 500, stock: 50 }
+        ];
+
+        for (const reward of recommendedRewards) {
+            await ctx.db.insert("rewards", {
+                course_id: courseId,
+                ...reward
+            });
+        }
+
+        return courseId;
     },
 });
 

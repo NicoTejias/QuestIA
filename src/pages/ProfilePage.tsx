@@ -76,17 +76,17 @@ export default function ProfilePage() {
                     Volver
                 </button>
 
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-                    <div className="flex items-center gap-6">
-                        <div className="w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-[2rem] flex items-center justify-center text-4xl shadow-2xl shadow-primary/20">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 md:mb-12">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 text-center sm:text-left">
+                        <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-primary to-accent rounded-3xl md:rounded-[2rem] flex items-center justify-center text-3xl md:text-4xl shadow-2xl shadow-primary/20 shrink-0">
                             {user.role === 'teacher' ? '👨‍🏫' : '🎓'}
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <h1 className="text-4xl font-black text-white">{user.name}</h1>
-                                {user.is_verified && <BadgeCheck className="w-6 h-6 text-primary-light" />}
+                        <div className="min-w-0">
+                            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                                <h1 className="text-2xl md:text-4xl font-black text-white truncate">{user.name}</h1>
+                                {user.is_verified && <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-primary-light shrink-0" />}
                             </div>
-                            <p className="text-slate-500 font-medium">{user.email}</p>
+                            <p className="text-slate-500 font-medium text-sm md:text-base truncate">{user.email}</p>
                         </div>
                     </div>
                 </div>

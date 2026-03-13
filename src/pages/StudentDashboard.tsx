@@ -198,31 +198,31 @@ export default function StudentDashboard() {
 
             {/* Main Content */}
             <main className="flex-1 min-h-screen flex flex-col">
-                <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white" title="Abrir panel de navegación">
-                            <Menu className="w-6 h-6" />
+                <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white shrink-0" title="Abrir panel de navegación">
+                            <Menu className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
-                        <div>
-                            <h1 className="text-xl font-bold text-white capitalize leading-none mb-1">
+                        <div className="min-w-0">
+                            <h1 className="text-base md:text-xl font-bold text-white capitalize leading-none mb-1 truncate">
                                 {selectedCourseId ? 'Detalle del Ramo' : tabs.find(t => t.id === activeTab)?.label}
                             </h1>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                            <p className="hidden xs:block text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest truncate">
                                 {selectedCourseId ? 'Contenido y Desafíos' : 'Panel de Control'}
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <BetaBanner className="hidden md:flex" />
+                    <div className="flex items-center gap-2 md:gap-4 shrink-0">
+                        <BetaBanner className="hidden lg:flex" />
                         <NotificationBell />
-                        <div className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-2 border border-white/10">
+                        <div className="flex items-center gap-2 md:gap-3 bg-white/5 rounded-xl md:rounded-2xl px-3 md:px-4 py-1.5 md:py-2 border border-white/10 shrink-0">
                             <div className="flex flex-col items-end">
-                                <span className="text-[10px] text-slate-500 font-bold leading-none mb-1">SALDO ACTUAL</span>
-                                <span className="text-gold font-black text-sm leading-none">{totalSpendablePoints.toLocaleString()} PTS</span>
+                                <span className="hidden sm:block text-[8px] md:text-[10px] text-slate-500 font-bold leading-none mb-1">SALDO ACTUAL</span>
+                                <span className="text-gold font-black text-xs md:text-sm leading-none">{totalSpendablePoints.toLocaleString()} <span className="hidden xs:inline">PTS</span></span>
                             </div>
-                            <div className="w-8 h-8 bg-gold/20 rounded-lg flex items-center justify-center">
-                                <Coins className="w-4 h-4 text-gold" />
+                            <div className="w-6 h-6 md:w-8 md:h-8 bg-gold/20 rounded-lg flex items-center justify-center">
+                                <Coins className="w-3.5 h-3.5 md:w-4 md:h-4 text-gold" />
                             </div>
                         </div>
                     </div>
@@ -266,37 +266,39 @@ function DashboardHome({ courses, totalRanking, firstName, onSelectCourse }: { c
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
             {/* Hero Card */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border border-white/10 rounded-[2rem] p-10">
+            <div className="relative overflow-hidden bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border border-white/10 rounded-2xl md:rounded-[2rem] p-6 md:p-10">
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-primary/20 rounded-full blur-[80px]"></div>
-                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div>
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="px-3 py-1 bg-primary/20 rounded-full text-xs font-black text-primary-light uppercase tracking-widest border border-primary/20">
+                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 text-center md:text-left">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
+                            <div className="px-3 py-1 bg-primary/20 rounded-full text-[10px] md:text-xs font-black text-primary-light uppercase tracking-widest border border-primary/20">
                                 {getGreeting()}
                             </div>
                         </div>
-                        <h2 className="text-4xl md:text-5xl font-black text-white mb-4 leading-[1.1]">
+                        <h2 className="text-3xl md:text-5xl font-black text-white mb-4 leading-[1.1] break-words">
                             ¡Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-light to-accent-light">{firstName}</span>!
                         </h2>
-                        <p className="text-slate-400 text-lg max-w-md leading-relaxed">
+                        <p className="text-slate-400 text-base md:text-lg max-w-md leading-relaxed mx-auto md:mx-0">
                             {courses.length === 0
                                 ? 'Tu aventura está por comenzar. Espera a que tu docente te inscriba en un ramo.'
-                                : `Hoy es un gran día para aprender. Tienes ${totalRanking.toLocaleString()} puntos de ranking acumulados.`
+                                : `Hoy es un gran día para aprender. Tienes ${totalRanking.toLocaleString()} puntos acumulados.`
                             }
                         </p>
                     </div>
-                    <div className="flex flex-col items-center p-6 bg-white/5 backdrop-blur-md rounded-[2rem] border border-white/10 shadow-2xl">
-                        <div className="relative mb-4">
-                            <svg className="w-32 h-32 transform -rotate-90">
-                                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5" />
-                                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="364" strokeDashoffset={364 - (364 * 0.75)} className="text-primary transition-all duration-1000" />
+                    <div className="flex flex-col items-center p-5 md:p-6 bg-white/5 backdrop-blur-md rounded-2xl md:rounded-[2rem] border border-white/10 shadow-2xl shrink-0">
+                        <div className="relative mb-3 md:mb-4">
+                            <svg className="w-24 h-24 md:w-32 md:h-32 transform -rotate-90">
+                                <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-white/5 md:hidden" />
+                                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5 hidden md:block" />
+                                <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray="251" strokeDashoffset={251 - (251 * 0.75)} className="text-primary transition-all duration-1000 md:hidden" />
+                                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="364" strokeDashoffset={364 - (364 * 0.75)} className="text-primary transition-all duration-1000 hidden md:block" />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <Trophy className="w-8 h-8 text-gold mb-1" />
-                                <span className="text-2xl font-black text-white leading-none">#2</span>
+                                <Trophy className="w-6 h-6 md:w-8 md:h-8 text-gold mb-1" />
+                                <span className="text-xl md:text-2xl font-black text-white leading-none">#2</span>
                             </div>
                         </div>
-                        <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Nivel 14</p>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Nivel 14</p>
                     </div>
                 </div>
             </div>
@@ -336,16 +338,16 @@ function DashboardHome({ courses, totalRanking, firstName, onSelectCourse }: { c
                                     <BookOpen className="w-16 h-16 text-primary" />
                                 </div>
                                 <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary-light">
-                                            <BookOpen className="w-6 h-6" />
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-xl md:rounded-2xl flex items-center justify-center text-primary-light shrink-0">
+                                            <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
                                         </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] text-slate-500 font-black uppercase mb-1">CÓDIGO</span>
-                                            <span className="text-xs font-mono text-white/50">{course.code}</span>
+                                        <div className="flex flex-col items-end min-w-0 ml-4">
+                                            <span className="text-[9px] md:text-[10px] text-slate-500 font-black uppercase mb-1">CÓDIGO</span>
+                                            <span className="text-[10px] md:text-xs font-mono text-white/50 truncate max-w-[80px]">{course.code}</span>
                                         </div>
                                     </div>
-                                    <h4 className="text-xl font-bold text-white mb-6 group-hover:text-primary-light transition-colors line-clamp-1">{course.name}</h4>
+                                    <h4 className="text-lg md:text-xl font-bold text-white mb-6 group-hover:text-primary-light transition-colors line-clamp-1">{course.name}</h4>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col">
@@ -419,17 +421,17 @@ function CourseDetailView({ courseId, onBack, onPlayQuiz }: { courseId: any, onB
                 <span className="text-sm font-bold uppercase tracking-widest">Volver a Ramos</span>
             </button>
 
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-white/10 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden">
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-white/10 rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 relative overflow-hidden">
                 <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-primary/10 rounded-full blur-[100px]"></div>
-                <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-4">
-                            <span className="px-3 py-1 bg-primary/20 text-primary-light text-[10px] font-black rounded-full border border-primary/20 tracking-tighter uppercase">{course.code}</span>
-                            <span className="text-slate-500 font-medium">•</span>
-                            <span className="text-slate-400 text-sm font-medium">Impartido por {course.teacher_name || 'Docente'}</span>
+                <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 md:gap-8">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-4">
+                            <span className="px-3 py-1 bg-primary/20 text-primary-light text-[9px] md:text-[10px] font-black rounded-full border border-primary/20 tracking-tighter uppercase">{course.code}</span>
+                            <span className="text-slate-500 font-medium hidden xs:inline">•</span>
+                            <span className="text-slate-400 text-xs md:text-sm font-medium">Impartido por {course.teacher_name || 'Docente'}</span>
                         </div>
-                        <h2 className="text-4xl font-black text-white mb-4">{course.name}</h2>
-                        <p className="text-slate-400 text-lg leading-relaxed max-w-2xl">{course.description || 'Sin descripción pormenorizada.'}</p>
+                        <h2 className="text-2xl md:text-4xl font-black text-white mb-4 leading-tight">{course.name}</h2>
+                        <p className="text-slate-400 text-base md:text-lg leading-relaxed max-w-2xl">{course.description || 'Sin descripción pormenorizada.'}</p>
                     </div>
                 </div>
             </div>
@@ -447,48 +449,46 @@ function CourseDetailView({ courseId, onBack, onPlayQuiz }: { courseId: any, onB
 
                     <div className="space-y-4">
                         {quizzes?.map((q: any) => (
-                            <div key={q._id} className="group bg-surface-light border border-white/5 rounded-3xl p-5 hover:bg-white/5 hover:border-accent/40 transition-all flex items-center justify-between">
-                                <div className="flex items-center gap-5">
-                                    <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center text-accent-light group-hover:bg-accent/20 transition-colors">
-                                        {q.quiz_type === 'flashcard' ? <Brain className="w-7 h-7" /> : <PlayCircle className="w-7 h-7" />}
+                            <div key={q._id} className="group bg-surface-light border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-5 hover:bg-white/5 hover:border-accent/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex items-center gap-4 md:gap-5">
+                                    <div className="w-12 h-12 md:w-14 md:h-14 bg-accent/10 rounded-xl md:rounded-2xl flex items-center justify-center text-accent-light group-hover:bg-accent/20 transition-colors shrink-0">
+                                        {q.quiz_type === 'flashcard' ? <Brain className="w-6 h-6 md:w-7 md:h-7" /> : <PlayCircle className="w-6 h-6 md:w-7 md:h-7" />}
                                     </div>
-                                    <div>
-                                        <h4 className="font-bold text-white group-hover:text-accent-light transition-colors">{q.title}</h4>
-                                        <div className="flex items-center gap-3 mt-1.5">
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                                                <Target className="w-3 h-3" /> {q.num_questions} PREG.
+                                    <div className="min-w-0">
+                                        <h4 className="font-bold text-white group-hover:text-accent-light transition-colors text-sm md:text-base truncate">{q.title}</h4>
+                                        <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1.5">
+                                            <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                                                <Target className="w-2.5 h-2.5" /> {q.num_questions} PREG.
                                             </span>
-                                            <span className={`text-[10px] font-bold uppercase ${q.difficulty === 'dificil' ? 'text-red-400' : q.difficulty === 'medio' ? 'text-orange-400' : 'text-green-400'}`}>
+                                            <span className={`text-[9px] md:text-[10px] font-bold uppercase ${q.difficulty === 'dificil' ? 'text-red-400' : q.difficulty === 'medio' ? 'text-orange-400' : 'text-green-400'}`}>
                                                 {q.difficulty}
                                             </span>
-                                            <span className="text-[10px] font-bold text-gold flex items-center gap-1 bg-gold/10 px-1.5 py-0.5 rounded-md border border-gold/20">
-                                                <Star className="w-3 h-3 fill-gold" />
+                                            <span className="text-[9px] md:text-[10px] font-bold text-gold flex items-center gap-1 bg-gold/10 px-1.5 py-0.5 rounded-md border border-gold/20">
+                                                <Star className="w-2.5 h-2.5 fill-gold" />
                                                 HASTA {(q.num_questions || 5) * (q.difficulty === 'dificil' ? 20 : q.difficulty === 'medio' ? 15 : 10)} PTS
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-end gap-2">
-                                    <div className="flex flex-col items-end mr-4">
+                                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                                    <div className="flex flex-col items-start sm:items-end">
                                         <div className="flex items-center gap-1.5 mb-1">
-                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Intentos</span>
-                                            <span className={`text-xs font-black ${q.attempts_count >= q.max_attempts ? 'text-red-400' : 'text-accent-light'}`}>
+                                            <span className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">Intentos</span>
+                                            <span className={`text-[10px] md:text-xs font-black ${q.attempts_count >= q.max_attempts ? 'text-red-400' : 'text-accent-light'}`}>
                                                 {q.attempts_count} / {q.max_attempts}
                                             </span>
                                         </div>
                                         {q.completed && (
                                             <div className="flex items-center gap-1.5">
-                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Mejor Score</span>
-                                                <span className="text-xs font-black text-white">
-                                                    {q.score}%
-                                                </span>
+                                                <span className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">Score</span>
+                                                <span className="text-[10px] md:text-xs font-black text-white">{q.score}%</span>
                                             </div>
                                         )}
                                     </div>
                                     <button
                                         onClick={() => q.can_take && onPlayQuiz(q)}
                                         disabled={!q.can_take}
-                                        className={`font-black text-[10px] tracking-widest px-5 py-2.5 rounded-xl transition-all shadow-lg 
+                                        className={`font-black text-[9px] md:text-[10px] tracking-widest px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl transition-all shadow-lg shrink-0
                                             ${!q.can_take
                                                 ? 'bg-green-500/10 text-green-400 border border-green-500/20 cursor-default shadow-none'
                                                 : q.completed
@@ -1355,7 +1355,7 @@ function CompleteProfileModal({ user, onComplete }: { user: any, onComplete: () 
         if (checkWhitelist === undefined) {
              // Loading
         } else if (!checkWhitelist?.allowed) {
-            setError('RUT No Autorizado: No estás en el listado de ningún ramo. Verifica con tu docente.')
+            setError('RUT No Autorizado: No apareces en la lista de alumnos autorizados. Asegúrate de ingresar tu RUT correctamente (con o sin puntos/guion) o consulta con tu docente.')
             setLoading(false)
             return
         }

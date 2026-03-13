@@ -417,31 +417,36 @@ export const submitQuiz = mutation({
             .unique();
 
         if (!enrollment) throw new Error("No inscrito");
+        
+        // Multiplicador activo (recompensa)
+        const multiplier = enrollment.active_multiplier || 1;
 
         // Registrar el intento
         await ctx.db.insert("quiz_submissions", {
             quiz_id: args.quiz_id,
             user_id: user._id,
             score: args.score,
-            earned_points: currentEarnedPoints,
+            earned_points: Math.round(currentEarnedPoints * multiplier),
             completed_at: Date.now(),
         });
 
         if (pointsToAward > 0) {
-            const newRankingPoints = (enrollment.ranking_points ?? enrollment.total_points ?? 0) + pointsToAward;
-            const newSpendablePoints = (enrollment.spendable_points ?? enrollment.total_points ?? 0) + pointsToAward;
+            const finalPointsToAward = Math.round(pointsToAward * multiplier);
+            const newRankingPoints = (enrollment.ranking_points ?? enrollment.total_points ?? 0) + finalPointsToAward;
+            const newSpendablePoints = (enrollment.spendable_points ?? enrollment.total_points ?? 0) + finalPointsToAward;
 
             await ctx.db.patch(enrollment._id, {
                 ranking_points: newRankingPoints,
                 spendable_points: newSpendablePoints,
-                total_points: (enrollment.total_points ?? 0) + pointsToAward,
+                total_points: (enrollment.total_points ?? 0) + finalPointsToAward,
+                active_multiplier: undefined, // Consumir el multiplicador
             });
 
             return {
                 success: true,
-                earned: pointsToAward,
+                earned: finalPointsToAward,
                 is_improvement: pointsToAward > dailyBonus,
-                total_earned_now: currentEarnedPoints,
+                total_earned_now: Math.round(currentEarnedPoints * multiplier),
                 new_rank: newRankingPoints,
                 new_spendable: newSpendablePoints,
                 daily_bonus_applied: dailyBonus > 0,
@@ -450,14 +455,15 @@ export const submitQuiz = mutation({
             };
         }
 
-        // Si no hubo mejora pero sí hubo bono diario, igual actualizamos los puntos
-        if (dailyBonus > 0) {
+        // Si no hubo mejora pero sí hubo bono diario, igual actualizamos los puntos y limpiamos multiplicador
+        if (dailyBonus > 0 || multiplier > 1) {
             const newPoints = (enrollment.ranking_points ?? 0) + dailyBonus;
             const newSpendable = (enrollment.spendable_points ?? 0) + dailyBonus;
             await ctx.db.patch(enrollment._id, {
                 ranking_points: newPoints,
                 spendable_points: newSpendable,
                 total_points: (enrollment.total_points ?? 0) + dailyBonus,
+                active_multiplier: undefined, // Consumir el multiplicador incluso si no hubo mejora en este quiz
             });
             return {
                 success: true,

@@ -6,7 +6,6 @@ import {
     Trash2, Target, Flame, Sparkles, Loader2, RefreshCw,
     Users, Trophy, Coins, CheckCircle, Edit3, X, Search, Star
 } from 'lucide-react'
-import { formatRutWithDV } from "../../utils/rutUtils"
 import { toast } from 'sonner'
 import ConfirmModal from '../ConfirmModal'
 import { EditMissionModal, EditRewardModal } from './EditModals'
@@ -375,7 +374,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                                                 </div>
                                                                 <div className="flex flex-col truncate">
                                                                     <span className="text-white text-sm font-semibold truncate uppercase flex items-center gap-2">
-                                                                        {s.name || (s.identifier ? formatRutWithDV(s.identifier.replace(/[^\d]/g, '')) : (s.student_id ? (s.student_id.includes('-') ? s.student_id : formatRutWithDV(s.student_id.replace(/[^\d]/g, ''))) : 'Alumno'))}
+                                                                        {s.name || 'Alumno sin registro'}
                                                                         <span className={`text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold shadow-sm ${s.daily_streak > 0 ? 'text-orange-400 bg-orange-400/10 border border-orange-400/20' : 'text-slate-500 bg-white/5 border border-white/10'}`} title={`Racha de ${s.daily_streak || 0} días`}>
                                                                             <Flame className={`w-3 h-3 ${s.daily_streak > 0 ? 'fill-orange-500' : 'text-slate-500'}`} /> {s.daily_streak || 0}
                                                                         </span>
@@ -385,7 +384,10 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                                                             </span>
                                                                         )}
                                                                     </span>
-                                                                    <div className="flex gap-4 mt-1">
+                                                                    <div className="flex gap-4 mt-1 items-center">
+                                                                        <span className="text-[10px] text-primary-light font-mono font-bold bg-primary/5 px-2 py-0.5 rounded">
+                                                                            ID: {s.identifier || s.student_id || 'S/ID'}
+                                                                        </span>
                                                                         <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1 uppercase tracking-wider">
                                                                             <Trophy className="w-3 h-3 text-gold" />: {s.ranking_points || 0}
                                                                         </span>

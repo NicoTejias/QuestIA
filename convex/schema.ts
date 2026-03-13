@@ -74,6 +74,7 @@ export default defineSchema({
         total_points: v.optional(v.number()), // Legacy (compatibilidad)
         group_id: v.optional(v.string()),
         section: v.optional(v.string()), // Sección del ramo (copiado desde whitelist al registrarse)
+        active_multiplier: v.optional(v.number()), // Multiplicador para el próximo quiz
     })
         .index("by_user", ["user_id"])
         .index("by_course", ["course_id"])

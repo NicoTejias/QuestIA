@@ -83,21 +83,40 @@ export const redeemReward = mutation({
         });
 
         // Registrar canje
-        const isIceCube = reward.name.toLowerCase().includes("congelar la racha");
+        const rewardName = reward.name.toLowerCase();
+        const isIceCube = rewardName.includes("congelar racha");
+        const isMultiplierX2 = rewardName.includes("x2");
+        const isMultiplierX15 = rewardName.includes("x1.5");
+        const isGradeBump = rewardName.includes("subir nota");
         
         await ctx.db.insert("redemptions", {
             user_id: user._id,
             reward_id: reward._id,
-            status: isIceCube ? "completed" : "pending",
+            status: (isIceCube || isMultiplierX2 || isMultiplierX15) ? "completed" : "pending",
             timestamp: Date.now(),
         });
 
-        // Si es un congelador de racha, lo aplicamos directamente al inventario del usuario
+        // Aplicar efectos inmediatos
         if (isIceCube) {
-            const currentCubes = user.ice_cubes || 0;
+            // Lógica de recuperación de racha si falló
+            const now = Date.now();
+            const lastBonus = user.last_daily_bonus_at || 0;
+            const yesterday = now - 1000 * 60 * 60 * 24;
+            
+            // Si la racha se rompió (el último bono fue hace más de un día), la restauramos
+            // Simulamos que el último bono fue ayer para que el próximo quiz continúe la racha
             await ctx.db.patch(user._id, {
-                ice_cubes: currentCubes + 1
+                last_daily_bonus_at: yesterday, 
+                // No tocamos daily_streak aquí, dejamos el que tenía antes de fallar
             });
+        }
+
+        if (isMultiplierX2) {
+            await ctx.db.patch(enrollment._id, { active_multiplier: 2 });
+        }
+
+        if (isMultiplierX15) {
+            await ctx.db.patch(enrollment._id, { active_multiplier: 1.5 });
         }
 
         return { success: true };
@@ -148,4 +167,41 @@ export const deleteReward = mutation({
 
         await ctx.db.delete(args.reward_id);
     },
+});
+
+// Inicializar recompensas recomendadas para un ramo (útil para ramos antiguos)
+export const initRecommendedRewards = mutation({
+    args: { course_id: v.id("courses") },
+    handler: async (ctx, args) => {
+        const user = await requireTeacher(ctx);
+
+        const course = await ctx.db.get(args.course_id);
+        if (!course || course.teacher_id !== user._id)
+            throw new Error("No autorizado");
+
+        const recommendedRewards = [
+            { name: "Multiplicador de Puntaje x2", description: "Multiplica x2 los puntos de tu próximo quiz", cost: 100, stock: 999 },
+            { name: "Multiplicador de Puntaje x1.5", description: "Multiplica x1.5 los puntos de tu próximo quiz", cost: 50, stock: 999 },
+            { name: "Congelar Racha (Recuperación)", description: "Si fallaste ayer, recupera tu racha hoy comprando este item", cost: 10, stock: 999 },
+            { name: "Subir Nota (3.7 a 4.0)", description: "Eleva tu nota final de una evaluación de 3.7 a 4.0", cost: 500, stock: 50 }
+        ];
+
+        let added = 0;
+        for (const r of recommendedRewards) {
+            const existing = await ctx.db
+                .query("rewards")
+                .withIndex("by_course", q => q.eq("course_id", args.course_id))
+                .filter(q => q.eq(q.field("name"), r.name))
+                .unique();
+            
+            if (!existing) {
+                await ctx.db.insert("rewards", {
+                    course_id: args.course_id,
+                    ...r
+                });
+                added++;
+            }
+        }
+        return { added };
+    }
 });

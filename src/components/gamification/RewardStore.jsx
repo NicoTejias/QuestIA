@@ -43,42 +43,42 @@ const RewardStore = ({ courseId }) => {
     const spendablePoints = enrollment?.spendable_points ?? 0;
 
     return (
-        <div className="bg-surface text-slate-100 p-8 font-sans min-h-screen">
+        <div className="bg-surface text-slate-100 p-4 md:p-8 font-sans min-h-screen">
             {/* Header del Mercado */}
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
-                <div>
-                    <h1 className="text-4xl font-black bg-gradient-to-r from-primary-light to-accent-light bg-clip-text text-transparent">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 md:mb-12 gap-6">
+                <div className="min-w-0">
+                    <h1 className="text-2xl md:text-4xl font-black bg-gradient-to-r from-primary-light to-accent-light bg-clip-text text-transparent leading-tight">
                         Mercado de Recompensas
                     </h1>
-                    <p className="text-slate-400 mt-2 text-lg">
+                    <p className="text-slate-400 mt-2 text-base md:text-lg max-w-md">
                         Invierte tus puntos en beneficios exclusivos y protección de racha.
                     </p>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-3 md:gap-4 w-full md:w-auto">
                     {/* Visualización de Hielos */}
-                    <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-4 flex items-center gap-4 shadow-xl shadow-cyan-500/5">
-                        <div className="bg-cyan-500/20 p-3 rounded-full relative">
-                            <Snowflake className="text-cyan-400 w-8 h-8" />
+                    <div className="flex-1 md:flex-none bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-3 md:p-4 flex items-center gap-3 md:gap-4 shadow-xl shadow-cyan-500/5">
+                        <div className="bg-cyan-500/20 p-2 md:p-3 rounded-full relative shrink-0">
+                            <Snowflake className="text-cyan-400 w-6 h-6 md:w-8 md:h-8" />
                             {user.ice_cubes > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-cyan-400 text-black text-[10px] font-black px-1.5 rounded-full ring-2 ring-slate-950">
+                                <span className="absolute -top-1 -right-1 bg-cyan-400 text-black text-[9px] md:text-[10px] font-black px-1.5 rounded-full ring-2 ring-slate-950">
                                     {user.ice_cubes}
                                 </span>
                             )}
                         </div>
                         <div>
-                            <p className="text-[10px] text-cyan-400 uppercase tracking-widest font-black">Protección</p>
-                            <p className="text-2xl font-black text-white">Racha</p>
+                            <p className="hidden xs:block text-[8px] md:text-[10px] text-cyan-400 uppercase tracking-widest font-black">Protección</p>
+                            <p className="text-lg md:text-2xl font-black text-white">Racha</p>
                         </div>
                     </div>
 
-                    <div className="bg-slate-900 border border-white/5 rounded-2xl p-4 flex items-center gap-4 shadow-2xl">
-                        <div className="bg-amber-500/20 p-3 rounded-full">
-                            <Coins className="text-amber-400 w-8 h-8" />
+                    <div className="flex-1 md:flex-none bg-slate-900 border border-white/5 rounded-2xl p-3 md:p-4 flex items-center gap-3 md:gap-4 shadow-2xl">
+                        <div className="bg-amber-500/20 p-2 md:p-3 rounded-full shrink-0">
+                            <Coins className="text-amber-400 w-6 h-6 md:w-8 md:h-8" />
                         </div>
                         <div>
-                            <p className="text-xs text-slate-500 uppercase tracking-wider font-bold">Puntos Disponibles</p>
-                            <p className="text-3xl font-black text-white">{spendablePoints}</p>
+                            <p className="hidden xs:block text-[8px] md:text-[10px] text-slate-500 uppercase tracking-wider font-bold">Puntos</p>
+                            <p className="text-lg md:text-3xl font-black text-white">{spendablePoints}</p>
                         </div>
                     </div>
                 </div>
@@ -91,42 +91,41 @@ const RewardStore = ({ courseId }) => {
                     <h2 className="text-2xl font-bold text-white">Recomendado por el Sistema</h2>
                 </div>
                 
-                <div className="bg-gradient-to-br from-indigo-600/20 via-slate-900 to-cyan-600/20 border border-indigo-500/30 rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center gap-10 shadow-2xl relative overflow-hidden group">
+                <div className="bg-gradient-to-br from-indigo-600/20 via-slate-900 to-cyan-600/20 border border-indigo-500/30 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 flex flex-col md:flex-row items-center gap-6 md:gap-10 shadow-2xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/10 blur-[100px] pointer-events-none" />
                     
-                    <div className="relative">
-                        <div className="w-40 h-40 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl rotate-3 group-hover:rotate-6 transition-transform duration-500">
-                            <Snowflake className="w-20 h-20 text-white animate-pulse" />
+                    <div className="relative shrink-0">
+                        <div className="w-24 h-24 md:w-40 md:h-40 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-2xl rotate-3 group-hover:rotate-6 transition-transform duration-500">
+                            <Snowflake className="w-12 h-12 md:w-20 md:h-20 text-white animate-pulse" />
                         </div>
-                        <div className="absolute -bottom-4 -right-4 bg-orange-500 rounded-2xl p-3 shadow-xl flex items-center gap-2">
-                           <Flame className="w-6 h-6 text-white" />
-                           <span className="text-white font-black">SAVE STREAK</span>
+                        <div className="absolute -bottom-2 md:-bottom-4 -right-2 md:-right-4 bg-orange-500 rounded-lg md:rounded-2xl p-1.5 md:p-3 shadow-xl flex items-center gap-1 md:gap-2">
+                           <Flame className="w-3 h-3 md:w-6 md:h-6 text-white" />
+                           <span className="text-white font-black text-[8px] md:text-sm">SAVE STREAK</span>
                         </div>
                     </div>
 
-                    <div className="flex-1 text-center md:text-left">
-                        <h3 className="text-3xl font-black text-white mb-2 italic tracking-tight">Cubo de Hielo (Congelar Racha)</h3>
-                        <p className="text-slate-400 text-lg leading-relaxed max-w-xl">
-                            ¿Faltaste un día? ¡No hay problema! Este ítem se consume automáticamente si no te conectas, 
-                            manteniendo tu racha intacta. Los puntos extra de racha (+5 a +50) son vitales para el ranking.
+                    <div className="flex-1 text-center md:text-left min-w-0">
+                        <h3 className="text-xl md:text-3xl font-black text-white mb-2 italic tracking-tight italic">Cubo de Hielo (Racha)</h3>
+                        <p className="text-slate-400 text-sm md:text-lg leading-relaxed max-w-xl">
+                            ¿Faltaste un día? ¡No hay problema! Este ítem se consume automáticamente si no te conectas, manteniendo tu racha intacta.
                         </p>
                         
-                        <div className="mt-8 flex flex-wrap items-center justify-center md:justify-start gap-4">
-                            <div className="flex items-center gap-2 text-2xl font-black text-amber-400 bg-amber-400/10 px-6 py-2 rounded-full border border-amber-400/20">
-                                <Coins className="w-6 h-6" />
-                                200 PTS
+                        <div className="mt-6 md:mt-8 flex flex-wrap items-center justify-center md:justify-start gap-4">
+                            <div className="flex items-center gap-2 text-lg md:text-2xl font-black text-amber-400 bg-amber-400/10 px-4 md:px-6 py-1.5 md:py-2 rounded-full border border-amber-400/20">
+                                <Coins className="w-4 h-4 md:w-6 md:h-6" />
+                                200 <span className="text-xs md:text-base font-bold ml-1">PTS</span>
                             </div>
                             <button 
                                 onClick={handleBuyIceCube}
                                 disabled={spendablePoints < 200}
-                                className={`px-10 py-4 rounded-2xl font-black text-lg transition-all active:scale-95 flex items-center gap-3 shadow-xl
+                                className={`w-full sm:w-auto px-6 md:px-10 py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-sm md:text-lg transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl
                                     ${spendablePoints >= 200 
                                         ? 'bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:shadow-indigo-500/40' 
                                         : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'}`}
                             >
-                                <ShoppingBag className="w-6 h-6" />
-                                {spendablePoints >= 200 ? 'COMPRAR AHORA' : 'PUNTOS INSUFICIENTES'}
+                                <ShoppingBag className="w-5 h-5 md:w-6 md:h-6" />
+                                {spendablePoints >= 200 ? 'COMPRAR' : 'INSUFICIENTE'}
                             </button>
                         </div>
                     </div>

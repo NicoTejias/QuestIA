@@ -1,7 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { ShieldAlert, Rocket, ArrowLeft } from "lucide-react";
 import { useClerk } from "@clerk/clerk-react";
-import { useEffect } from "react";
 
 export default function AuthErrorPage() {
     const location = useLocation();
@@ -9,11 +8,17 @@ export default function AuthErrorPage() {
     const params = new URLSearchParams(location.search);
     const error = params.get("error");
 
-    // EFECTO DE SEGURIDAD: Desloguear inmediatamente si llegamos aquí
-    useEffect(() => {
-        signOut().catch(console.error);
-        // Opcionalmente podemos limpiar caches locales aquí si fuera necesario
-    }, [signOut]);
+    // Ya no deslogueamos automáticamente para que el usuario pueda leer el error.
+    // El deslogueo ocurrirá cuando el usuario decida reintentar.
+    const handleRetry = async () => {
+        try {
+            await signOut();
+            window.location.href = "/login";
+        } catch (error) {
+            console.error("Error signing out:", error);
+            window.location.href = "/login";
+        }
+    };
 
     let title = "Acceso Denegado";
     let message = "Hubo un problema al intentar iniciar sesión.";
@@ -49,12 +54,12 @@ export default function AuthErrorPage() {
                 </div>
 
                 <div className="flex flex-col gap-4">
-                    <a 
-                        href="/login"
+                    <button 
+                        onClick={handleRetry}
                         className="w-full flex items-center justify-center gap-3 px-8 py-5 bg-primary hover:bg-primary-light text-white font-black rounded-2xl transition-all shadow-xl shadow-primary/20 active:scale-95"
                     >
                         <ArrowLeft className="w-5 h-5" /> REINTENTAR CON OTRO CORREO
-                    </a>
+                    </button>
 
                     <div className="pt-8 border-t border-white/5 flex items-center justify-center gap-2">
                         <Rocket className="w-4 h-4 text-slate-600" />

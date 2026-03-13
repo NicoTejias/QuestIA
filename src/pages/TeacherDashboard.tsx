@@ -33,6 +33,7 @@ export default function TeacherDashboard() {
     const navigate = useNavigate()
     const user = useQuery(api.users.getProfile)
     const courses = useQuery(api.courses.getMyCourses)
+    const stats = useQuery(api.analytics.getTeacherStats)
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [activeTab, setActiveTab] = useState('inicio')
     const [selectedCourse, setSelectedCourse] = useState<any>(null)
@@ -134,15 +135,15 @@ export default function TeacherDashboard() {
 
             {/* Main */}
             <main className="flex-1 min-h-screen">
-                <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white" aria-label="Abrir panel de navegación" title="Abrir panel de navegación">
-                            <Menu className="w-6 h-6" />
+                <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white shrink-0" aria-label="Abrir panel de navegación" title="Abrir panel de navegación">
+                            <Menu className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
-                        <h1 className="text-xl font-bold text-white">{tabs.find(t => t.id === activeTab)?.label}</h1>
+                        <h1 className="text-base md:text-xl font-bold text-white truncate">{tabs.find(t => t.id === activeTab)?.label}</h1>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <BetaBanner className="hidden sm:flex" />
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <BetaBanner className="hidden lg:flex" />
                         <NotificationBell />
                     </div>
                 </header>
@@ -153,6 +154,7 @@ export default function TeacherDashboard() {
                             firstName={firstName}
                             coursesCount={coursesCount}
                             courses={courses || []}
+                            stats={stats}
                             onSelectCourse={(c) => {
                                 setSelectedCourse(c)
                                 setActiveTab('ramos')
@@ -183,19 +185,19 @@ export default function TeacherDashboard() {
 
 // ======== INICIO con saludo personalizado ========
 
-function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { firstName: string, coursesCount: number, courses: any[], onSelectCourse: (c: any) => void }) {
+function InicioDocente({ firstName, coursesCount, courses, stats, onSelectCourse }: { firstName: string, coursesCount: number, courses: any[], stats: any, onSelectCourse: (c: any) => void }) {
     return (
         <div className="space-y-8">
             {/* Saludo Personalizado */}
-            <div className="bg-gradient-to-r from-accent/10 via-primary/5 to-surface-light border border-accent/20 rounded-3xl p-8">
+            <div className="bg-gradient-to-r from-accent/10 via-primary/5 to-surface-light border border-accent/20 rounded-2xl md:rounded-3xl p-6 md:p-8">
                 <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-5 h-5 text-accent-light" />
-                    <span className="text-accent-light text-sm font-medium">{getGreeting()}</span>
+                    <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-accent-light" />
+                    <span className="text-accent-light text-[10px] md:text-sm font-medium">{getGreeting()}</span>
                 </div>
-                <h2 className="text-3xl font-black text-white mb-2">
+                <h2 className="text-2xl md:text-3xl font-black text-white mb-2">
                     Hola {firstName} 👋
                 </h2>
-                <p className="text-slate-400 text-lg">
+                <p className="text-slate-400 text-base md:text-lg">
                     {coursesCount === 0
                         ? 'Comienza creando tu primer ramo para empezar a gamificar tus clases.'
                         : `Tienes ${coursesCount} ${coursesCount === 1 ? 'ramo activo' : 'ramos activos'}. ¿Listo para inspirar hoy?`
@@ -207,18 +209,21 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
                     { label: 'Ramos Activos', value: `${coursesCount}`, color: 'text-accent-light', bg: 'bg-accent/10', icon: <BookOpen className="w-6 h-6" /> },
-                    { label: 'Misiones Creadas', value: '—', color: 'text-primary-light', bg: 'bg-primary/10', icon: <Target className="w-6 h-6" /> },
-                    { label: 'Alumnos Totales', value: '—', color: 'text-gold', bg: 'bg-gold/10', icon: <Users className="w-6 h-6" /> },
+                    { label: 'Misiones Creadas', value: stats?.totalMissionsCreated ?? '...', color: 'text-primary-light', bg: 'bg-primary/10', icon: <Target className="w-6 h-6" /> },
+                    { label: 'Alumnos Inscritos', value: stats?.totalStudents ?? '...', color: 'text-gold', bg: 'bg-gold/10', icon: <Users className="w-6 h-6" /> },
                 ].map((stat, i) => (
-                    <div key={i} className="bg-surface-light border border-white/5 rounded-2xl p-5">
+                    <div key={i} className="bg-surface-light border border-white/5 rounded-2xl p-5 transition-all hover:border-white/10">
                         <div className="flex items-center justify-between mb-3">
-                            <span className="text-sm text-slate-400">{stat.label}</span>
+                            <span className="text-sm text-slate-400 font-medium">{stat.label}</span>
                             <div className={`${stat.bg} p-2 rounded-xl ${stat.color}`}>{stat.icon}</div>
                         </div>
-                        <p className={`text-3xl font-black ${stat.color}`}>{stat.value}</p>
+                        <p className={`text-3xl font-black ${stat.color}`}>
+                            {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
+                        </p>
                     </div>
                 ))}
             </div>
+
 
             {/* Ramos recientes */}
             <div>

@@ -102,8 +102,14 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                     const entries = dataRows
                         .map(row => {
                             const rawId = String(row[firstNumericCol] || '').trim()
-                            const cleanBody = rawId.replace(/[^\d]/g, '')
-                            const id = cleanBody ? formatRutWithDV(cleanBody) : rawId
+                            const cleanBody = rawId.replace(/[^\dkK]/g, '')
+                            // Si ya tiene guion o parece un RUT completo, no forzamos formatRutWithDV
+                            let id = rawId;
+                            if (!rawId.includes('-') && cleanBody.length >= 7 && cleanBody.length <= 8) {
+                                id = formatRutWithDV(cleanBody);
+                            } else {
+                                id = rawId.toUpperCase().replace(/\./g, '');
+                            }
                             const section = seccionCol !== -1 ? String(row[seccionCol] || '').trim() : detectedSection || undefined
                             return { id, name: '', section }
                         })
@@ -113,8 +119,13 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                     const entries = dataRows
                         .map(row => {
                             const rawRut = String(row[rutCol] || '').trim()
-                            const cleanBody = rawRut.replace(/[^\d]/g, '')
-                            const rut = cleanBody ? formatRutWithDV(cleanBody) : rawRut
+                            const cleanBody = rawRut.replace(/[^\dkK]/g, '')
+                            let rut = rawRut;
+                            if (!rawRut.includes('-') && cleanBody.length >= 7 && cleanBody.length <= 8) {
+                                rut = formatRutWithDV(cleanBody);
+                            } else {
+                                rut = rawRut.toUpperCase().replace(/\./g, '');
+                            }
 
                             // Construir nombre completo
                             const parts = []
@@ -147,8 +158,13 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                         .map((row: any) => {
                             const values = Object.values(row) as string[]
                             const rawId = rutCol !== -1 ? String(values[rutCol] || '').trim() : String(values[0] || '').trim()
-                            const cleanBody = rawId.replace(/[^\d]/g, '')
-                            const id = cleanBody ? formatRutWithDV(cleanBody) : rawId
+                            const cleanBody = rawId.replace(/[^\dkK]/g, '')
+                            let id = rawId;
+                            if (!rawId.includes('-') && cleanBody.length >= 7 && cleanBody.length <= 8) {
+                                id = formatRutWithDV(cleanBody);
+                            } else {
+                                id = rawId.toUpperCase().replace(/\./g, '');
+                            }
 
                             const parts = []
                             if (nombresCol !== -1) parts.push(String(values[nombresCol] || '').trim())
