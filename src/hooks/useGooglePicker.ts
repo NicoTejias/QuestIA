@@ -47,6 +47,7 @@ export function useGooglePicker() {
         client_id: CLIENT_ID,
         scope: SCOPES,
         prompt: 'select_account',
+        hint: 'ni.tejias@profesor.duoc.cl', // Ayuda a Google a preseleccionar tu cuenta
         callback: (response: any) => {
           if (response.error) {
             reject(response);
