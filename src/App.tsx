@@ -96,7 +96,8 @@ function DashboardRedirect() {
   // 4. Si autenticado pero perfil es null (error de DB)
   if (user === null) {
       console.error("DashboardRedirect: Auth OK but Profile NULL");
-      return <Navigate to="/login?error=ProfileNotFound" replace />
+      // Si el perfil es null pero está autenticado, es que fue rechazado por el filtro institucional
+      return <Navigate to="/auth-error?error=Correo no institucional o perfil no vinculado" replace />
   }
 
   const userRole = (user as any)?.role || 'student';
