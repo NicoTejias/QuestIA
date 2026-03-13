@@ -10,6 +10,13 @@ export function useGooglePicker() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
+  // Debug logs (Safe)
+  useEffect(() => {
+    console.log("🔍 Google Client ID exists:", !!CLIENT_ID);
+    if (CLIENT_ID) console.log("🔍 ID starts with:", CLIENT_ID.substring(0, 10));
+    console.log("🔍 API Key exists:", !!API_KEY);
+  }, []);
+
   useEffect(() => {
     // Cargar librerías de Google
     const script = document.createElement("script");
