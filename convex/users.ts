@@ -241,7 +241,6 @@ export const checkWhitelist = query({
         }
 
         const inputRaw = args.student_id.trim();
-        const inputNormalized = normalizeRut(inputRaw);
         const inputClean = inputRaw.replace(/[^\dkK]/g, '').toUpperCase();
         const inputNumbersOnly = inputRaw.replace(/[^\d]/g, '');
 

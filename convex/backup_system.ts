@@ -1,5 +1,4 @@
 import { query } from "./_generated/server";
-import { v } from "convex/values";
 
 /**
  * Realiza un respaldo de seguridad de todos los enrolamientos y puntos actuales
