@@ -537,10 +537,10 @@ export const getGlobalRanking = query({
             const refCourse = await ctx.db.get(args.course_id);
             if (!refCourse) return [];
 
-            // 1. Encontrar todos los ramos con el mismo código
+            // 1. Encontrar todos los ramos con el mismo nombre (fusión multicarreara)
             const relatedCourses = await ctx.db
                 .query("courses")
-                .withIndex("by_code", q => q.eq("code", refCourse.code))
+                .withIndex("by_name", q => q.eq("name", refCourse.name))
                 .collect();
 
             const courseIds = relatedCourses.map(c => c._id);

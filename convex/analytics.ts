@@ -123,8 +123,13 @@ export const getTeacherStats = query({
                 }
             }
 
-            const courseStats = courseIds.map((courseId: any) => {
+            // Agrupar estadísticas por nombre de ramo (Fusión multicarreara)
+            const statsByName = new Map<string, any>();
+
+            for (const courseId of courseIds) {
                 const course = courses.find((c: any) => c._id === courseId);
+                if (!course) continue;
+
                 const courseEnrollments = enrollments.filter((e: any) => e.course_id === courseId);
                 const courseMissions = missions.filter((m: any) => m.course_id === courseId);
                 const courseQuizzes = quizzes.filter((q: any) => q.course_id === courseId);
@@ -138,16 +143,31 @@ export const getTeacherStats = query({
                 const courseDocs = documents.filter((d: any) => d.course_id === courseId);
                 const coursePoints = courseEnrollments.reduce((sum: number, e: any) => sum + (e.ranking_points ?? e.total_points ?? 0), 0);
 
-                return {
-                    name: course?.name || "",
-                    code: course?.code || "",
-                    students: courseEnrollments.length,
-                    missions: courseMissions.length + courseQuizzes.length,
-                    submissions: courseSubmissions.length + courseQuizSubmissions.length,
-                    documents: courseDocs.length,
-                    totalPoints: coursePoints,
+                const existing = statsByName.get(course.name);
+                if (existing) {
+                    existing.students += courseEnrollments.length;
+                    existing.missions += courseMissions.length + courseQuizzes.length;
+                    existing.submissions += courseSubmissions.length + courseQuizSubmissions.length;
+                    existing.documents += courseDocs.length;
+                    existing.totalPoints += coursePoints;
+                    // Mantenemos el código del primero o una lista? Un string concatenado es útil si son pocos
+                    if (!existing.code.includes(course.code)) {
+                        existing.code += ` / ${course.code}`;
+                    }
+                } else {
+                    statsByName.set(course.name, {
+                        name: course.name,
+                        code: course.code,
+                        students: courseEnrollments.length,
+                        missions: courseMissions.length + courseQuizzes.length,
+                        submissions: courseSubmissions.length + courseQuizSubmissions.length,
+                        documents: courseDocs.length,
+                        totalPoints: coursePoints,
+                    });
                 }
-            });
+            }
+
+            const courseStats = Array.from(statsByName.values());
 
             return {
                 totalStudents,

@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
+
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { FileText, Upload, Trash2, Loader2, X, CheckCircle, Eye, EyeOff, BookOpen, Database } from 'lucide-react'
+import { FileText, Upload, Trash2, Loader2, X, CheckCircle, Eye, EyeOff, BookOpen, Cloud } from 'lucide-react'
 import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '../../utils/documentParser'
 import { useGooglePicker } from '../../hooks/useGooglePicker'
 
@@ -198,52 +199,53 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                         onChange={e => handleUpload(e.target.files)}
                         title="Subir archivos"
                     />
-
-                    <div className="flex justify-center pt-2">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (!selectedCourse) {
-                                    setError('Selecciona un ramo antes de importar de Drive.');
-                                    return;
-                                }
-                                openPicker(async (file, token) => {
-                                    try {
-                                        setUploading(true);
-                                        setUploadProgress(`📥 Descargando "${file.name}" desde Drive...`);
-                                        
-                                        const blob = await downloadFile(file.id, token);
-                                        const driveFile = new File([blob], file.name, { type: file.mimeType });
-                                        
-                                        // Reutilizar la lógica de upload enviando un FileList simulado o llamando a una lógica compartida
-                                        // Para simplicidad, invocamos el proceso directamente para este archivo
-                                        await processAndUploadFile(driveFile);
-                                        
-                                        setSuccess(`✅ "${file.name}" importado exitosamente desde Google Drive.`);
-                                    } catch (err: any) {
-                                        setError(`Error al importar de Drive: ${err.message}`);
-                                    } finally {
-                                        setUploading(false);
-                                        setUploadProgress('');
-                                    }
-                                });
-                            }}
-                            disabled={!isLoaded || uploading}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all
-                                ${!selectedCourse 
-                                    ? 'bg-white/5 text-white/20 cursor-not-allowed' 
-                                    : 'bg-[#4285F4]/20 text-[#4285F4] hover:bg-[#4285F4]/30 border border-[#4285F4]/50'}
-                            `}
-                        >
-                            {uploading ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <Database className="w-5 h-5" />
-                            )}
-                            Importar desde Google Drive
-                        </button>
-                    </div>
                 </div>
+
+                <div className="flex items-center gap-3">
+                    <div className="h-px bg-white/5 flex-1"></div>
+                    <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">o bien</span>
+                    <div className="h-px bg-white/5 flex-1"></div>
+                </div>
+
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (!selectedCourse) {
+                            setError('Selecciona un ramo antes de importar de Drive.');
+                            return;
+                        }
+                        openPicker(async (file, token) => {
+                            try {
+                                setUploading(true);
+                                setUploadProgress(`📥 Descargando "${file.name}" desde Drive...`);
+                                
+                                const blob = await downloadFile(file.id, token);
+                                const driveFile = new File([blob], file.name, { type: file.mimeType });
+                                await processAndUploadFile(driveFile);
+                                
+                                setSuccess(`✅ "${file.name}" importado exitosamente desde Google Drive.`);
+                            } catch (err: any) {
+                                setError(`Error al importar de Drive: ${err.message}`);
+                            } finally {
+                                setUploading(false);
+                                setUploadProgress('');
+                            }
+                        });
+                    }}
+                    disabled={!isLoaded || uploading}
+                    className={`flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold transition-all border
+                        ${!selectedCourse 
+                            ? 'bg-white/5 text-white/20 border-white/5 cursor-not-allowed' 
+                            : 'bg-[#4285F4]/10 text-[#4285F4] hover:bg-[#4285F4]/20 border-[#4285F4]/30'}
+                    `}
+                >
+                    {uploading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                        <Cloud className="w-5 h-5" />
+                    )}
+                    Importar desde Google Drive
+                </button>
             </div>
 
             {/* Lista de documentos subidos */}

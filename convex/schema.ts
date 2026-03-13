@@ -55,7 +55,8 @@ export default defineSchema({
         description: v.string(),
     })
         .index("by_teacher", ["teacher_id"])
-        .index("by_code", ["code"]),
+        .index("by_code", ["code"])
+        .index("by_name", ["name"]),
 
     whitelists: defineTable({
         course_id: v.id("courses"),

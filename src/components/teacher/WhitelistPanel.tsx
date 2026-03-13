@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
 import { useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { Upload, Trash2, CheckCircle, X, Loader2 } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, X, Loader2, Cloud } from 'lucide-react'
+import { useGooglePicker } from '../../hooks/useGooglePicker'
 import Papa from 'papaparse'
 
 export default function WhitelistPanel({ courses }: { courses: any[] }) {
@@ -14,6 +15,7 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
     const [uploading, setUploading] = useState(false)
     const [success, setSuccess] = useState('')
     const [error, setError] = useState('')
+    const { openPicker, downloadFile, isLoaded } = useGooglePicker()
     const [clearExisting, setClearExisting] = useState(false)
     const deleteWhitelist = useMutation(api.courses.deleteCourseWhitelist)
 
@@ -30,9 +32,7 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
         return -1
     }
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
+    const processFile = async (file: File) => {
         setFileName(file.name)
         setError('')
         setParsedData([])
@@ -40,7 +40,6 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
         const ext = file.name.split('.').pop()?.toLowerCase()
 
         if (ext === 'xlsx' || ext === 'xls') {
-            // ===== Parsear XLSX con SheetJS =====
             try {
                 const XLSX = await import('xlsx')
                 const arrayBuffer = await file.arrayBuffer()
@@ -53,20 +52,16 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                     return
                 }
 
-                // Buscar la fila de headers (puede no ser la primera si tiene títulos)
                 let headerRowIdx = 0
                 let detectedSection = ''
                 
                 for (let i = 0; i < Math.min(5, jsonData.length); i++) {
                     const row = (jsonData[i] || []).map(c => String(c || '').toLowerCase())
-                    
-                    // Intentar extraer la sección del texto como "Histórico Asistencia Curso : GDP3475-004D | ..."
                     const fullRowText = (jsonData[i] || []).join(' ')
                     const sectionMatch = fullRowText.match(/([0-9]{3}[A-Z])/i)
                     if (sectionMatch && !detectedSection) {
                         detectedSection = sectionMatch[1].toUpperCase()
                     }
-
                     if (row.some(c => c.includes('rut') || c.includes('alumno') || c.includes('matrícula') || c.includes('matricula'))) {
                         headerRowIdx = i
                         break
@@ -80,30 +75,24 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                 const headers = (jsonData[headerRowIdx] || []).map(h => String(h || ''))
                 const dataRows = jsonData.slice(headerRowIdx + 1)
 
-                // Detectar columna de RUT/identificador
                 const rutCol = findColumn(headers, ['rut alumno', 'rut', 'matrícula', 'matricula', 'identificador', 'id alumno'])
-                // Detectar columnas de nombre
                 const nombresCol = findColumn(headers, ['nombres', 'nombre'])
                 const apPaternoCol = findColumn(headers, ['apellido paterno', 'ap. paterno', 'paterno'])
                 const apMaternoCol = findColumn(headers, ['apellido materno', 'ap. materno', 'materno'])
-                // Detectar columna de sección
                 const seccionCol = findColumn(headers, ['sección', 'seccion', 'grupo', 'curso'])
 
                 if (rutCol === -1) {
-                    // Fallback: usar la primera columna numérica como RUT
                     const firstNumericCol = headers.findIndex((_, i) => {
                         const val = String(dataRows[0]?.[i] || '')
                         return /^\d{6,}/.test(val.replace(/\./g, ''))
                     })
                     if (firstNumericCol === -1) {
-                        setError('No se encontró una columna de RUT o identificador en el archivo. Asegúrate de que exista una columna "Rut Alumno".')
+                        setError('No se encontró una columna de RUT en el archivo.')
                         return
                     }
-                    // Usar esa columna
                     const entries = dataRows
                         .map(row => {
                             const rawId = String(row[firstNumericCol] || '').trim()
-                            // Solo limpiar puntos y estandarizar a mayúsculas, sin agregar guiones ni DVs
                             const id = rawId.replace(/\./g, '').replace(/\s/g, '').toUpperCase();
                             const section = seccionCol !== -1 ? String(row[seccionCol] || '').trim() : detectedSection || undefined
                             return { id, name: '', section }
@@ -114,10 +103,7 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                     const entries = dataRows
                         .map(row => {
                             const rawRut = String(row[rutCol] || '').trim()
-                            // Solo limpiar puntos y estandarizar a mayúsculas
                             const rut = rawRut.replace(/\./g, '').replace(/\s/g, '').toUpperCase();
-
-                            // Construir nombre completo
                             const parts = []
                             if (nombresCol !== -1) parts.push(String(row[nombresCol] || '').trim())
                             if (apPaternoCol !== -1) parts.push(String(row[apPaternoCol] || '').trim())
@@ -133,7 +119,6 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                 setError(`Error al leer el archivo Excel: ${err.message}`)
             }
         } else {
-            // ===== Parsear CSV con PapaParse =====
             Papa.parse(file, {
                 header: true,
                 skipEmptyLines: true,
@@ -148,9 +133,7 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                         .map((row: any) => {
                             const values = Object.values(row) as string[]
                             const rawId = rutCol !== -1 ? String(values[rutCol] || '').trim() : String(values[0] || '').trim()
-                            // Solo limpiar puntos y estandarizar a mayúsculas
                             const id = rawId.replace(/\./g, '').replace(/\s/g, '').toUpperCase();
-
                             const parts = []
                             if (nombresCol !== -1) parts.push(String(values[nombresCol] || '').trim())
                             if (apPaternoCol !== -1) parts.push(String(values[apPaternoCol] || '').trim())
@@ -163,6 +146,12 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                 error: (err) => setError('Error al leer el archivo CSV: ' + err.message)
             })
         }
+    }
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        await processFile(file)
     }
 
     const handleUpload = async () => {
@@ -247,15 +236,57 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
 
                 <div>
                     <label className="text-sm font-medium text-slate-300 mb-2 block">Archivo XLSX o CSV</label>
-                    <label className="flex flex-col items-center justify-center w-full h-36 bg-surface border-2 border-dashed border-white/10 rounded-2xl cursor-pointer hover:border-accent/40 transition-all group" title="Haz clic para subir el listado de alumnos">
-                        <div className="flex gap-2 mb-2">
-                            <span className="text-2xl">📗</span>
-                            <span className="text-2xl">📄</span>
+                    <div className="flex flex-col gap-3">
+                        <label className="flex flex-col items-center justify-center w-full h-36 bg-surface border-2 border-dashed border-white/10 rounded-2xl cursor-pointer hover:border-accent/40 transition-all group" title="Haz clic para subir el listado de alumnos">
+                            <div className="flex gap-2 mb-2">
+                                <span className="text-2xl">📗</span>
+                                <span className="text-2xl">📄</span>
+                            </div>
+                            <span className="text-slate-400 text-sm font-medium">{fileName || 'Cargar archivo local (Arrastra o clic)'}</span>
+                            <span className="text-slate-500 text-xs mt-1">.xlsx o .csv — Listado de Alumnos</span>
+                            <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} title="Subir archivo" />
+                        </label>
+
+                        <div className="flex items-center gap-3">
+                            <div className="h-px bg-white/5 flex-1"></div>
+                            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">o bien</span>
+                            <div className="h-px bg-white/5 flex-1"></div>
                         </div>
-                        <span className="text-slate-400 text-sm font-medium">{fileName || 'Haz clic para subir el listado de alumnos'}</span>
-                        <span className="text-slate-500 text-xs mt-1">.xlsx o .csv — se detectará el RUT exacto de Blackboard</span>
-                        <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} title="Subir archivo" />
-                    </label>
+
+                        <button
+                            onClick={async () => {
+                                if (!selectedCourse) {
+                                    setError('Selecciona un ramo antes de importar de Drive.');
+                                    return;
+                                }
+                                openPicker(async (file, token) => {
+                                    try {
+                                        setUploading(true);
+                                        const blob = await downloadFile(file.id, token);
+                                        const driveFile = new File([blob], file.name, { type: file.mimeType });
+                                        await processFile(driveFile);
+                                    } catch (err: any) {
+                                        setError(`Error de Drive: ${err.message}`);
+                                    } finally {
+                                        setUploading(false);
+                                    }
+                                });
+                            }}
+                            disabled={!isLoaded || uploading}
+                            className={`flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold transition-all border
+                                ${!selectedCourse 
+                                    ? 'bg-white/5 text-white/20 border-white/5 cursor-not-allowed' 
+                                    : 'bg-[#4285F4]/10 text-[#4285F4] hover:bg-[#4285F4]/20 border-[#4285F4]/30'}
+                            `}
+                        >
+                            {uploading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Cloud className="w-5 h-5" />
+                            )}
+                            Importar desde Google Drive
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2 p-3 bg-white/5 rounded-xl border border-white/5">

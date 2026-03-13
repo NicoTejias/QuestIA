@@ -66,7 +66,7 @@ export default function RankingDocentePanel() {
                 <div className="bg-accent/10 border border-accent/20 rounded-xl p-4 mb-6">
                     <p className="text-accent-light text-sm flex items-center gap-2">
                         <Trophy className="w-4 h-4" />
-                        Estás viendo el ranking de **todas las secciones** del ramo (mismo código).
+                        Estás viendo el ranking de **todas las secciones** del ramo (mismo nombre).
                     </p>
                 </div>
             )}

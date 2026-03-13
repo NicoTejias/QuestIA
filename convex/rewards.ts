@@ -33,7 +33,7 @@ export const createReward = mutation({
         name: v.string(),
         description: v.string(),
         cost: v.number(),
-        stock: v.number(),
+        stock: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const user = await requireTeacher(ctx);
@@ -42,12 +42,22 @@ export const createReward = mutation({
         if (!course || course.teacher_id !== user._id)
             throw new Error("No autorizado para crear recompensas en este ramo");
 
+        // Si no se especifica stock, el default es 1 por alumno inscrito actualmente
+        let finalStock = args.stock;
+        if (finalStock === undefined) {
+             const enrollments = await ctx.db
+                .query("enrollments")
+                .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
+                .collect();
+            finalStock = Math.max(enrollments.length, 1); // Al menos 1 si no hay alumnos aún
+        }
+
         const rewardId = await ctx.db.insert("rewards", {
             course_id: args.course_id,
             name: args.name,
             description: args.description,
             cost: args.cost,
-            stock: args.stock,
+            stock: finalStock,
         });
 
         // Notificar a los alumnos inscritos
@@ -65,13 +75,12 @@ export const createReward = mutation({
                     body: `Se ha agregado "${args.name}" a la tienda de ${course.name}. ¡Canjéala con tus puntos!`,
                 });
             }
-
         }
 
         return rewardId;
-
     },
 });
+
 
 // Canjear una recompensa
 export const redeemReward = mutation({
