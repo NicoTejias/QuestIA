@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useQuery, useMutation } from "convex/react"
+import { useQuery, useMutation, useAction } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { Users, Loader2, CheckCircle, X } from 'lucide-react'
+import { Users, Loader2, CheckCircle, X, Sparkles } from 'lucide-react'
 
 export default function GruposPanel() {
     const courses = useQuery(api.courses.getMyCourses)
@@ -11,6 +11,10 @@ export default function GruposPanel() {
     const [generating, setGenerating] = useState(false)
     const [result, setResult] = useState<any>(null)
     const [error, setError] = useState('')
+    const [aiFeedback, setAiFeedback] = useState('')
+    const [gettingFeedback, setGettingFeedback] = useState(false)
+
+    const getAiFeedback = useAction(api.ai_feedback.getGroupFeedback)
 
     // Obtener grupos existentes del ramo seleccionado
     const existingGroups = useQuery(
@@ -71,18 +75,43 @@ export default function GruposPanel() {
     }
     // ------------------------
 
+    const handleGetAiFeedback = async () => {
+        if (displayGroups.length === 0) return
+        setGettingFeedback(true)
+        setAiFeedback('')
+        try {
+            const feedback = await getAiFeedback({ groupsData: displayGroups })
+            setAiFeedback(feedback)
+        } catch (err: any) {
+            setError('Error al obtener feedback de IA: ' + err.message)
+        } finally {
+            setGettingFeedback(false)
+        }
+    }
+
     return (
         <div>
             <div className="flex items-center justify-between mb-6">
                 <p className="text-slate-400">Genera grupos equilibrados automáticamente basándose en los perfiles Belbin de tus alumnos.</p>
                 {displayGroups.length > 0 && (
-                    <button
-                        onClick={startRoulette}
-                        className="bg-white/5 border border-white/10 text-white font-bold px-4 py-2 rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"
-                        title="Sortear orden de exposición"
-                    >
-                        🎡 Ruleta de Presentación
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleGetAiFeedback}
+                            disabled={gettingFeedback}
+                            className="bg-primary/20 border border-primary/20 text-primary-light font-bold px-4 py-2 rounded-xl hover:bg-primary/30 transition-all flex items-center gap-2"
+                            title="Analizar grupos con IA"
+                        >
+                            {gettingFeedback ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                            Feedback IA
+                        </button>
+                        <button
+                            onClick={startRoulette}
+                            className="bg-white/5 border border-white/10 text-white font-bold px-4 py-2 rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"
+                            title="Sortear orden de exposición"
+                        >
+                            🎡 Ruleta
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -182,6 +211,23 @@ export default function GruposPanel() {
                     <p className="text-green-400 text-sm font-medium">
                         ✅ {result.total_groups} grupos generados con {result.total_students} alumnos
                     </p>
+                </div>
+            )}
+
+            {aiFeedback && (
+                <div className="bg-slate-900/50 border border-primary/20 rounded-2xl p-6 mb-6 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-2 opacity-20">
+                        <Sparkles className="w-12 h-12 text-primary" />
+                    </div>
+                    <div className="flex items-center gap-2 mb-4">
+                        <h4 className="font-bold text-white flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-primary" /> Sugerencias de IA (Belbin)
+                        </h4>
+                        <button onClick={() => setAiFeedback('')} className="ml-auto text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                        {aiFeedback}
+                    </div>
                 </div>
             )}
 

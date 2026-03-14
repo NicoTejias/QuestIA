@@ -192,4 +192,14 @@ export default defineSchema({
         .index("by_quiz", ["quiz_id"])
         .index("by_user", ["user_id"])
         .index("by_quiz_user", ["quiz_id", "user_id"]),
+
+    messages: defineTable({
+        course_id: v.id("courses"),
+        user_id: v.id("users"),
+        content: v.string(),
+        type: v.union(v.literal("text"), v.literal("system")),
+        created_at: v.number(),
+    })
+        .index("by_course", ["course_id"])
+        .index("by_course_time", ["course_id", "created_at"]),
 });

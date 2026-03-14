@@ -16,7 +16,8 @@ export default function LoginPage() {
     }, [isSignedIn, navigate])
 
     return (
-        <div className="min-h-screen bg-surface flex">
+        <div className="min-h-screen bg-surface flex pt-safe pb-safe">
+
             {/* Panel Izquierdo - Decorativo */}
             <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary/20 to-surface items-center justify-center">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--color-primary)_0%,_transparent_70%)] opacity-20" />

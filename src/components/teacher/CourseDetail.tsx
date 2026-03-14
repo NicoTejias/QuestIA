@@ -10,7 +10,9 @@ import { toast } from 'sonner'
 import ConfirmModal from '../ConfirmModal'
 import { EditMissionModal, EditRewardModal } from './EditModals'
 
-export default function CourseDetail({ course, onBack }: { course: any, onBack: () => void }) {
+import ChatPanel from '../ChatPanel'
+
+export default function CourseDetail({ course, currentUserId, onBack }: { course: any, currentUserId: any, onBack: () => void }) {
     const fixAllIds = useMutation(api.users.fixAllStudentIds)
     const documents = useQuery(api.documents.getDocumentsByCourse, { course_id: course._id })
     const { results: rewards } = usePaginatedQuery(
@@ -434,7 +436,11 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                 />
             )}
 
-            {/* Modals */}
+            {/* Chat Colaborativo */}
+            <div className="mt-8">
+                <ChatPanel courseId={course._id} currentUserId={currentUserId} />
+            </div>
+
             <EditMissionModal
                 isOpen={!!editingMission}
                 onClose={() => setEditingMission(null)}

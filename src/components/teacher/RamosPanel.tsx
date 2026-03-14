@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import ConfirmModal from '../ConfirmModal'
 import { EditCourseModal } from './EditModals'
 
-export default function RamosPanel({ courses, selectedCourse, setSelectedCourse }: { courses: any[], selectedCourse: any, setSelectedCourse: (c: any) => void }) {
+export default function RamosPanel({ courses, selectedCourse, setSelectedCourse, currentUserId }: { courses: any[], selectedCourse: any, setSelectedCourse: (c: any) => void, currentUserId: any }) {
     const createCourse = useMutation(api.courses.createCourse)
     const deleteCourse = useMutation(api.courses.deleteCourse)
     const [showCreate, setShowCreate] = useState(false)
@@ -57,7 +57,7 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
     }
 
     if (selectedCourse) {
-        return <CourseDetail course={selectedCourse} onBack={() => setSelectedCourse(null)} />
+        return <CourseDetail course={selectedCourse} currentUserId={currentUserId} onBack={() => setSelectedCourse(null)} />
     }
 
     return (

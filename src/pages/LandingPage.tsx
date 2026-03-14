@@ -59,10 +59,11 @@ export default function LandingPage() {
         toast.info("Sesión cerrada. Puedes intentar con otra cuenta.")
     }
     return (
-        <div className="min-h-screen bg-surface">
+        <div className="min-h-screen bg-surface pb-safe">
             {/* Navbar */}
-            <nav className="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-white/5">
+            <nav className="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-white/5 pt-safe">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center">
                             <Rocket className="w-5 h-5 text-white" />

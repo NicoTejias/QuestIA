@@ -1,4 +1,5 @@
 import { query } from "./_generated/server";
+import { v } from "convex/values";
 import { requireTeacher } from "./withUser";
 
 // Estadísticas generales de un docente
@@ -182,11 +183,125 @@ export const getTeacherStats = query({
                 totalDocuments,
                 belbinDistribution,
                 courseStats,
+                topStudents: calculateTopStudents(enrollments, studentMap),
+                dailyActivity: calculateDailyActivity(submissions, quizSubmissions),
             };
         } catch (e) {
             console.error("Error in getTeacherStats:", e);
             return null;
         }
     },
+});
+
+function calculateDailyActivity(mSubs: any[], qSubs: any[]) {
+    const days = 7;
+    const activity = [];
+    const now = new Date();
+    
+    for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dayStr = date.toISOString().split('T')[0];
+        
+        const count = mSubs.filter(s => new Date(s.created_at).toISOString().split('T')[0] === dayStr).length +
+                      qSubs.filter(s => new Date(s.created_at || s._creationTime).toISOString().split('T')[0] === dayStr).length;
+        
+        activity.push({ day: dayStr, count });
+    }
+    return activity;
+}
+
+function calculateTopStudents(enrollments: any[], studentMap: Map<string, any>) {
+    const studentStats = new Map<string, any>();
+
+    for (const en of enrollments) {
+        const student = studentMap.get(en.user_id);
+        if (!student) continue;
+
+        // Unificamos por student_id (RUT) si existe, si no por user_id
+        const key = student.student_id || student._id;
+        const pts = en.ranking_points ?? en.total_points ?? 0;
+
+        if (studentStats.has(key)) {
+            const s = studentStats.get(key);
+            s.totalPoints += pts;
+            if (!s.courses.includes(en.course_id)) {
+                s.courses.push(en.course_id);
+            }
+        } else {
+            studentStats.set(key, {
+                id: student._id,
+                name: student.name || "Alumno",
+                studentId: student.student_id || "S/I",
+                totalPoints: pts,
+                courses: [en.course_id],
+                belbin: student.belbin_profile?.role_dominant || "S/D"
+            });
+        }
+    }
+
+    return Array.from(studentStats.values())
+        .sort((a, b) => b.totalPoints - a.totalPoints)
+        .slice(0, 10);
+}
+
+// Obtener datos detallados de alumnos para exportación
+export const exportCourseData = query({
+    args: { courseName: v.string() },
+    handler: async (ctx, args) => {
+        const user = await requireTeacher(ctx);
+        const userId = user._id;
+
+        // Buscar todos los cursos con ese nombre (para agregación multicarrera)
+        const courses = await ctx.db
+            .query("courses")
+            .withIndex("by_teacher", (q: any) => q.eq("teacher_id", userId))
+            .collect();
+        
+        const targetCourses = courses.filter(c => c.name === args.courseName);
+        const courseIds = targetCourses.map(c => c._id);
+
+        if (courseIds.length === 0) return [];
+
+        // Enrollments
+        const enrollments = [];
+        for (const cid of courseIds) {
+            const batch = await ctx.db
+                .query("enrollments")
+                .withIndex("by_course", q => q.eq("course_id", cid as any))
+                .collect();
+            enrollments.push(...batch);
+        }
+
+        // De-duplicate users across sections if necessary (keep highest points or sum?)
+        // Usually, in DuocencIA, one user per section. Sum is safer.
+        const userMap = new Map<string, any>();
+
+        for (const en of enrollments) {
+            const student = await ctx.db.get(en.user_id);
+            if (!student) continue;
+
+            const existing = userMap.get(en.user_id);
+            if (existing) {
+                existing.points += (en.ranking_points ?? en.total_points ?? 0);
+                existing.spendable += (en.spendable_points ?? en.total_points ?? 0);
+                if (!existing.sections.includes(en.course_id)) {
+                     // We could fetch the code if needed
+                }
+            } else {
+                userMap.set(en.user_id, {
+                    name: student.name,
+                    id: student.student_id || "S/I",
+                    email: student.email,
+                    points: (en.ranking_points ?? en.total_points ?? 0),
+                    spendable: (en.spendable_points ?? en.total_points ?? 0),
+                    belbin: student.belbin_profile?.role_dominant || "No realizado",
+                    missions: 0 // Mock for now or calculate
+                });
+            }
+        }
+
+        return Array.from(userMap.values());
+    }
 });
 

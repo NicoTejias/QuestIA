@@ -9,6 +9,7 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as ai_feedback from "../ai_feedback.js";
 import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as backup_system from "../backup_system.js";
@@ -22,6 +23,7 @@ import type * as documents from "../documents.js";
 import type * as fcm from "../fcm.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
+import type * as messages from "../messages.js";
 import type * as missions from "../missions.js";
 import type * as notifications from "../notifications.js";
 import type * as point_transfers from "../point_transfers.js";
@@ -30,6 +32,7 @@ import type * as repair from "../repair.js";
 import type * as rewards from "../rewards.js";
 import type * as rutUtils from "../rutUtils.js";
 import type * as streak_reminders from "../streak_reminders.js";
+import type * as test_notification from "../test_notification.js";
 import type * as transfers from "../transfers.js";
 import type * as users from "../users.js";
 import type * as withUser from "../withUser.js";
@@ -42,6 +45,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  ai_feedback: typeof ai_feedback;
   analytics: typeof analytics;
   auth: typeof auth;
   backup_system: typeof backup_system;
@@ -55,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   fcm: typeof fcm;
   groups: typeof groups;
   http: typeof http;
+  messages: typeof messages;
   missions: typeof missions;
   notifications: typeof notifications;
   point_transfers: typeof point_transfers;
@@ -63,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   rewards: typeof rewards;
   rutUtils: typeof rutUtils;
   streak_reminders: typeof streak_reminders;
+  test_notification: typeof test_notification;
   transfers: typeof transfers;
   users: typeof users;
   withUser: typeof withUser;
