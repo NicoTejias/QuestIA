@@ -5,10 +5,9 @@ const config: CapacitorConfig = {
   appName: 'DuocencIA',
   webDir: 'dist',
   server: {
-    url: 'https://duocencia.vercel.app', // Cambia esto por tu URL de Vercel real
+    url: 'https://duocenc-ia.vercel.app',
     cleartext: true
   }
 };
-
 
 export default config;
