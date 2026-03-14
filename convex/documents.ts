@@ -56,8 +56,8 @@ export const saveDocument = mutation({
 export const getDocumentsByCourse = query({
     args: { course_id: v.id("courses") },
     handler: async (ctx, args) => {
-        const userId = await getAuthUserId(ctx);
-        if (!userId) return [];
+        const user = await requireAuth(ctx);
+        if (!user) return [];
 
         return await ctx.db
             .query("course_documents")
@@ -71,12 +71,12 @@ export const getDocumentsByCourse = query({
 export const getMyDocuments = query({
     args: {},
     handler: async (ctx) => {
-        const userId = await getAuthUserId(ctx);
-        if (!userId) return [];
+        const user = await requireAuth(ctx);
+        if (!user) return [];
 
         return await ctx.db
             .query("course_documents")
-            .withIndex("by_teacher", (q) => q.eq("teacher_id", userId))
+            .withIndex("by_teacher", (q) => q.eq("teacher_id", user._id))
             .order("desc")
             .collect();
     },
