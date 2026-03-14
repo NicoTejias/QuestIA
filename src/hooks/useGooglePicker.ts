@@ -72,24 +72,23 @@ export function useGooglePicker() {
     gapi.load("picker", () => {
       const pickerWindow = (window as any).google.picker;
       
-      // La vista de documentos estándar
-      const docsView = new pickerWindow.DocsView();
+      // Intentamos una configuración más clásica para evitar fallos de inicialización
+      const docsView = new pickerWindow.DocsView(pickerWindow.ViewId.DOCS);
       docsView.setIncludeFolders(true);
-      docsView.setMimeTypes("application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet,application/vnd.google-apps.presentation");
-
-      const picker = new pickerWindow.PickerBuilder()
+      
+      const pickerBuilder = new pickerWindow.PickerBuilder()
         .addView(docsView)
-        .addView(pickerWindow.ViewId.RECENTLY_USED)
         .setOAuthToken(token)
         .setDeveloperKey(API_KEY)
-        .setAppId(APP_ID)
         .setCallback((data: any) => {
           if (data.action === pickerWindow.Action.PICKED) {
-            const file = data.docs[0];
-            onFileSelected(file, token!);
+            onFileSelected(data.docs[0], token!);
           }
-        })
-        .build();
+        });
+
+      if (APP_ID) pickerBuilder.setAppId(APP_ID);
+
+      const picker = pickerBuilder.build();
       picker.setVisible(true);
     });
   };
