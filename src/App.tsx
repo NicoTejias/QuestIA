@@ -110,8 +110,10 @@ function DashboardRedirect() {
 
 
 import PushNotificationManager from './components/PushNotificationManager'
+import UpdateNotification from './components/UpdateNotification'
 
 function App() {
+
   const { isLoading, isAuthenticated } = useConvexAuth()
   
   useEffect(() => {
@@ -121,7 +123,9 @@ function App() {
   return (
     <>
       <PushNotificationManager />
+      <UpdateNotification />
       <Routes>
+
 
         <Route path="/" element={<LandingPage />} />
 

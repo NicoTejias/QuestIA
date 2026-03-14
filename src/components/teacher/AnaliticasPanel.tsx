@@ -1,4 +1,4 @@
-import { useQuery, useConvex } from "convex/react"
+import { useQuery, useConvex, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { BarChart3, Loader2, Sparkles, Download } from 'lucide-react'
 import { useState } from "react"
@@ -9,6 +9,10 @@ export default function AnaliticasPanel() {
     const stats = useQuery(api.analytics.getTeacherStats)
     const convex = useConvex()
     const [exporting, setExporting] = useState<string | null>(null)
+    const [unifying, setUnifying] = useState(false)
+    const unifyUsers = useMutation(api.admin_fix.unifyUsersByRut)
+    const [unifying, setUnifying] = useState(false)
+    const unifyUsers = useMutation(api.admin_fix.unifyUsersByRut)
 
     if (!stats) {
         return (
@@ -46,6 +50,19 @@ export default function AnaliticasPanel() {
         }
     }
 
+    const handleUnify = async () => {
+        if (!confirm("Esto buscará alumnos duplicados por RUT y unificará sus puntos. ¿Continuar?")) return
+        setUnifying(true)
+        try {
+            const res = await unifyUsers()
+            toast.success(`Se han unificado ${res.unifiedCount} registros.`)
+        } catch (err: any) {
+            toast.error("Error al unificar: " + err.message)
+        } finally {
+            setUnifying(false)
+        }
+    }
+
     const belbinColors: Record<string, string> = {
         'Cerebro': 'bg-blue-500', 'Monitor': 'bg-blue-400',
         'Coordinador': 'bg-green-500', 'Investigador': 'bg-green-400', 'Cohesionador': 'bg-emerald-400',
@@ -61,14 +78,25 @@ export default function AnaliticasPanel() {
                     <h2 className="text-2xl font-black text-white">Analíticas del Docente</h2>
                     <p className="text-slate-400">Métricas de rendimiento y participación de tus alumnos.</p>
                 </div>
-                <button 
-                    onClick={() => handleExport('TODOS')}
-                    disabled={exporting === 'TODOS'}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
-                >
-                    {exporting === 'TODOS' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    Exportar Ranking Global
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={handleUnify}
+                        disabled={unifying}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary-light border border-primary/20 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
+                        title="Unificar alumnos duplicados por RUT"
+                    >
+                        {unifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                        Unificar Alumnos
+                    </button>
+                    <button 
+                        onClick={() => handleExport('TODOS')}
+                        disabled={exporting === 'TODOS'}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
+                    >
+                        {exporting === 'TODOS' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        Exportar Ranking Global
+                    </button>
+                </div>
             </div>
 
             {/* KPI Cards */}
