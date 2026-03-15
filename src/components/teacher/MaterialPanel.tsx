@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { FileText, Upload, Trash2, Loader2, X, CheckCircle, Eye, EyeOff, BookOpen, Cloud } from 'lucide-react'
+import { FileText, Upload, Trash2, Loader2, X, CheckCircle, Eye, EyeOff, BookOpen, Cloud, Sparkles } from 'lucide-react'
 import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '../../utils/documentParser'
 import { useGooglePicker } from '../../hooks/useGooglePicker'
 
@@ -22,6 +22,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
     const [success, setSuccess] = useState('')
     const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
     const [dragOver, setDragOver] = useState(false)
+    const [uploadType, setUploadType] = useState<string>('none')
 
     const ACCEPTED_TYPES = '.pdf,.docx,.pptx,.xlsx,.xls'
     const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20MB
@@ -60,6 +61,8 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
             file_type: fileType,
             file_size: file.size,
             content_text: contentText,
+            is_master_doc: uploadType !== 'none',
+            master_doc_type: uploadType !== 'none' ? uploadType as any : undefined
         })
 
         return contentText.length
@@ -155,20 +158,46 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                     Subir Material
                 </h3>
 
-                <div>
-                    <label className="text-sm font-medium text-slate-300 mb-2 block">Ramo destino</label>
-                    <select
-                        value={selectedCourse}
-                        onChange={e => setSelectedCourse(e.target.value)}
-                        className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accent"
-                        aria-label="Selecciona un ramo para subir material"
-                        title="Seleccionar ramo"
-                    >
-                        <option value="">Selecciona un ramo</option>
-                        {courses.map((c: any) => (
-                            <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
-                        ))}
-                    </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-sm font-medium text-slate-300 mb-2 block">Ramo destino</label>
+                        <select
+                            value={selectedCourse}
+                            onChange={e => setSelectedCourse(e.target.value)}
+                            className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accent"
+                            aria-label="Selecciona un ramo para subir material"
+                            title="Seleccionar ramo"
+                        >
+                            <option value="">Selecciona un ramo</option>
+                            {courses.map((c: any) => (
+                                <option key={c._id} value={c._id}>{c.name} ({c.code})</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-medium text-slate-300 mb-2 block">Tipo de Documento</label>
+                        <div className="flex bg-surface border border-white/10 rounded-xl p-1 gap-1">
+                            {[
+                                { id: 'none', label: 'Material' },
+                                { id: 'PDA', label: 'PDA' },
+                                { id: 'PIA', label: 'PIA' },
+                                { id: 'PA', label: 'PA' }
+                            ].map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => setUploadType(t.id)}
+                                    className={`flex-1 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest
+                                        ${uploadType === t.id 
+                                            ? 'bg-accent text-white shadow-lg shadow-accent/20' 
+                                            : 'text-slate-500 hover:text-white hover:bg-white/5'
+                                        }`}
+                                >
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Drag & Drop Zone */}
@@ -270,84 +299,128 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                                     <BookOpen className="w-4 h-4 text-accent-light" />
                                     {course?.name || 'Ramo'} <span className="text-slate-500 text-xs font-mono">({course?.code})</span>
                                 </h3>
-                                <div className="space-y-2">
-                                    {(docs as any[]).map((doc: any) => (
-                                        <div key={doc._id} className="bg-surface-light border border-white/5 rounded-xl overflow-hidden">
-                                            <div className="flex items-center justify-between px-5 py-4">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <span className="text-2xl shrink-0">{getFileIcon(doc.file_type)}</span>
-                                                    <div className="min-w-0">
-                                                        <p className="text-white font-medium truncate">{doc.file_name}</p>
-                                                         <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
-                                                            <span>{formatFileSize(doc.file_size)}</span>
-                                                            <span>{doc.file_type.toUpperCase()}</span>
-                                                            <span>{doc.content_text.length.toLocaleString()} chars</span>
-                                                            <span>{new Date(doc.uploaded_at).toLocaleDateString('es-CL')}</span>
-                                                            {doc.is_master_doc && (
-                                                                <span className="bg-primary/20 text-primary-light px-2 py-0.5 rounded-full font-black text-[9px] border border-primary/20">
-                                                                    MASTER {doc.master_doc_type}
-                                                                </span>
-                                                            )}
+                                    {(() => {
+                                        const masterDocs = (docs as any[]).filter(d => d.is_master_doc);
+                                        const regularDocs = (docs as any[]).filter(d => !d.is_master_doc);
+                                        
+                                        return (
+                                            <div className="space-y-4">
+                                                {/* Sección de Documentos Maestros */}
+                                                {masterDocs.length > 0 && (
+                                                    <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
+                                                        <p className="text-[10px] font-black text-primary-light uppercase tracking-[0.2em] mb-3 px-1 flex items-center gap-2">
+                                                            <Sparkles className="w-3 h-3" />
+                                                            Bóveda de Documentación Maestra (IA context)
+                                                        </p>
+                                                        <div className="space-y-2">
+                                                            {masterDocs.map((doc: any) => (
+                                                                <DocumentCard 
+                                                                    key={doc._id} 
+                                                                    doc={doc} 
+                                                                    expandedDoc={expandedDoc}
+                                                                    setExpandedDoc={setExpandedDoc}
+                                                                    handleSetMasterType={handleSetMasterType}
+                                                                    handleDelete={handleDelete}
+                                                                />
+                                                            ))}
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <select
-                                                        title="Tipo de Documento"
-                                                        value={doc.master_doc_type || 'none'}
-                                                        onChange={(e) => handleSetMasterType(doc._id, e.target.value)}
-                                                        className="bg-black/20 border border-white/5 rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-400 focus:outline-none focus:border-primary/50 cursor-pointer"
-                                                    >
-                                                        <option value="none">Material</option>
-                                                        <option value="PDA">PDA</option>
-                                                        <option value="PIA">PIA</option>
-                                                        <option value="PA">PA</option>
-                                                    </select>
-                                                    <button
-                                                        onClick={() => setExpandedDoc(expandedDoc === doc._id ? null : doc._id)}
-                                                        className="p-2 text-slate-500 hover:text-accent-light hover:bg-accent/10 rounded-lg transition-colors"
-                                                        title="Ver contenido extraído"
-                                                    >
-                                                        {expandedDoc === doc._id ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(doc._id)}
-                                                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                                                        title="Eliminar documento"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                )}
+
+                                                {/* Sección de Material de Clase */}
+                                                <div className="space-y-2">
+                                                    {regularDocs.map((doc: any) => (
+                                                        <DocumentCard 
+                                                            key={doc._id} 
+                                                            doc={doc} 
+                                                            expandedDoc={expandedDoc}
+                                                            setExpandedDoc={setExpandedDoc}
+                                                            handleSetMasterType={handleSetMasterType}
+                                                            handleDelete={handleDelete}
+                                                        />
+                                                    ))}
                                                 </div>
                                             </div>
-                                            {expandedDoc === doc._id && (
-                                                <div className="px-5 pb-4 border-t border-white/5">
-                                                    <div className="mt-3 bg-surface rounded-xl p-4 max-h-64 overflow-y-auto">
-                                                        <pre className="text-slate-300 text-xs whitespace-pre-wrap font-mono leading-relaxed">
-                                                            {doc.content_text.substring(0, 5000)}
-                                                            {doc.content_text.length > 5000 && (
-                                                                <span className="text-slate-500">{'\n\n'}... [{(doc.content_text.length - 5000).toLocaleString()} caracteres más]</span>
-                                                            )}
-                                                        </pre>
-                                                    </div>
-                                                    <p className="text-xs text-slate-500 mt-2">
-                                                        ✨ Este contenido será usado por la IA para generar quizzes, misiones y evaluaciones automáticas.
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                        );
+                                    })()}
                                 </div>
+                            )
+                        })}
+                    </div>
+                ) : (
+                    <div className="bg-surface-light border border-dashed border-white/10 rounded-2xl p-10 text-center">
+                        <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                        <h4 className="text-white font-semibold mb-2">Sin material aún</h4>
+                        <p className="text-slate-400 text-sm">Sube documentos PDF, DOCX, PPTX o XLSX para que la IA los analice y genere actividades gamificadas.</p>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // --- Sub-componente interno para cada documento ---
+    function DocumentCard({ doc, expandedDoc, setExpandedDoc, handleSetMasterType, handleDelete }: any) {
+        return (
+            <div className={`bg-surface-light border border-white/5 rounded-xl overflow-hidden transition-all ${doc.is_master_doc ? 'border-primary/20 shadow-lg shadow-primary/5' : ''}`}>
+                <div className="flex items-center justify-between px-5 py-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-2xl shrink-0">{getFileIcon(doc.file_type)}</span>
+                        <div className="min-w-0">
+                            <p className="text-white font-medium truncate">{doc.file_name}</p>
+                            <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                                <span>{formatFileSize(doc.file_size)}</span>
+                                <span>{doc.file_type.toUpperCase()}</span>
+                                {doc.is_master_doc && (
+                                    <span className="bg-primary/20 text-primary-light px-2 py-0.5 rounded-full font-black text-[9px] border border-primary/20">
+                                        MASTER {doc.master_doc_type}
+                                    </span>
+                                )}
                             </div>
-                        )
-                    })}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <select
+                            title="Tipo de Documento"
+                            value={doc.master_doc_type || 'none'}
+                            onChange={(e) => handleSetMasterType(doc._id, e.target.value)}
+                            className="bg-black/20 border border-white/5 rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-400 focus:outline-none focus:border-primary/50 cursor-pointer"
+                        >
+                            <option value="none">Material</option>
+                            <option value="PDA">PDA</option>
+                            <option value="PIA">PIA</option>
+                            <option value="PA">PA</option>
+                        </select>
+                        <button
+                            onClick={() => setExpandedDoc(expandedDoc === doc._id ? null : doc._id)}
+                            className="p-2 text-slate-500 hover:text-accent-light hover:bg-accent/10 rounded-lg transition-colors"
+                            title="Ver contenido extraído"
+                        >
+                            {expandedDoc === doc._id ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        <button
+                            onClick={() => handleDelete(doc._id)}
+                            className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                            title="Eliminar documento"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
-            ) : (
-                <div className="bg-surface-light border border-dashed border-white/10 rounded-2xl p-10 text-center">
-                    <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                    <h4 className="text-white font-semibold mb-2">Sin material aún</h4>
-                    <p className="text-slate-400 text-sm">Sube documentos PDF, DOCX, PPTX o XLSX para que la IA los analice y genere actividades gamificadas.</p>
-                </div>
-            )}
-        </div>
-    )
-}
+                {expandedDoc === doc._id && (
+                    <div className="px-5 pb-4 border-t border-white/5">
+                        <div className="mt-3 bg-surface rounded-xl p-4 max-h-64 overflow-y-auto">
+                            <pre className="text-slate-300 text-xs whitespace-pre-wrap font-mono leading-relaxed">
+                                {doc.content_text.substring(0, 5000)}
+                                {doc.content_text.length > 5000 && (
+                                    <span className="text-slate-500">{'\n\n'}... [{(doc.content_text.length - 5000).toLocaleString()} caracteres más]</span>
+                                )}
+                            </pre>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2">
+                            ✨ Este contenido será usado por la IA para generar quizzes, misiones y evaluaciones automáticas.
+                        </p>
+                    </div>
+                )}
+            </div>
+        )
+    }

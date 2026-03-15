@@ -33,6 +33,8 @@ export const saveDocument = mutation({
         file_type: v.string(),
         file_size: v.number(),
         content_text: v.string(),
+        is_master_doc: v.optional(v.boolean()),
+        master_doc_type: v.optional(v.union(v.literal("PDA"), v.literal("PIA"), v.literal("PA"))),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -62,6 +64,8 @@ export const saveDocument = mutation({
             file_size: args.file_size,
             content_text: trimmedContent,
             uploaded_at: Date.now(),
+            is_master_doc: args.is_master_doc,
+            master_doc_type: args.master_doc_type,
         });
     },
 });
