@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { getAnalytics } from "firebase/analytics";
 
+// Firebase configuration from environment variables
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -12,10 +13,29 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
-export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+// Check if Firebase is properly configured
+const isFirebaseConfigured = !!firebaseConfig.apiKey && !!firebaseConfig.projectId && !!firebaseConfig.appId;
+
+// Initialize Firebase only if config is present to avoid crashing the app
+let app: any = null;
+let analytics: any = null;
+let messaging: any = null;
+
+if (isFirebaseConfigured) {
+  try {
+    app = initializeApp(firebaseConfig);
+    if (typeof window !== 'undefined') {
+      analytics = getAnalytics(app);
+      messaging = getMessaging(app);
+    }
+  } catch (error) {
+    console.error("❌ Failed to initialize Firebase:", error);
+  }
+} else {
+  console.warn("⚠️ Firebase is not configured. Push notifications and analytics will be disabled. Check your environment variables (VITE_FIREBASE_...).");
+}
+
+export { app, analytics, messaging };
 
 export const requestNotificationPermission = async () => {
   if (!messaging) return null;
