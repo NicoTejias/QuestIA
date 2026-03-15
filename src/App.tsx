@@ -81,29 +81,33 @@ function DashboardRedirect() {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
 
+  console.log("🛠️ DashboardRedirect State:", { isAuthLoading, isAuthenticated, userExists: user !== undefined, userProfile: user });
+
   // 1. Esperar estado de auth
   if (isAuthLoading) return <LoadingScreen />
   
   // 2. Si definitivamente no hay sesión, al login
   if (!isAuthenticated) {
-    console.log("DashboardRedirect: No auth session");
+    console.warn("DashboardRedirect: No auth session, redirecting to login");
     return <Navigate to="/login" replace />
   }
 
   // 3. Si hay sesión, esperar perfil de DB
-  if (user === undefined) return <LoadingScreen />
+  if (user === undefined) {
+    console.log("DashboardRedirect: Waiting for user profile from Convex...");
+    return <LoadingScreen />
+  }
   
   // 4. Si autenticado pero perfil es null (error de DB)
   if (user === null) {
-      console.error("DashboardRedirect: Auth OK but Profile NULL");
-      // Si el perfil es null pero está autenticado, es que fue rechazado por el filtro institucional
-      return <Navigate to="/auth-error?error=Correo no institucional o perfil no vinculado" replace />
+      console.error("DashboardRedirect: Auth OK but Profile NULL - Verification failure");
+      return <Navigate to="/auth-error?error=Perfil no encontrado o correo no institucional" replace />
   }
 
   const userRole = (user as any)?.role || 'student';
   const target = userRole === 'teacher' ? '/docente' : '/alumno'
   
-  // Solo redirigir si no estamos ya en el destino (esto evita bucles)
+  console.log("✅ DashboardRedirect: Success! Target:", target);
   return <Navigate to={target} replace />
 }
 

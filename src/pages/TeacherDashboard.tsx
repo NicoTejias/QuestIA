@@ -68,6 +68,12 @@ export default function TeacherDashboard() {
         )
     }
 
+    console.log("👩‍🏫 TeacherDashboard Render:", { 
+        userId: user._id, 
+        coursesCount: courses?.length, 
+        hasStats: !!stats 
+    });
+
     return (
         <div className="min-h-screen bg-surface flex pb-safe">
 

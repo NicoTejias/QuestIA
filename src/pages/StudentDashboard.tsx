@@ -65,6 +65,13 @@ export default function StudentDashboard() {
     const firstName = getFirstName(user?.name)
     const belbinRole = user?.belbin_profile?.role_dominant || 'Sin determinar'
 
+    console.log("📊 StudentDashboard Render:", { 
+        userId: user._id, 
+        role: user.role, 
+        coursesCount: courses?.length,
+        hasBartle: !!user.bartle_profile
+    });
+
     // Totales agregados de todos los ramos
     const totalRankingPoints = courses?.reduce((sum: number, c: any) => sum + (c.ranking_points || c.total_points || 0), 0) || 0
     const totalSpendablePoints = courses?.reduce((sum: number, c: any) => sum + (c.spendable_points || c.total_points || 0), 0) || 0

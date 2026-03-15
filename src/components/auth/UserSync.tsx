@@ -13,8 +13,8 @@ export function UserSync() {
     
     if (isAuthenticated && !isLoading && !hasError) {
       storeUser()
-        .then(() => {
-          console.log("User synchronized successfully");
+        .then((res) => {
+          console.log("✅ User synchronized successfully:", res);
         })
         .catch((err) => {
           console.error("Sync error:", err);
