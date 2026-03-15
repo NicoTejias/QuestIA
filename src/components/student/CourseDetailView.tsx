@@ -4,6 +4,7 @@ import { api } from "../../../convex/_generated/api"
 import { Loader2, X, PlayCircle, Brain, Target, Star, Flame } from 'lucide-react'
 import { toast } from "sonner"
 import ChatPanel from "../ChatPanel"
+import AttendanceCard from "./AttendanceCard"
 
 interface CourseDetailViewProps {
     courseId: any;
@@ -60,6 +61,9 @@ export default function CourseDetailView({ courseId, currentUserId, onBack, onPl
                     </div>
                 </div>
             </div>
+
+            {/* Marcación de Asistencia Inteligente */}
+            <AttendanceCard courseId={courseId} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Columna Quizzes */}

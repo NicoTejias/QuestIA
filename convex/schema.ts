@@ -43,6 +43,14 @@ export default defineSchema({
                 Monitor: v.optional(v.number())
             }),
         })),
+        // Perfil de jugador (Bartle)
+        bartle_profile: v.optional(v.union(
+            v.literal("achiever"), 
+            v.literal("socializer"), 
+            v.literal("explorer"), 
+            v.literal("killer")
+        )),
+        avatarUrl: v.optional(v.string()),
     })
         .index("email", ["email"])
         .index("by_student_id", ["student_id"])
@@ -80,13 +88,13 @@ export default defineSchema({
         .index("by_user", ["user_id"])
         .index("by_course", ["course_id"])
         .index("by_ranking", ["course_id", "ranking_points"]),
-
     missions: defineTable({
         course_id: v.id("courses"),
         title: v.string(),
         description: v.string(),
         points: v.number(),
         status: v.union(v.literal("active"), v.literal("archived")),
+        narrative: v.optional(v.string()), // Contexto inmersivo de la misión
     }).index("by_course", ["course_id"]),
 
     mission_submissions: defineTable({
@@ -124,6 +132,12 @@ export default defineSchema({
         file_size: v.number(), // bytes
         content_text: v.string(), // Texto extraído del documento
         uploaded_at: v.number(),
+        is_master_doc: v.optional(v.boolean()), // Indicar si es un documento maestro (PDA, PIA, PA)
+        master_doc_type: v.optional(v.union(
+            v.literal("PDA"), 
+            v.literal("PIA"), 
+            v.literal("PA")
+        )),
     })
         .index("by_course", ["course_id"])
         .index("by_teacher", ["teacher_id"]),
@@ -139,7 +153,9 @@ export default defineSchema({
                 question: v.string(),
                 options: v.array(v.string()),
                 correct: v.number(),
-                explanation: v.optional(v.string())
+                explanation: v.optional(v.string()),
+                bloom_level: v.optional(v.string()), // ej: "Recordar", "Analizar"
+                dok_level: v.optional(v.number()), // 1, 2, 3, 4
             }),
             v.object({
                 front: v.string(),
@@ -202,4 +218,43 @@ export default defineSchema({
     })
         .index("by_course", ["course_id"])
         .index("by_course_time", ["course_id", "created_at"]),
+
+    attendance_sessions: defineTable({
+        course_id: v.id("courses"),
+        teacher_id: v.id("users"),
+        code: v.string(), // Código de 6 dígitos
+        lat: v.optional(v.number()), // Ubicación del aula
+        lng: v.optional(v.number()),
+        radius: v.optional(v.number()), // Radio permitido en metros
+        expires_at: v.number(),
+        created_at: v.number(),
+        status: v.union(v.literal("active"), v.literal("expired"), v.literal("cancelled")),
+    }).index("by_course", ["course_id"]),
+
+    attendance_logs: defineTable({
+        session_id: v.id("attendance_sessions"),
+        user_id: v.id("users"),
+        timestamp: v.number(),
+        lat: v.optional(v.number()),
+        lng: v.optional(v.number()),
+        distance: v.optional(v.number()),
+    }).index("by_session", ["session_id"])
+      .index("by_user_session", ["user_id", "session_id"]),
+
+    badges: defineTable({
+        course_id: v.id("courses"),
+        name: v.string(),
+        description: v.string(),
+        icon: v.string(), // Emoji o ID de asset
+        criteria_type: v.string(), // "attendance", "improvement", "social", "mastery"
+        criteria_value: v.optional(v.number()),
+    }).index("by_course", ["course_id"]),
+
+    user_badges: defineTable({
+        user_id: v.id("users"),
+        badge_id: v.id("badges"),
+        course_id: v.id("courses"),
+        earned_at: v.number(),
+    }).index("by_user_course", ["user_id", "course_id"])
+      .index("by_badge", ["badge_id"]),
 });

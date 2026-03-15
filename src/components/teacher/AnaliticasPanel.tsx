@@ -11,8 +11,6 @@ export default function AnaliticasPanel() {
     const [exporting, setExporting] = useState<string | null>(null)
     const [unifying, setUnifying] = useState(false)
     const unifyUsers = useMutation(api.admin_fix.unifyUsersByRut)
-    const [unifying, setUnifying] = useState(false)
-    const unifyUsers = useMutation(api.admin_fix.unifyUsersByRut)
 
     if (!stats) {
         return (

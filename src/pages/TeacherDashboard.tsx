@@ -94,7 +94,13 @@ export default function TeacherDashboard() {
                     {/* Perfil Docente */}
                     <div className="bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20 rounded-2xl p-4 mb-6">
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center text-lg">👩‍🏫</div>
+                            <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center text-lg overflow-hidden border border-white/10 shrink-0">
+                                {user.avatarUrl ? (
+                                    <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span>👩‍🏫</span>
+                                )}
+                            </div>
                             <div>
                                 <p className="text-white font-semibold text-sm">{user.name}</p>
                                 <p className="text-slate-400 text-xs">{user.email}</p>

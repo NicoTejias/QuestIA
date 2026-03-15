@@ -10,6 +10,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
     const generateUploadUrl = useMutation(api.documents.generateUploadUrl)
     const saveDocument = useMutation(api.documents.saveDocument)
     const deleteDocument = useMutation(api.documents.deleteDocument)
+    const setAsMasterDoc = useMutation(api.documents.setAsMasterDoc)
     const documents = useQuery(api.documents.getMyDocuments)
     const fileRef = useRef<HTMLInputElement>(null)
     const { openPicker, downloadFile, isLoaded } = useGooglePicker()
@@ -89,6 +90,16 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
         setUploading(false)
         setUploadProgress('')
         if (fileRef.current) fileRef.current.value = ''
+    }
+
+    const handleSetMasterType = async (docId: any, type: string) => {
+        try {
+            await setAsMasterDoc({ document_id: docId, master_type: type as any })
+            setSuccess(`Documento marcado como ${type === 'none' ? 'material común' : type}.`)
+            setTimeout(() => setSuccess(''), 3000)
+        } catch (err: any) {
+            setError(err.message)
+        }
     }
 
     const handleDelete = async (docId: any) => {
@@ -267,15 +278,31 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                                                     <span className="text-2xl shrink-0">{getFileIcon(doc.file_type)}</span>
                                                     <div className="min-w-0">
                                                         <p className="text-white font-medium truncate">{doc.file_name}</p>
-                                                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                                                         <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
                                                             <span>{formatFileSize(doc.file_size)}</span>
                                                             <span>{doc.file_type.toUpperCase()}</span>
                                                             <span>{doc.content_text.length.toLocaleString()} chars</span>
                                                             <span>{new Date(doc.uploaded_at).toLocaleDateString('es-CL')}</span>
+                                                            {doc.is_master_doc && (
+                                                                <span className="bg-primary/20 text-primary-light px-2 py-0.5 rounded-full font-black text-[9px] border border-primary/20">
+                                                                    MASTER {doc.master_doc_type}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2 shrink-0">
+                                                    <select
+                                                        title="Tipo de Documento"
+                                                        value={doc.master_doc_type || 'none'}
+                                                        onChange={(e) => handleSetMasterType(doc._id, e.target.value)}
+                                                        className="bg-black/20 border border-white/5 rounded-lg px-2 py-1.5 text-[10px] font-black text-slate-400 focus:outline-none focus:border-primary/50 cursor-pointer"
+                                                    >
+                                                        <option value="none">Material</option>
+                                                        <option value="PDA">PDA</option>
+                                                        <option value="PIA">PIA</option>
+                                                        <option value="PA">PA</option>
+                                                    </select>
                                                     <button
                                                         onClick={() => setExpandedDoc(expandedDoc === doc._id ? null : doc._id)}
                                                         className="p-2 text-slate-500 hover:text-accent-light hover:bg-accent/10 rounded-lg transition-colors"

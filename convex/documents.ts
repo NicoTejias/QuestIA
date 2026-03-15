@@ -121,3 +121,53 @@ export const getDocumentById = query({
         return await ctx.db.get(args.document_id);
     },
 });
+
+export const setAsMasterDoc = mutation({
+    args: {
+        document_id: v.id("course_documents"),
+        master_type: v.union(v.literal("PDA"), v.literal("PIA"), v.literal("PA"), v.literal("none")),
+    },
+    handler: async (ctx, args) => {
+        const user = await requireAuth(ctx);
+        const doc = await ctx.db.get(args.document_id);
+        
+        if (!doc || doc.teacher_id !== user._id) {
+            throw new Error("No tienes permiso sobre este documento");
+        }
+
+        if (args.master_type === "none") {
+            await ctx.db.patch(args.document_id, {
+                is_master_doc: false,
+                master_doc_type: undefined,
+            });
+        } else {
+            // Desmarcar otros del mismo tipo en el mismo curso (Solo puede haber un PDA oficial, por ejemplo)
+            const existing = await ctx.db
+                .query("course_documents")
+                .withIndex("by_course", q => q.eq("course_id", doc.course_id))
+                .filter(q => q.eq(q.field("master_doc_type"), args.master_type))
+                .collect();
+            
+            for (const old of existing) {
+                await ctx.db.patch(old._id, { is_master_doc: false, master_doc_type: undefined });
+            }
+
+            await ctx.db.patch(args.document_id, {
+                is_master_doc: true,
+                master_doc_type: args.master_type,
+            });
+        }
+        return { success: true };
+    }
+});
+
+export const getMasterDocuments = query({
+    args: { course_id: v.id("courses") },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("course_documents")
+            .withIndex("by_course", q => q.eq("course_id", args.course_id))
+            .filter(q => q.eq(q.field("is_master_doc"), true))
+            .collect();
+    }
+});

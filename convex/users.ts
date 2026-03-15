@@ -60,7 +60,17 @@ export const storeUser = mutation({
             clerkId: identity.subject,
             role: isTeacherEmail ? "teacher" : "student",
             is_verified: true,
+            avatarUrl: !isTeacherEmail ? "/avatars/duco.png" : identity.pictureUrl,
         });
+    },
+});
+
+export const updateAvatar = mutation({
+    args: { avatarUrl: v.string() },
+    handler: async (ctx, args) => {
+        const user = await requireAuth(ctx);
+        await ctx.db.patch(user._id, { avatarUrl: args.avatarUrl });
+        return { success: true };
     },
 });
 
@@ -119,6 +129,26 @@ export const saveBelbinProfile = mutation({
                 category: args.category,
                 scores: args.scores,
             },
+        });
+
+        return { success: true };
+    },
+});
+
+export const saveBartleProfile = mutation({
+    args: {
+        profile: v.union(
+            v.literal("achiever"),
+            v.literal("socializer"),
+            v.literal("explorer"),
+            v.literal("killer")
+        ),
+    },
+    handler: async (ctx, args) => {
+        const user = await requireAuth(ctx);
+
+        await ctx.db.patch(user._id, {
+            bartle_profile: args.profile,
         });
 
         return { success: true };

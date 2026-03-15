@@ -1,2 +1,2 @@
 export const NATIVE_VERSION = "1.0.3"; // Versión actual del APK/IPA
-export const UPDATE_URL = "https://github.com/NicoTejias/DuocencIA/releases"; // URL donde el usuario bajará el nuevo APK
+export const UPDATE_URL = "https://github.com/NicoTejias/Quest/releases"; // URL donde el usuario bajará el nuevo APK

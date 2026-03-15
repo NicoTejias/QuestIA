@@ -27,6 +27,20 @@ export const generateQuiz = action({
             throw new Error("El documento no tiene suficiente texto para generar un quiz.");
         }
 
+        // Obtener documentos maestros (PDA, PIA, PA) para alineación pedagógica oficial de Duoc UC
+        const masterDocs: any[] = await ctx.runQuery(api.documents.getMasterDocuments, {
+            course_id: doc.course_id,
+        });
+
+        let masterContext = "";
+        if (masterDocs.length > 0) {
+            masterContext = "\n\n=== CONTEXTO MAESTRO DE ASIGNATURA (DUOC UC) ===\n";
+            masterDocs.forEach(m => {
+                masterContext += `\nDocumento Ofical ${m.master_doc_type}:\n${m.content_text.substring(0, 4000)}\n`;
+            });
+            masterContext += "\nIMPORTANTE: Es obligatorio que las preguntas se alineen con los Resultados de Aprendizaje (RA) y los Indicadores de Logro (IL) definidos en estos documentos. Si el documento maestro pide 'analizar', no hagas preguntas de simple 'memoria'.\n";
+        }
+
         // Truncar contenido a 15000 chars para el prompt
         const content = doc.content_text.substring(0, 15000);
 
@@ -50,30 +64,35 @@ export const generateQuiz = action({
         let prompt = "";
 
         if (type === "multiple_choice") {
-            prompt = `Eres un generador de quizzes educativos para educación superior en Chile. 
-Genera EXACTAMENTE ${args.num_questions} preguntas de opción múltiple basándote en el siguiente contenido académico.
+            prompt = `Eres un generador de quizzes educativos de nivel experto para Duoc UC en Chile. 
+Genera EXACTAMENTE ${args.num_questions} preguntas de opción múltiple con ALTA CALIDAD PEDAGÓGICA basándote en el siguiente contenido académico. Considera los estándares institucionales.
 
 REGLAS:
 - Cada pregunta tiene EXACTAMENTE 4 opciones (A, B, C, D)
 - Solo UNA opción es correcta
 - Las opciones incorrectas deben ser plausibles pero claramente distinguibles
 - Nivel de dificultad: ${difficultyMap[args.difficulty] || "medio"}
-- Las preguntas deben cubrir diferentes temas del contenido
-- Escribe en español chileno formal
-- Incluye una breve explicación de por qué la respuesta es correcta
+- Clasificación Bloom: Asigna a cada pregunta uno de estos niveles: "Recordar", "Comprender", "Aplicar", "Analizar", "Evaluar", "Crear".
+- Clasificación DOK: Asigna un Nivel DOK del 1 al 4 según la complejidad.
+- Idioma: Español chileno formal
+- Incluye una breve explicación pedagógica de la respuesta correcta.
 
-CONTENIDO DEL DOCUMENTO:
+CONTENIDO DEL DOCUMENTO PARA EXTRAER PREGUNTAS:
 ${content}
+
+${masterContext}
 
 RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, con esta estructura:
 {
-  "title": "Quiz: [nombre descriptivo basado en el contenido]",
+  "title": "Misión: [nombre descriptivo inmersivo basado en el contenido]",
   "questions": [
     {
       "question": "Texto de la pregunta",
       "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
       "correct": 0,
-      "explanation": "Explicación breve de la respuesta correcta"
+      "explanation": "Explicación breve de la respuesta correcta",
+      "bloom_level": "Nivel de Bloom",
+      "dok_level": 1
     }
   ]
 }`;
@@ -89,8 +108,10 @@ REGLAS:
 - Nivel de profundidad: ${difficultyMap[args.difficulty] || "medio"}
 - Escribe en español.
 
-CONTENIDO DEL DOCUMENTO:
+CONTENIDO DEL DOCUMENTO PARA EXTRAER CONCEPTOS:
 ${content}
+
+${masterContext}
 
 RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, con esta estructura:
 {
@@ -156,7 +177,9 @@ export const saveQuiz = mutation({
                 question: v.string(),
                 options: v.array(v.string()),
                 correct: v.number(),
-                explanation: v.optional(v.string())
+                explanation: v.optional(v.string()),
+                bloom_level: v.optional(v.string()),
+                dok_level: v.optional(v.number()),
             }),
             v.object({
                 front: v.string(),

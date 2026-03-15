@@ -11,6 +11,7 @@ import ConfirmModal from '../ConfirmModal'
 import { EditMissionModal, EditRewardModal } from './EditModals'
 
 import ChatPanel from '../ChatPanel'
+import AttendancePanel from './AttendancePanel'
 
 export default function CourseDetail({ course, currentUserId, onBack }: { course: any, currentUserId: any, onBack: () => void }) {
     const fixAllIds = useMutation(api.users.fixAllStudentIds)
@@ -95,6 +96,9 @@ export default function CourseDetail({ course, currentUserId, onBack }: { course
                 </div>
                 <p className="text-slate-400 mt-2">{course.description || 'Sin descripción pormenorizada.'}</p>
             </div>
+
+            {/* Panel de Asistencia Inteligente */}
+            <AttendancePanel courseId={course._id} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-surface-light border border-white/5 rounded-2xl p-6 hover:border-accent/20 transition-all">

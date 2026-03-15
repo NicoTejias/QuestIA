@@ -117,7 +117,7 @@ function App() {
   const { isLoading, isAuthenticated } = useConvexAuth()
   
   useEffect(() => {
-    console.log("🚀 DuocencIA v1.0.3 - Auth State:", { isLoading, isAuthenticated });
+    console.log("🚀 Quest v1.0.3 - Auth State:", { isLoading, isAuthenticated });
   }, [isLoading, isAuthenticated]);
 
   return (

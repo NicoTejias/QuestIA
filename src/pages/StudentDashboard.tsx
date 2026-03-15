@@ -18,6 +18,7 @@ import PerfilPanel from '../components/student/PerfilPanel'
 import QuizPlayer from '../components/student/QuizPlayer'
 import TransferModal from '../components/student/TransferModal'
 import CompleteProfileModal from '../components/student/CompleteProfileModal'
+import BartleTest, { BartleProfileDisplay } from '../components/student/BartleTest'
 
 // Utilidades
 import { getFirstName } from '../utils/dashboardUtils'
@@ -126,12 +127,22 @@ export default function StudentDashboard() {
                         />
                     ) : (
                         <>
-                            {activeTab === 'inicio' && <DashboardHome
-                                courses={courses || []}
-                                totalRanking={totalRankingPoints}
-                                firstName={firstName}
-                                onSelectCourse={(id) => setSelectedCourseId(id)}
-                            />}
+                            {activeTab === 'inicio' && (
+                                <div className="space-y-6">
+                                    {!user.bartle_profile && (
+                                        <BartleTest onComplete={() => {}} />
+                                    )}
+                                    {user.bartle_profile && (
+                                        <BartleProfileDisplay profile={user.bartle_profile} />
+                                    )}
+                                    <DashboardHome
+                                        courses={courses || []}
+                                        totalRanking={totalRankingPoints}
+                                        firstName={firstName}
+                                        onSelectCourse={(id) => setSelectedCourseId(id)}
+                                    />
+                                </div>
+                            )}
                             {activeTab === 'notificaciones' && <NotificacionesPanel />}
                             {activeTab === 'misiones' && <MisionesPanel courses={courses || []} onSelectCourse={(id: string) => { setSelectedCourseId(id); setActiveTab('ramos') }} />}
                             {activeTab === 'ranking' && <RankingPanel courses={courses || []} />}

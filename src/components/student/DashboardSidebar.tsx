@@ -53,8 +53,12 @@ export default function DashboardSidebar({
                 {/* User Mini Card */}
                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
                     <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-slate-700 to-slate-800 rounded-full flex items-center justify-center text-xl shadow-inner">
-                            {belbinRole === 'Cerebro' ? '🧠' : belbinRole === 'Impulsor' ? '⚡' : '🎓'}
+                        <div className="w-12 h-12 bg-gradient-to-br from-slate-700 to-slate-800 rounded-full flex items-center justify-center text-xl shadow-inner overflow-hidden border border-white/10">
+                            {user.avatarUrl ? (
+                                <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <span>{belbinRole === 'Cerebro' ? '🧠' : belbinRole === 'Impulsor' ? '⚡' : '🎓'}</span>
+                            )}
                         </div>
                         <div className="overflow-hidden">
                             <p className="text-white font-bold text-sm truncate">{userName}</p>

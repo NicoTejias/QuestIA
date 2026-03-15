@@ -4,10 +4,13 @@ import { api } from "../../convex/_generated/api"
 import { User, Mail, Shield, Key, Save, Loader2, ArrowLeft, BadgeCheck, IdCard } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Camera, RefreshCw } from 'lucide-react'
 
 export default function ProfilePage() {
     const user = useQuery(api.users.getProfile)
     const updateProfile = useMutation(api.users.updateProfile)
+    const updateAvatar = useMutation(api.users.updateAvatar)
     const navigate = useNavigate()
 
     const [editing, setEditing] = useState(false)
@@ -64,6 +67,74 @@ export default function ProfilePage() {
         })
     }
 
+    const [uploading, setUploading] = useState(false)
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Por favor, selecciona una imagen válida.')
+            return
+        }
+
+        setUploading(true)
+        
+        try {
+            // Redimensionar imagen en el cliente para ahorrar espacio
+            const reader = new FileReader()
+            reader.readAsDataURL(file)
+            reader.onload = (event) => {
+                const img = new Image()
+                img.src = event.target?.result as string
+                img.onload = async () => {
+                    const canvas = document.createElement('canvas')
+                    const MAX_SIZE = 150 // Tamaño pequeño como pidió el usuario
+                    let width = img.width
+                    let height = img.height
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width
+                            width = MAX_SIZE
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height
+                            height = MAX_SIZE
+                        }
+                    }
+
+                    canvas.width = width
+                    canvas.height = height
+                    const ctx = canvas.getContext('2d')
+                    ctx?.drawImage(img, 0, 0, width, height)
+                    
+                    // Comprimir a JPEG calidad media
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+                    await updateAvatar({ avatarUrl: dataUrl })
+                    toast.success('Avatar actualizado con éxito')
+                    setUploading(false)
+                }
+            }
+        } catch (err: any) {
+            toast.error('Error al subir la imagen')
+            setUploading(false)
+        }
+    }
+
+    const setDucoAvatar = async () => {
+        setUploading(true)
+        try {
+            await updateAvatar({ avatarUrl: "/avatars/duco.png" })
+            toast.success('¡Avatar de DUCO activado! 🐦')
+        } catch (err) {
+            toast.error('Error al cambiar avatar')
+        } finally {
+            setUploading(false)
+        }
+    }
+
     return (
         <div className="min-h-screen bg-surface text-white">
             {/* Header / Nav */}
@@ -78,17 +149,60 @@ export default function ProfilePage() {
 
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 md:mb-12">
                     <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 text-center sm:text-left">
-                        <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-primary to-accent rounded-3xl md:rounded-[2rem] flex items-center justify-center text-3xl md:text-4xl shadow-2xl shadow-primary/20 shrink-0">
-                            {user.role === 'teacher' ? '👨‍🏫' : '🎓'}
+                        <div className="relative group">
+                            <motion.div 
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-primary to-accent rounded-[2.5rem] flex items-center justify-center overflow-hidden shadow-2xl shadow-primary/20 shrink-0 border-4 border-white/5"
+                            >
+                                {user.avatarUrl ? (
+                                    <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-4xl md:text-5xl">
+                                        {user.role === 'teacher' ? '👨‍🏫' : '🎓'}
+                                    </span>
+                                )}
+                            </motion.div>
+                            
+                            <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-primary hover:bg-primary-light rounded-full border-4 border-surface items-center justify-center flex cursor-pointer shadow-lg transition-all active:scale-90">
+                                <Camera className="w-5 h-5 text-white" />
+                                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                            </label>
+                            
+                            {uploading && (
+                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-[2.5rem] flex items-center justify-center">
+                                    <RefreshCw className="w-8 h-8 text-white animate-spin" />
+                                </div>
+                            )}
                         </div>
+
                         <div className="min-w-0">
                             <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                                 <h1 className="text-2xl md:text-4xl font-black text-white truncate">{user.name}</h1>
                                 {user.is_verified && <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-primary-light shrink-0" />}
                             </div>
-                            <p className="text-slate-500 font-medium text-sm md:text-base truncate">{user.email}</p>
+                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                                <p className="text-slate-500 font-medium text-sm md:text-base truncate">{user.email}</p>
+                                <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-primary-light">
+                                    {user.role === 'teacher' ? 'Docente' : 'Alumno'}
+                                </span>
+                            </div>
                         </div>
                     </div>
+
+                    <AnimatePresence>
+                        {user.role === 'student' && user.avatarUrl !== "/avatars/duco.png" && (
+                            <motion.button
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                onClick={setDucoAvatar}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary-light border border-primary/20 text-xs font-bold transition-all"
+                            >
+                                <RefreshCw className="w-3 h-3" /> USAR AVATAR DUCO
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
