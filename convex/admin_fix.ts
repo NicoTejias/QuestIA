@@ -1,11 +1,10 @@
 import { mutation } from "./_generated/server";
 import { requireTeacher } from "./withUser";
-import { normalizeRut } from "./rutUtils";
 
 export const unifyUsersByRut = mutation({
     args: {},
     handler: async (ctx) => {
-        const teacher = await requireTeacher(ctx);
+        await requireTeacher(ctx);
         
         // 1. Obtener todos los alumnos del sistema (o al menos los vinculados a este docente)
         // Por ahora lo haremos global pero limitado a lo que el docente puede ver/gestionar
@@ -29,7 +28,8 @@ export const unifyUsersByRut = mutation({
         let unifiedCount = 0;
         let pointsTransferred = 0;
 
-        for (const [body, group] of rutGroups.entries()) {
+        for (const [_body, group] of rutGroups.entries()) {
+
             if (group.length > 1) {
                 // Hay duplicados por RUT
                 // Prioridad: 1. El que tenga clerkId (el usuario real que se logueó)

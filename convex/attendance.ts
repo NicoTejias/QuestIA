@@ -124,7 +124,7 @@ export const checkIn = mutation({
             throw new Error("Se requiere activar el GPS para verificar tu ubicación en el aula.");
         }
 
-        const logId = await ctx.db.insert("attendance_logs", {
+        await ctx.db.insert("attendance_logs", {
             session_id: session._id,
             user_id: user._id,
             timestamp: Date.now(),
@@ -132,6 +132,7 @@ export const checkIn = mutation({
             lng: args.lng,
             distance,
         });
+
 
         // Recompensa: +2 puntos por asistir
         const enrollment = await ctx.db
@@ -155,7 +156,7 @@ export const checkIn = mutation({
 export const getSessionLogs = query({
     args: { session_id: v.id("attendance_sessions") },
     handler: async (ctx, args) => {
-        const user = await requireTeacher(ctx);
+        await requireTeacher(ctx);
         const logs = await ctx.db
             .query("attendance_logs")
             .withIndex("by_session", (q) => q.eq("session_id", args.session_id))

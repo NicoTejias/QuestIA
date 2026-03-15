@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { X, AlertCircle, Trophy, Star, Coins, Sparkles, Loader2, Brain, PlayCircle, Target } from 'lucide-react'
+import { X, AlertCircle, Trophy, Star, Coins, Sparkles, Loader2 } from 'lucide-react'
 import { toast } from "sonner"
 
 interface QuizPlayerProps {
