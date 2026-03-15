@@ -13,7 +13,7 @@ export const getGroupFeedback = action({
             stats: v.any(),
         })),
     },
-    handler: async (ctx, args) => {
+    handler: async (_ctx, args) => {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         if (!GEMINI_API_KEY) {
             throw new Error("GEMINI_API_KEY no configurada");
