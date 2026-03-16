@@ -95,8 +95,6 @@ export function useGooglePicker() {
           }
         });
 
-      if (APP_ID) pickerBuilder.setAppId(APP_ID);
-
       const picker = pickerBuilder.build();
       picker.setVisible(true);
     });
