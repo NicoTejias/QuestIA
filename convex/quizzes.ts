@@ -357,19 +357,64 @@ export const getQuizSubmissions = query({
     },
 });
 
-// Obtener el intento de un usuario para un quiz específico
-export const getUserQuizAttempt = query({
+// Obtener o crear un intento para un quiz
+export const getOrCreateAttempt = mutation({
     args: { quiz_id: v.id("quizzes") },
     handler: async (ctx, args) => {
-        try {
-            const user = await requireAuth(ctx);
-            return await ctx.db
-                .query("quiz_submissions")
-                .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
-                .unique();
-        } catch {
-            return null;
+        const user = await requireAuth(ctx);
+
+        const quiz = await ctx.db.get(args.quiz_id);
+        if (!quiz) throw new Error("Quiz no encontrado");
+
+        // Buscar si ya hay un intento en progreso
+        const existingAttempt = await ctx.db
+            .query("quiz_attempts")
+            .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
+            .filter((q) => q.eq(q.field("status"), "in_progress"))
+            .unique();
+
+        if (existingAttempt) {
+            return existingAttempt;
         }
+
+        // Crear nuevo intento
+        const attemptId = await ctx.db.insert("quiz_attempts", {
+            quiz_id: args.quiz_id,
+            user_id: user._id,
+            current_question_index: 0,
+            selected_options: new Array(quiz.questions.length).fill(null),
+            status: "in_progress",
+            last_updated: Date.now(),
+        });
+
+        return await ctx.db.get(attemptId);
+    },
+});
+
+// Guardar progreso del intento
+export const updateAttemptProgress = mutation({
+    args: {
+        attempt_id: v.id("quiz_attempts"),
+        current_question_index: v.number(),
+        selected_options: v.array(v.union(v.number(), v.null())),
+    },
+    handler: async (ctx, args) => {
+        const user = await requireAuth(ctx);
+        const attempt = await ctx.db.get(args.attempt_id);
+        
+        if (!attempt || attempt.user_id !== user._id) {
+            throw new Error("Intento no válido");
+        }
+
+        if (attempt.status !== "in_progress") {
+            throw new Error("Este intento ya ha sido finalizado");
+        }
+
+        await ctx.db.patch(args.attempt_id, {
+            current_question_index: args.current_question_index,
+            selected_options: args.selected_options,
+            last_updated: Date.now(),
+        });
     },
 });
 
@@ -377,7 +422,7 @@ export const getUserQuizAttempt = query({
 export const submitQuiz = mutation({
     args: {
         quiz_id: v.id("quizzes"),
-        score: v.number(), // Puntuación de 0 a 100
+        // El score ya no se envía desde el frontend para evitar trampas
     },
     handler: async (ctx, args) => {
         const user = await requireAuth(ctx);
@@ -385,18 +430,50 @@ export const submitQuiz = mutation({
         const quiz = await ctx.db.get(args.quiz_id);
         if (!quiz) throw new Error("Quiz no encontrado");
 
-        // Obtener historial de intentos
+        // Buscar el intento en progreso
+        const attempt = await ctx.db
+            .query("quiz_attempts")
+            .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
+            .filter((q) => q.eq(q.field("status"), "in_progress"))
+            .unique();
+
+        if (!attempt) throw new Error("No hay un intento activo para este quiz");
+
+        // Calcular puntaje
+        let correctCount = 0;
+        const totalQuestions = quiz.questions.length;
+
+        quiz.questions.forEach((q: any, idx: number) => {
+            const selected = attempt.selected_options[idx];
+            const correct = q.correct ?? q.correctAnswerIndex;
+            if (selected !== null && selected === correct) {
+                correctCount++;
+            }
+            // Para flashcards y match, la lógica de guardado de selected_options 
+            // puede variar, pero por ahora asumimos que el frontend marca 
+            // correctamente lo que se considere "acierto".
+        });
+
+        const scorePct = Math.round((correctCount / totalQuestions) * 100);
+
+        // Obtener historial de intentos previos (excluyendo este que vamos a cerrar)
         const submissions = await ctx.db
             .query("quiz_submissions")
             .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
             .collect();
 
-        const currentAttempts = submissions.length;
+        const currentAttemptsCount = submissions.length;
         const maxAttempts = quiz.max_attempts ?? 1;
 
-        if (currentAttempts >= maxAttempts) {
+        if (currentAttemptsCount >= maxAttempts) {
             throw new Error(`Has alcanzado el límite de ${maxAttempts} intentos permitido para este quiz.`);
         }
+
+        // Marcar intento como completado
+        await ctx.db.patch(attempt._id, {
+            status: "completed",
+            last_updated: Date.now(),
+        });
 
         // --- Lógica de Bono Diario por Racha ---
         const now = Date.now();
@@ -415,20 +492,16 @@ export const submitQuiz = mutation({
 
         if (lastBonusDateStr !== todayDateStr) {
             if (lastBonusDateStr === yesterdayDateStr || lastBonus === 0) {
-                // Continúa la racha o es la primera vez
                 newStreak += 1;
             } else {
-                // Se rompió la racha cronológicamente. 
-                // ¿Tiene hielos para salvarla?
                 if (currentIceCubes > 0) {
-                    newStreak += 1; // Mantenemos la racha
+                    newStreak += 1;
                     usedFreeze = true;
                 } else {
-                    newStreak = 1; // Reinicia
+                    newStreak = 1;
                 }
             }
             
-            // 5pts por día de racha, tope de 50pts máximos diarios
             dailyBonus = Math.min(newStreak * 5, 50);
             
             await ctx.db.patch(user._id, { 
@@ -439,20 +512,16 @@ export const submitQuiz = mutation({
         }
         // ----------------------------------------
 
-        // Cálculo de puntos base según dificultad y número de preguntas.
+        // Cálculo de puntos base según dificultad
         const basePoints = (quiz.num_questions || 5) * (quiz.difficulty === 'dificil' ? 20 : quiz.difficulty === 'medio' ? 15 : 10);
-        const currentEarnedPoints = Math.round((args.score / 100) * basePoints);
+        const currentEarnedPoints = Math.round((scorePct / 100) * basePoints);
 
-        // Puntos previamente ganados (el mejor intento)
         const bestPreviousPoints = submissions.length > 0
             ? Math.max(...submissions.map(s => s.earned_points))
             : 0;
 
-        // Solo otorgamos la diferencia si el nuevo intento es mejor
-        // El bono diario se suma siempre si aplica, independiente de si el score mejora
         const pointsToAward = Math.max(0, currentEarnedPoints - bestPreviousPoints) + dailyBonus;
 
-        // Buscar inscripcion
         const enrollment = await ctx.db
             .query("enrollments")
             .withIndex("by_user", (q) => q.eq("user_id", user._id))
@@ -461,14 +530,13 @@ export const submitQuiz = mutation({
 
         if (!enrollment) throw new Error("No inscrito");
         
-        // Multiplicador activo (recompensa)
         const multiplier = enrollment.active_multiplier || 1;
 
-        // Registrar el intento
+        // Registrar el intento en submissions
         await ctx.db.insert("quiz_submissions", {
             quiz_id: args.quiz_id,
             user_id: user._id,
-            score: args.score,
+            score: scorePct,
             earned_points: Math.round(currentEarnedPoints * multiplier),
             completed_at: Date.now(),
         });
@@ -482,11 +550,12 @@ export const submitQuiz = mutation({
                 ranking_points: newRankingPoints,
                 spendable_points: newSpendablePoints,
                 total_points: (enrollment.total_points ?? 0) + finalPointsToAward,
-                active_multiplier: undefined, // Consumir el multiplicador
+                active_multiplier: undefined,
             });
 
             return {
                 success: true,
+                score: scorePct,
                 earned: finalPointsToAward,
                 is_improvement: pointsToAward > dailyBonus,
                 total_earned_now: Math.round(currentEarnedPoints * multiplier),
@@ -494,11 +563,11 @@ export const submitQuiz = mutation({
                 new_spendable: newSpendablePoints,
                 daily_bonus_applied: dailyBonus > 0,
                 daily_bonus: dailyBonus,
-                new_streak: newStreak
+                new_streak: newStreak,
+                selected_options: attempt.selected_options // Devolvemos esto para que el frontend muestre revisión
             };
         }
 
-        // Si no hubo mejora pero sí hubo bono diario, igual actualizamos los puntos y limpiamos multiplicador
         if (dailyBonus > 0 || multiplier > 1) {
             const newPoints = (enrollment.ranking_points ?? 0) + dailyBonus;
             const newSpendable = (enrollment.spendable_points ?? 0) + dailyBonus;
@@ -506,26 +575,30 @@ export const submitQuiz = mutation({
                 ranking_points: newPoints,
                 spendable_points: newSpendable,
                 total_points: (enrollment.total_points ?? 0) + dailyBonus,
-                active_multiplier: undefined, // Consumir el multiplicador incluso si no hubo mejora en este quiz
+                active_multiplier: undefined,
             });
             return {
                 success: true,
+                score: scorePct,
                 earned: dailyBonus,
                 is_improvement: false,
                 daily_bonus_applied: true,
                 daily_bonus: dailyBonus,
                 new_streak: newStreak,
                 new_rank: newPoints,
-                new_spendable: newSpendable
+                new_spendable: newSpendable,
+                selected_options: attempt.selected_options
             };
         }
 
         return {
             success: true,
+            score: scorePct,
             earned: 0,
             is_improvement: false,
             total_earned_best: bestPreviousPoints,
-            new_streak: currentStreak
+            new_streak: currentStreak,
+            selected_options: attempt.selected_options
         };
     },
 });

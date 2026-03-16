@@ -1,7 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { X, AlertCircle, Trophy, Star, Coins, Sparkles, Loader2 } from 'lucide-react'
+import { X, AlertCircle, Trophy, Star, Coins, Sparkles, Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from "sonner"
 
 interface QuizPlayerProps {
@@ -10,12 +10,19 @@ interface QuizPlayerProps {
 }
 
 export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
+    const getOrCreateAttempt = useMutation(api.quizzes.getOrCreateAttempt)
+    const updateAttemptProgress = useMutation(api.quizzes.updateAttemptProgress)
     const submitQuiz = useMutation(api.quizzes.submitQuiz)
+
+    const [attemptId, setAttemptId] = useState<any>(null)
     const [currentIdx, setCurrentIdx] = useState(0)
-    const [score, setScore] = useState(0)
     const [finished, setFinished] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [quizResult, setQuizResult] = useState<any>(null)
+    const [loadingAttempt, setLoadingAttempt] = useState(true)
+
+    // Current state of answers (local copy for the UI)
+    const [selectedOptions, setSelectedOptions] = useState<(number | null)[]>([])
 
     // For Match quiz
     const [selectedA, setSelectedA] = useState<number | null>(null)
@@ -24,13 +31,41 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
     // For Flashcards
     const [flipped, setFlipped] = useState(false)
 
-    // For Multiple Choice
-    const [selectedOption, setSelectedOption] = useState<number | null>(null)
-
     const isMatch = quiz.quiz_type === 'match'
     const isFlashcard = quiz.quiz_type === 'flashcard'
     const isMultipleChoice = !isMatch && !isFlashcard
     const questions = quiz.questions || []
+
+    useEffect(() => {
+        async function initAttempt() {
+            try {
+                const attempt = await getOrCreateAttempt({ quiz_id: quiz._id })
+                if (attempt) {
+                    setAttemptId(attempt._id)
+                    setCurrentIdx(attempt.current_question_index)
+                    setSelectedOptions(attempt.selected_options)
+                } else {
+                    toast.error("No se pudo iniciar el intento")
+                    onClose()
+                }
+            } catch (err) {
+                console.error(err)
+                toast.error("Error al cargar progreso del quiz")
+                onClose()
+            } finally {
+                setLoadingAttempt(false)
+            }
+        }
+        initAttempt()
+    }, [quiz._id, getOrCreateAttempt, onClose])
+
+    if (loadingAttempt) {
+        return (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <Loader2 className="w-12 h-12 text-accent animate-spin" />
+            </div>
+        )
+    }
 
     if (questions.length === 0) {
         return (
@@ -47,12 +82,11 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
 
     const currentQ = questions[currentIdx]
 
-    const saveResult = async (finalScoreRaw: number) => {
-        setFinished(true)
+    const saveResult = async () => {
         setSubmitting(true)
-        const pct = Math.round((finalScoreRaw / questions.length) * 100)
+        setFinished(true)
         try {
-            const res = await submitQuiz({ quiz_id: quiz._id, score: pct })
+            const res = await submitQuiz({ quiz_id: quiz._id })
             setQuizResult(res)
         } catch (err: any) {
             console.error(err)
@@ -62,21 +96,35 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
         }
     }
 
-    const handleAnswerMC = (optIdx: number) => {
-        if (selectedOption !== null) return
-        setSelectedOption(optIdx)
-        const isCorrect = optIdx === (currentQ.correct ?? currentQ.correctAnswerIndex);
-        const newScore = isCorrect ? score + 1 : score;
-        if (isCorrect) setScore(newScore)
+    const handleAnswerMC = async (optIdx: number) => {
+        const newSelected = [...selectedOptions]
+        newSelected[currentIdx] = optIdx
+        setSelectedOptions(newSelected)
+
+        // Save progress to DB
+        try {
+            await updateAttemptProgress({
+                attempt_id: attemptId,
+                current_question_index: currentIdx,
+                selected_options: newSelected
+            })
+        } catch (err) {
+            console.error("No se pudo guardar progreso:", err)
+        }
 
         setTimeout(() => {
             if (currentIdx < questions.length - 1) {
-                setCurrentIdx(prev => prev + 1)
-                setSelectedOption(null)
+                const nextIdx = currentIdx + 1
+                setCurrentIdx(nextIdx)
+                updateAttemptProgress({
+                    attempt_id: attemptId,
+                    current_question_index: nextIdx,
+                    selected_options: newSelected
+                })
             } else {
-                saveResult(newScore)
+                saveResult()
             }
-        }, 1200)
+        }, 300)
     }
 
     const handleMatchSelect = (idx: number, isRightSide: boolean) => {
@@ -84,13 +132,16 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
             setSelectedA(idx)
         } else if (selectedA !== null) {
             if (selectedA === idx) {
-                const newScore = score + 1;
-                setScore(newScore)
                 const newMatchedPairs = [...matchedPairs, idx];
                 setMatchedPairs(newMatchedPairs)
                 
+                // For match, we can store correctness in selectedOptions if we want persistence
+                const newSelected = [...selectedOptions]
+                newSelected[idx] = idx // Concept index matched
+                setSelectedOptions(newSelected)
+
                 if (newMatchedPairs.length === questions.length) {
-                    setTimeout(() => saveResult(newScore), 1000)
+                    setTimeout(() => saveResult(), 1000)
                 }
             }
             setSelectedA(null)
@@ -98,13 +149,15 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
     }
 
     const nextFlashcard = () => {
-        const newScore = score + 1;
-        setScore(newScore)
         setFlipped(false)
+        const newSelected = [...selectedOptions]
+        newSelected[currentIdx] = 1 // Marked as "viewed/correct"
+        setSelectedOptions(newSelected)
+
         if (currentIdx < questions.length - 1) {
             setCurrentIdx(prev => prev + 1)
         } else {
-            saveResult(newScore)
+            saveResult()
         }
     }
 
@@ -112,7 +165,7 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
 
     return (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-surface-light border border-white/10 rounded-[2.5rem] max-w-3xl w-full p-8 md:p-12 relative overflow-hidden shadow-2xl">
+            <div className={`bg-surface-light border border-white/10 rounded-[2.5rem] ${finished ? 'max-w-4xl max-h-[90vh] overflow-y-auto' : 'max-w-3xl'} w-full p-8 md:p-12 relative shadow-2xl transition-all duration-500`}>
                 {!finished && (
                     <button onClick={onClose} title="Cerrar Quiz" className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors">
                         <X className="w-5 h-5" />
@@ -139,17 +192,14 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                                 <h3 className="text-2xl font-black text-white mb-8 leading-relaxed">{currentQ.question}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {currentQ.options?.map((opt: string, i: number) => {
-                                        const isCorrectOpt = i === (currentQ.correct ?? currentQ.correctAnswerIndex)
-                                        let btnCls = "bg-white/5 border-white/10 text-slate-300 hover:border-accent/40"
-                                        if (selectedOption !== null) {
-                                            if (isCorrectOpt) btnCls = "bg-green-500/20 border-green-500/50 text-green-400"
-                                            else if (i === selectedOption) btnCls = "bg-red-500/20 border-red-500/50 text-red-400"
-                                            else btnCls = "bg-white/5 border-white/10 text-slate-600 opacity-50"
-                                        }
+                                        const isSelected = selectedOptions[currentIdx] === i
+                                        let btnCls = isSelected 
+                                            ? "bg-accent/20 border-accent text-white" 
+                                            : "bg-white/5 border-white/10 text-slate-300 hover:border-accent/40"
+                                        
                                         return (
                                             <button
                                                 key={i}
-                                                disabled={selectedOption !== null}
                                                 onClick={() => handleAnswerMC(i)}
                                                 className={`p-6 rounded-2xl border text-left font-semibold transition-all ${btnCls}`}
                                             >
@@ -224,7 +274,7 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                         )}
                     </div>
                 ) : (
-                    <div className="text-center py-12 animate-in zoom-in-95 duration-500">
+                    <div className="text-center py-4 animate-in zoom-in-95 duration-500">
                         {submitting ? (
                             <div className="py-20 flex flex-col items-center">
                                 <Loader2 className="w-12 h-12 animate-spin text-accent mb-4" />
@@ -232,48 +282,98 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                             </div>
                         ) : (
                             <>
-                                <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl ${quizResult?.is_improvement ? 'bg-gold/20 shadow-gold/20' : 'bg-slate-800 shadow-black/50'}`}>
-                                    {quizResult?.is_improvement ? <Trophy className="w-12 h-12 text-gold" /> : <Star className="w-12 h-12 text-slate-500" />}
+                                <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl ${quizResult?.is_improvement ? 'bg-gold/20 shadow-gold/20' : 'bg-slate-800 shadow-black/50'}`}>
+                                    {quizResult?.is_improvement ? <Trophy className="w-10 h-10 text-gold" /> : <Star className="w-10 h-10 text-slate-500" />}
                                 </div>
-                                <h2 className="text-4xl font-black text-white mb-2">
+                                <h2 className="text-3xl font-black text-white mb-1">
                                     {quizResult?.is_improvement ? '¡Nuevo Record!' : 'Reto Completado'}
                                 </h2>
-                                <p className="text-slate-400 text-lg mb-8">
+                                <p className="text-slate-400 mb-6">
                                     {quizResult?.is_improvement
                                         ? '¡Increíble! Has superado tu puntuación anterior.'
                                         : 'Bien hecho, has finalizado el quiz satisfactoriamente.'}
                                 </p>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                                    <div className="bg-black/20 p-6 rounded-3xl border border-white/5">
-                                        <span className="block text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">PUNTUACIÓN ACTUAL</span>
-                                        <span className="text-4xl font-black text-white">{Math.round((score / questions.length) * 100)}%</span>
+                                <div className="grid grid-cols-2 gap-4 mb-8">
+                                    <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
+                                        <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-1">PUNTUACIÓN</span>
+                                        <span className="text-3xl font-black text-white">{quizResult?.score}%</span>
                                     </div>
-                                    <div className="bg-black/20 p-6 rounded-3xl border border-white/5">
-                                        <span className="block text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">PUNTOS GANADOS</span>
-                                        <div className="flex items-center justify-center gap-2">
-                                            <Coins className="w-6 h-6 text-gold" />
-                                            <span className="text-4xl font-black text-gold">+{quizResult?.earned || 0}</span>
+                                    <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
+                                        <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-1">PUNTOS</span>
+                                        <div className="flex items-center justify-center gap-1">
+                                            <Coins className="w-5 h-5 text-gold" />
+                                            <span className="text-3xl font-black text-gold">+{quizResult?.earned || 0}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {quizResult?.daily_bonus_applied && (
-                                    <div className="bg-gold/10 border border-gold/20 rounded-2xl p-4 mb-8 text-gold flex items-center justify-center gap-2 animate-bounce">
-                                        <Sparkles className="w-5 h-5 flex-shrink-0" />
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-sm font-black uppercase tracking-widest text-center leading-tight">
-                                                +{quizResult.daily_bonus} PTS BONO POR RACHA
-                                            </span>
-                                            <span className="text-[10px] font-bold mt-1 opacity-80 uppercase tracking-widest text-center">
-                                                ¡{quizResult.new_streak} {quizResult.new_streak === 1 ? 'DÍA' : 'DÍAS'} DE RACHA DIARIA! Sigue así para ganar hasta 50 pts
-                                            </span>
-                                        </div>
+                                    <div className="bg-gold/10 border border-gold/20 rounded-xl p-3 mb-6 text-gold flex items-center justify-center gap-2">
+                                        <Sparkles className="w-4 h-4 flex-shrink-0" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">
+                                            +{quizResult.daily_bonus} PTS BONO POR RACHA ({quizResult.new_streak} DÍAS)
+                                        </span>
                                     </div>
                                 )}
 
-                                <div>
-                                    <button onClick={onClose} className="bg-accent hover:bg-accent-light text-white font-black px-12 py-5 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-accent/20 uppercase tracking-widest">
+                                {/* REVISIÓN DE RESPUESTAS */}
+                                <div className="mt-8 text-left border-t border-white/10 pt-8">
+                                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                                        <AlertCircle className="w-5 h-5 text-accent" />
+                                        Revisión de respuestas
+                                    </h3>
+                                    <div className="space-y-6">
+                                        {questions.map((q: any, i: number) => {
+                                            const selected = quizResult?.selected_options[i]
+                                            const correct = q.correct ?? q.correctAnswerIndex
+                                            const isCorrect = selected === correct
+
+                                            return (
+                                                <div key={i} className="bg-white/5 rounded-2xl p-6 border border-white/5">
+                                                    <div className="flex items-start gap-4">
+                                                        {isCorrect ? (
+                                                            <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                                                        ) : (
+                                                            <XCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
+                                                        )}
+                                                        <div>
+                                                            <p className="text-white font-bold mb-2">{q.question}</p>
+                                                            <div className="grid grid-cols-1 gap-2 mt-4">
+                                                                {q.options?.map((opt: string, optIdx: number) => {
+                                                                    const isCorrectOpt = optIdx === correct
+                                                                    const isSelectedOpt = optIdx === selected
+                                                                    
+                                                                    let cls = "text-sm p-3 rounded-xl border "
+                                                                    if (isCorrectOpt) cls += "bg-green-500/10 border-green-500/30 text-green-400"
+                                                                    else if (isSelectedOpt) cls += "bg-red-500/10 border-red-500/30 text-red-400"
+                                                                    else cls += "bg-white/5 border-transparent text-slate-500"
+
+                                                                    return (
+                                                                        <div key={optIdx} className={cls}>
+                                                                            {opt}
+                                                                            {isCorrectOpt && <span className="ml-2 text-[10px] font-black uppercase opacity-70">(Correcta)</span>}
+                                                                            {isSelectedOpt && !isCorrectOpt && <span className="ml-2 text-[10px] font-black uppercase opacity-70">(Tu elección)</span>}
+                                                                        </div>
+                                                                    )
+                                                                })}
+                                                            </div>
+                                                            {q.explanation && (
+                                                                <div className="mt-4 p-4 bg-accent/5 border border-accent/10 rounded-xl">
+                                                                    <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-1">Explicación</p>
+                                                                    <p className="text-sm text-slate-300 leading-relaxed">{q.explanation}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="mt-12 sticky bottom-0 bg-surface-light py-4 border-t border-white/10">
+                                    <button onClick={onClose} className="w-full bg-accent hover:bg-accent-light text-white font-black px-12 py-5 rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-accent/20 uppercase tracking-widest text-sm">
                                         VOLVER AL RAMO
                                     </button>
                                 </div>

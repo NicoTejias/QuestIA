@@ -18,7 +18,8 @@ import PerfilPanel from '../components/student/PerfilPanel'
 import QuizPlayer from '../components/student/QuizPlayer'
 import TransferModal from '../components/student/TransferModal'
 import CompleteProfileModal from '../components/student/CompleteProfileModal'
-import BartleTest, { BartleProfileDisplay } from '../components/student/BartleTest'
+import BartlePopup from '../components/student/BartlePopup'
+import { BartleProfileDisplay } from '../components/student/BartleTest'
 
 // Utilidades
 import { getFirstName } from '../utils/dashboardUtils'
@@ -135,9 +136,9 @@ export default function StudentDashboard() {
                     ) : (
                         <>
                             {activeTab === 'inicio' && (
-                                <div className="space-y-6">
+                                <div className="space-y-6 overflow-x-hidden">
                                     {!user.bartle_profile && (
-                                        <BartleTest onComplete={() => {}} />
+                                        <BartlePopup user={user} onComplete={() => {}} />
                                     )}
                                     {user.bartle_profile && (
                                         <BartleProfileDisplay profile={user.bartle_profile} />

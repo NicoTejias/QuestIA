@@ -257,4 +257,15 @@ export default defineSchema({
         earned_at: v.number(),
     }).index("by_user_course", ["user_id", "course_id"])
       .index("by_badge", ["badge_id"]),
+
+    quiz_attempts: defineTable({
+        quiz_id: v.id("quizzes"),
+        user_id: v.id("users"),
+        current_question_index: v.number(),
+        selected_options: v.array(v.union(v.number(), v.null())),
+        status: v.union(v.literal("in_progress"), v.literal("completed")),
+        last_updated: v.number(),
+    })
+    .index("by_quiz_user", ["quiz_id", "user_id"])
+    .index("by_user_status", ["user_id", "status"]),
 });
