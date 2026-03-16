@@ -11,6 +11,7 @@ export default function ProfilePage() {
     const user = useQuery(api.users.getProfile)
     const updateProfile = useMutation(api.users.updateProfile)
     const updateAvatar = useMutation(api.users.updateAvatar)
+    const resetBartle = useMutation(api.users.resetBartleTest)
     const navigate = useNavigate()
 
     const [editing, setEditing] = useState(false)
@@ -158,9 +159,7 @@ export default function ProfilePage() {
                                 {user.avatarUrl ? (
                                     <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="text-4xl md:text-5xl">
-                                        {user.role === 'teacher' ? '👨‍🏫' : '🎓'}
-                                    </span>
+                                    <img src="/avatars/duco.png" alt="Duco" className="w-full h-full object-cover" />
                                 )}
                             </motion.div>
                             
@@ -212,6 +211,21 @@ export default function ProfilePage() {
                             <User className="w-5 h-5" />
                             Datos Personales
                         </button>
+                        {user.role === 'student' && (
+                            <button 
+                                onClick={async () => {
+                                    if(window.confirm('¿Quieres borrar tu perfil actual de jugador y repetir el test?')) {
+                                        await resetBartle();
+                                        toast.success('Perfil de jugador reseteado');
+                                        navigate('/alumno');
+                                    }
+                                }}
+                                className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/5 text-slate-400 hover:text-white rounded-2xl font-bold transition-all text-left"
+                            >
+                                <RefreshCw className="w-5 h-5" />
+                                Repetir Test Bartle
+                            </button>
+                        )}
                         <button className="w-full flex items-center gap-3 px-6 py-4 hover:bg-white/5 text-slate-400 hover:text-white rounded-2xl font-bold transition-all text-left">
                             <Shield className="w-5 h-5" />
                             Seguridad

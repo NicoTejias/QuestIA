@@ -27,6 +27,22 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
     const ACCEPTED_TYPES = '.pdf,.docx,.pptx,.xlsx,.xls'
     const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20MB
 
+    const autoDetectType = (fileName: string, content: string): 'PDA' | 'PIA' | 'PA' | 'none' => {
+        const text = (fileName + " " + content.substring(0, 3000)).toUpperCase();
+        
+        // Prioridad: Frases exactas
+        if (text.includes("PLAN DIDÁCTICO DE AULA") || text.includes("PLAN DIDACTICO DE AULA")) return 'PDA';
+        if (text.includes("PROGRAMA DE IMPLEMENTACIÓN DE ASIGNATURA") || text.includes("PROGRAMA DE IMPLEMENTACION DE ASIGNATURA")) return 'PIA';
+        if (text.includes("PROGRAMA DE ASIGNATURA")) return 'PA';
+        
+        // Segundas opciones: Acrónimos (con cuidado)
+        if (fileName.toUpperCase().includes("PDA")) return 'PDA';
+        if (fileName.toUpperCase().includes("PIA")) return 'PIA';
+        if (fileName.toUpperCase().includes("PA") && (text.includes("DUOC") || text.includes("UNIDAD"))) return 'PA';
+        
+        return 'none';
+    }
+
     const processAndUploadFile = async (file: File) => {
         const fileType = getFileType(file.name)
         if (!fileType) {
@@ -54,6 +70,14 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
 
         // Paso 3: Guardar metadata + contenido en la BD
         setUploadProgress(`💾 Guardando "${file.name}"...`)
+        
+        // Si el usuario dejó 'Material' (none), intentamos autodetectar.
+        // Si el usuario seleccionó uno específicamente, respetamos su selección.
+        let finalType = uploadType;
+        if (uploadType === 'none') {
+            finalType = autoDetectType(file.name, contentText);
+        }
+
         await saveDocument({
             course_id: selectedCourse as any,
             file_id: storageId,
@@ -61,8 +85,8 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
             file_type: fileType,
             file_size: file.size,
             content_text: contentText,
-            is_master_doc: uploadType !== 'none',
-            master_doc_type: uploadType !== 'none' ? uploadType as any : undefined
+            is_master_doc: finalType !== 'none',
+            master_doc_type: finalType !== 'none' ? finalType as any : undefined
         })
 
         return contentText.length
@@ -131,8 +155,8 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
     }, {})
 
     return (
-        <div className="space-y-6">
-            <p className="text-slate-400">Sube documentos de tus ramos (PDF, DOCX, PPTX, XLSX). El sistema extraerá automáticamente el contenido para que la IA pueda generar actividades gamificadas.</p>
+        <div className="space-y-6 overflow-x-hidden">
+            <p className="text-slate-400 text-sm md:text-base leading-relaxed">Sube documentos de tus ramos (PDF, DOCX, PPTX, XLSX). El sistema extraerá automáticamente el contenido para que la IA pueda generar actividades gamificadas.</p>
 
             {/* Mensajes de estado */}
             {error && (
@@ -175,9 +199,9 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                         </select>
                     </div>
 
-                    <div>
-                        <label className="text-sm font-medium text-slate-300 mb-2 block">Tipo de Documento</label>
-                        <div className="flex bg-surface border border-white/10 rounded-xl p-1 gap-1">
+                    <div className="md:col-span-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Tipo de Documento</label>
+                        <div className="flex bg-surface border border-white/10 rounded-xl p-1 gap-1 overflow-x-auto no-scrollbar">
                             {[
                                 { id: 'none', label: 'Material' },
                                 { id: 'PDA', label: 'PDA' },
@@ -187,7 +211,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                                 <button
                                     key={t.id}
                                     onClick={() => setUploadType(t.id)}
-                                    className={`flex-1 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest
+                                    className={`flex-1 py-2 px-2 text-[9px] font-black rounded-lg transition-all uppercase tracking-tight min-w-[60px]
                                         ${uploadType === t.id 
                                             ? 'bg-accent text-white shadow-lg shadow-accent/20' 
                                             : 'text-slate-500 hover:text-white hover:bg-white/5'
@@ -312,7 +336,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                                                             <Sparkles className="w-3 h-3" />
                                                             Bóveda de Documentación Maestra (IA context)
                                                         </p>
-                                                        <div className="space-y-2">
+                                                        <div className="grid grid-cols-1 gap-3">
                                                             {masterDocs.map((doc: any) => (
                                                                 <DocumentCard 
                                                                     key={doc._id} 
@@ -362,23 +386,23 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
     function DocumentCard({ doc, expandedDoc, setExpandedDoc, handleSetMasterType, handleDelete }: any) {
         return (
             <div className={`bg-surface-light border border-white/5 rounded-xl overflow-hidden transition-all ${doc.is_master_doc ? 'border-primary/20 shadow-lg shadow-primary/5' : ''}`}>
-                <div className="flex items-center justify-between px-5 py-4">
-                    <div className="flex items-center gap-3 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-4 gap-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                         <span className="text-2xl shrink-0">{getFileIcon(doc.file_type)}</span>
                         <div className="min-w-0">
-                            <p className="text-white font-medium truncate">{doc.file_name}</p>
-                            <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                            <p className="text-white font-medium truncate text-sm">{doc.file_name}</p>
+                            <div className="flex items-center gap-3 text-[10px] text-slate-500 mt-0.5">
                                 <span>{formatFileSize(doc.file_size)}</span>
                                 <span>{doc.file_type.toUpperCase()}</span>
                                 {doc.is_master_doc && (
-                                    <span className="bg-primary/20 text-primary-light px-2 py-0.5 rounded-full font-black text-[9px] border border-primary/20">
+                                    <span className="bg-primary/20 text-primary-light px-2 py-0.5 rounded-full font-black text-[8px] border border-primary/20">
                                         MASTER {doc.master_doc_type}
                                     </span>
                                 )}
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center justify-end gap-2 shrink-0 border-t border-white/5 pt-3 sm:border-0 sm:pt-0">
                         <select
                             title="Tipo de Documento"
                             value={doc.master_doc_type || 'none'}

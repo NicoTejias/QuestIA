@@ -57,7 +57,7 @@ export default function DashboardSidebar({
                             {user.avatarUrl ? (
                                 <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
-                                <span>{belbinRole === 'Cerebro' ? '🧠' : belbinRole === 'Impulsor' ? '⚡' : '🎓'}</span>
+                                <img src="/avatars/duco.png" alt="Duco" className="w-full h-full object-cover" />
                             )}
                         </div>
                         <div className="overflow-hidden">

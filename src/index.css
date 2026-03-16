@@ -52,12 +52,12 @@
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Clases de utilidad para áreas seguras */
+  /* Clases de utilidad para áreas seguras con padding de respaldo */
   .pt-safe {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: max(1.5rem, env(safe-area-inset-top, 0px));
   }
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
   }
   .mt-safe {
     margin-top: env(safe-area-inset-top, 0px);

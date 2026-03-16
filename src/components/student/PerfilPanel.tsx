@@ -1,5 +1,5 @@
 import { useNavigate, Link } from "react-router-dom"
-import { Trophy, Mail, Settings, Sparkles, Coins } from 'lucide-react'
+import { Trophy, Mail, Settings, Sparkles } from 'lucide-react'
 
 interface PerfilPanelProps {
     user: any;
@@ -12,8 +12,12 @@ export default function PerfilPanel({ user, totalPoints, belbinRole }: PerfilPan
     return (
         <div className="max-w-4xl mx-auto py-10 space-y-8">
             <div className="bg-surface-light border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8">
-                <div className="w-32 h-32 bg-gradient-to-br from-primary to-accent rounded-[2.5rem] flex items-center justify-center text-4xl shadow-2xl shadow-primary/20">
-                    {belbinRole === 'Cerebro' ? '🧠' : belbinRole === 'Impulsor' ? '⚡' : '🎓'}
+                <div className="w-32 h-32 bg-gradient-to-br from-primary to-accent rounded-[2.5rem] flex items-center justify-center overflow-hidden shadow-2xl shadow-primary/20">
+                    {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                        <img src="/avatars/duco.png" alt="Duco" className="w-full h-full object-cover" />
+                    )}
                 </div>
                 <div className="text-center md:text-left flex-1">
                     <h2 className="text-3xl font-black text-white mb-1">{user.name}</h2>
@@ -50,15 +54,22 @@ export default function PerfilPanel({ user, totalPoints, belbinRole }: PerfilPan
                     <Link to="/test-belbin" className="text-indigo-400 hover:text-indigo-300 font-bold text-sm">Repetir Test →</Link>
                 </div>
 
-                <div className="bg-gradient-to-br from-gold/10 to-transparent border border-gold/20 rounded-3xl p-8">
+                <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-3xl p-8">
                     <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                        <Coins className="w-5 h-5 text-gold" />
-                        Beneficios Diarios
+                        <Trophy className="w-5 h-5 text-primary-light" />
+                        Perfil de Jugador (Bartle)
                     </h3>
                     <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                        Recuerda que cada día, al realizar tu primer quiz, recibirás un bono de <strong>20 puntos extra</strong> solo por participar. ¡Mantente activo!
+                        {user.bartle_profile 
+                            ? `Tu estilo de juego es ${user.bartle_profile.toUpperCase()}. Esto influye en cómo interactúas con las misiones y recompensas.`
+                            : "Aún no has descubierto tu perfil de jugador. ¡Realiza el test para reservar tu lugar en el ranking!"}
                     </p>
-                    <div className="text-[10px] text-gold font-black uppercase tracking-widest bg-gold/10 px-3 py-1 rounded-full inline-block">Bono Disponible hoy</div>
+                    <button 
+                         onClick={() => navigate('/perfil')}
+                         className="text-primary-light hover:text-primary font-bold text-sm"
+                    >
+                        Gestionar Perfil →
+                    </button>
                 </div>
             </div>
         </div>

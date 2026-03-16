@@ -155,6 +155,15 @@ export const saveBartleProfile = mutation({
     },
 });
 
+export const resetBartleTest = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const user = await requireAuth(ctx);
+        await ctx.db.patch(user._id, { bartle_profile: undefined });
+        return { success: true };
+    },
+});
+
 // Auto-enrollment: cruza el student_id con las whitelists activas
 // Normaliza el RUT del alumno antes de comparar para evitar problemas de formato
 export const autoEnroll = mutation({

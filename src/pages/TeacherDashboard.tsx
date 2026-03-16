@@ -149,7 +149,7 @@ export default function TeacherDashboard() {
             {/* Main */}
             <main className="flex-1 min-h-screen-dvh flex flex-col overflow-hidden">
                 <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 pt-safe flex flex-col shrink-0">
-                    <div className="flex items-center justify-between py-3 md:py-4">
+                    <div className="flex items-center justify-between py-4 md:py-6">
 
                     <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
                         <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white shrink-0" aria-label="Abrir panel de navegación" title="Abrir panel de navegación">
@@ -304,8 +304,12 @@ function PerfilPanel({ user, coursesCount }: { user: any, coursesCount: number }
     return (
         <div className="max-w-4xl mx-auto py-10 space-y-8">
             <div className="bg-surface-light border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8">
-                <div className="w-32 h-32 bg-gradient-to-br from-accent to-primary rounded-[2.5rem] flex items-center justify-center text-4xl shadow-2xl shadow-accent/20">
-                    👩‍🏫
+                <div className="w-32 h-32 bg-gradient-to-br from-accent to-primary rounded-[2.5rem] flex items-center justify-center overflow-hidden shadow-2xl shadow-accent/20">
+                    {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                        <span className="text-4xl">👩‍🏫</span>
+                    )}
                 </div>
                 <div className="text-center md:text-left flex-1">
                     <h2 className="text-3xl font-black text-white mb-1">{user.name}</h2>
