@@ -2,6 +2,7 @@ import { action, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireTeacher } from "./withUser";
 import { api } from "./_generated/api";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Generar quiz con IA a partir del contenido de un documento
 export const generateQuiz = action({
@@ -12,13 +13,13 @@ export const generateQuiz = action({
         quiz_type: v.optional(v.string()), // "multiple_choice", "flashcard", "match"
         max_attempts: v.optional(v.number()),
     },
-    handler: async (ctx: any, args: any) => {
+    handler: async (ctx, args) => {
         // action auth not supported with requireAuth context yet, leaving it as it was if possible:
-        const userId = await ctx.auth.getUserIdentity();
-        if (!userId) throw new Error("No autenticado");
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("No autenticado");
 
         // Obtener el documento
-        const doc: any = await ctx.runQuery(api.documents.getDocumentById, {
+        const doc = await ctx.runQuery(api.documents.getDocumentById, {
             document_id: args.document_id,
         });
 
@@ -28,7 +29,7 @@ export const generateQuiz = action({
         }
 
         // Obtener documentos maestros (PDA, PIA, PA) para alineación pedagógica oficial de Duoc UC
-        const masterDocs: any[] = await ctx.runQuery(api.documents.getMasterDocuments, {
+        const masterDocs = await ctx.runQuery(api.documents.getMasterDocuments, {
             course_id: doc.course_id,
         });
 
@@ -49,10 +50,8 @@ export const generateQuiz = action({
             throw new Error("API key de Gemini no configurada. Agrega GEMINI_API_KEY en las variables de entorno de Convex.");
         }
 
-        const { GoogleGenerativeAI } = await import("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        // Usando Gemini 3 Flash según disponibilidad de la clave proveída
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const difficultyMap: Record<string, string> = {
             facil: "fácil (conceptos básicos, definiciones directas)",
