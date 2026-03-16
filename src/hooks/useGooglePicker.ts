@@ -6,7 +6,6 @@ const cleanEnvVar = (val: string | undefined) => (val || '').replace(/[^\x20-\x7
 
 const CLIENT_ID = cleanEnvVar(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 const API_KEY = cleanEnvVar(import.meta.env.VITE_GOOGLE_API_KEY);
-const APP_ID = CLIENT_ID.split('-')[0] || '';
 const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
 
 export function useGooglePicker() {
