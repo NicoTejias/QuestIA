@@ -42,8 +42,18 @@ function UpdateNotificationInner() {
         // Solo verificamos si estamos corriendo como App Nativa (Android/iOS)
         if (!Capacitor.isNativePlatform()) return;
 
-        if (config && config.latestVersion !== NATIVE_VERSION) {
-            setShowModal(true);
+        if (config) {
+            console.log("🚀 Update Check:", { 
+                current_app: NATIVE_VERSION, 
+                latest_server: config.latestVersion,
+                has_mismatch: config.latestVersion !== NATIVE_VERSION 
+            });
+
+            if (config.latestVersion !== NATIVE_VERSION) {
+                setShowModal(true);
+            } else {
+                setShowModal(false); // Si ya se actualizó, ocultar
+            }
         }
     }, [config]);
 
@@ -61,7 +71,7 @@ function UpdateNotificationInner() {
             setError(null);
             setProgress(5); // Inicio visual
 
-            const fileName = `Duocencia_v${config.latestVersion}.apk`;
+            const fileName = `Quest_v${config.latestVersion}.apk`;
 
             // 1. Descargar el archivo
             const downloadResult = await Filesystem.downloadFile({
@@ -111,6 +121,17 @@ function UpdateNotificationInner() {
                         {downloading ? 'Descargando...' : '¡Nueva Actualización! 🚀'}
                     </h2>
                     
+                    <div className="bg-black/20 border border-white/5 rounded-2xl p-4 mb-6 text-left">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Tu Versión</span>
+                            <span className="text-xs font-mono text-slate-400">{NATIVE_VERSION}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-primary-light font-bold uppercase tracking-widest">Nueva Versión</span>
+                            <span className="text-xs font-mono text-primary-light font-bold">{config?.latestVersion}</span>
+                        </div>
+                    </div>
+
                     <p className="text-slate-400 text-sm leading-relaxed mb-6">
                         {downloading 
                             ? `Estamos preparando la versión v${config.latestVersion} para ti. No cierres la aplicación.` 

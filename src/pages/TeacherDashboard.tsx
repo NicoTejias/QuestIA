@@ -77,18 +77,18 @@ export default function TeacherDashboard() {
 
     return (
         <div className="h-screen-dvh bg-surface flex overflow-hidden relative">
-
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-surface-light border-r border-white/5 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="p-6 border-b border-white/5">
+            <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-surface-light border-r border-white/5 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                {/* Fixed Header */}
+                <div className="p-6 border-b border-white/5 shrink-0">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-accent to-primary rounded-xl flex items-center justify-center">
+                            <div className="w-10 h-10 bg-gradient-to-br from-accent to-primary rounded-xl flex items-center justify-center shadow-lg shadow-accent/20">
                                 <Settings className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <span className="text-lg font-bold text-white block tracking-tight">Quest</span>
-                                <span className="text-xs text-slate-500">Panel Docente</span>
+                                <span className="text-lg font-bold text-white block tracking-tight leading-none mb-1">Quest</span>
+                                <span className="text-[10px] font-black text-accent-light uppercase tracking-widest opacity-80">Panel Docente</span>
                             </div>
                         </div>
                         <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white" aria-label="Cerrar panel de navegación" title="Cerrar panel de navegación">
@@ -97,25 +97,22 @@ export default function TeacherDashboard() {
                     </div>
                 </div>
 
-                <div className="p-4">
-                    {/* Perfil Docente */}
-                    <div className="bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20 rounded-2xl p-4 mb-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center text-lg overflow-hidden border border-white/10 shrink-0">
+                {/* Scrollable Middle Content */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+                    {/* Compact Profile Card */}
+                    <div className="bg-gradient-to-br from-white/[0.03] to-transparent border border-white/5 rounded-2xl p-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center text-lg overflow-hidden border border-white/10 shrink-0">
                                 {user.avatarUrl ? (
                                     <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
                                     <span>👩‍🏫</span>
                                 )}
                             </div>
-                            <div>
-                                <p className="text-white font-semibold text-sm">{user.name}</p>
-                                <p className="text-slate-400 text-xs">{user.email}</p>
+                            <div className="min-w-0">
+                                <p className="text-white font-bold text-xs truncate">{user.name}</p>
+                                <p className="text-slate-500 text-[10px] truncate">{user.email}</p>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-accent-light text-xs font-medium">
-                            <BookOpen className="w-3.5 h-3.5" />
-                            {coursesCount} {coursesCount === 1 ? 'ramo activo' : 'ramos activos'}
                         </div>
                     </div>
 
@@ -124,24 +121,31 @@ export default function TeacherDashboard() {
                             <button
                                 key={tab.id}
                                 onClick={() => { setActiveTab(tab.id); setSidebarOpen(false) }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left font-medium text-sm
-                  ${activeTab === tab.id
-                                        ? 'bg-accent/10 text-accent-light border border-accent/20'
-                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-left font-medium text-sm
+                                    ${activeTab === tab.id
+                                        ? 'bg-accent/10 text-accent-light border border-accent/20 shadow-sm shadow-accent/5'
+                                        : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                                     }`}
                             >
-                                {tab.icon}
+                                <div className={`${activeTab === tab.id ? 'text-accent-light' : 'text-slate-500'}`}>
+                                    {tab.icon}
+                                </div>
                                 {tab.label}
                             </button>
                         ))}
                     </nav>
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5 pb-safe">
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-400/5 transition-all font-medium text-sm">
-                        <LogOut className="w-5 h-5" />
+                {/* Fixed Footer */}
+                <div className="p-4 border-t border-white/5 shrink-0 bg-surface-light/50 backdrop-blur-sm">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-400/5 transition-all font-bold text-xs uppercase tracking-widest mb-1">
+                        <LogOut className="w-4 h-4" />
                         Cerrar Sesión
                     </button>
+                    <div className="px-4 py-1 flex items-center justify-between opacity-30 transition-opacity">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Quest v1.0.11</span>
+                        <span className="text-[9px] font-medium text-slate-600">Quest Platform</span>
+                    </div>
                 </div>
             </aside>
 

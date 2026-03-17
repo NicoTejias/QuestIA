@@ -7,6 +7,8 @@ export const getFaqs = query({
     args: {},
     handler: async (ctx) => {
         try {
+            // Verificación extra de seguridad
+            await (ctx.db as any).getSchema?.();
             return await ctx.db
                 .query("faqs")
                 .withIndex("by_order", (q) => q)

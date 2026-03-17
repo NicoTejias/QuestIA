@@ -118,7 +118,7 @@ export default function StudentDashboard() {
             {sidebarOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
             {/* Main Content */}
-            <main className="flex-1 h-screen-dvh flex flex-col overflow-hidden">
+            <main className="flex-1 h-screen-dvh flex flex-col overflow-hidden pb-safe">
                 <DashboardHeader 
                     setSidebarOpen={setSidebarOpen}
                     activeTab={activeTab}
@@ -127,7 +127,7 @@ export default function StudentDashboard() {
                     totalSpendablePoints={totalSpendablePoints}
                 />
 
-                <div className="p-4 md:p-6 flex-1 overflow-y-auto pb-safe">
+                <div className="p-4 md:p-6 flex-1 overflow-y-auto">
                     {selectedCourseId ? (
                         <CourseDetailView
                             courseId={selectedCourseId as any}
