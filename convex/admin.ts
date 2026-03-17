@@ -78,3 +78,63 @@ export const updateUserRole = mutation({
     await ctx.db.patch(args.targetUserId, { role: args.newRole });
   },
 });
+
+// Listar todos los docentes activos
+export const listTeachers = query({
+  handler: async (ctx) => {
+    const user = await requireAuth(ctx);
+    if (user.role !== "admin") throw new Error("Acceso denegado");
+
+    const teachers = await ctx.db
+      .query("users")
+      .filter((q) => q.or(q.eq(q.field("role"), "teacher"), q.eq(q.field("role"), "admin")))
+      .collect();
+
+    return teachers;
+  },
+});
+
+// Listar todos los alumnos con sus respectivos docentes
+export const listStudentsWithTeachers = query({
+  handler: async (ctx) => {
+    const user = await requireAuth(ctx);
+    if (user.role !== "admin") throw new Error("Acceso denegado");
+
+    const enrollments = await ctx.db.query("enrollments").collect();
+    
+    const detailedList = await Promise.all(enrollments.map(async (e) => {
+      const student = await ctx.db.get(e.user_id);
+      const course = await ctx.db.get(e.course_id);
+      if (!student || !course) return null;
+
+      const teacher = await ctx.db.get(course.teacher_id);
+      
+      return {
+        studentName: student.name || "Sin Nombre",
+        studentEmail: student.email || "Sin Email",
+        studentId: student.student_id || "S/I",
+        courseName: course.name,
+        courseCode: course.code,
+        teacherName: teacher?.name || "Desconocido",
+        teacherEmail: teacher?.email || "Sin Email"
+      };
+    }));
+
+    return detailedList.filter(item => item !== null).sort((a: any, b: any) => a.studentName.localeCompare(b.studentName));
+  },
+});
+
+// Listar todos los alumnos registrados
+export const listStudents = query({
+  handler: async (ctx) => {
+    const user = await requireAuth(ctx);
+    if (user.role !== "admin") throw new Error("Acceso denegado");
+
+    const students = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "student"))
+      .collect();
+
+    return students;
+  },
+});
