@@ -60,8 +60,8 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
   const canAccessAsStudent = requiredRole === 'student' && 
     (userRole === 'student' || (isSimulating && (userRole === 'teacher' || userRole === 'admin')));
 
-  if (requiredRole && !canAccessAsStudent && userRole !== requiredRole) {
-    const target = userRole === 'teacher' ? '/docente' : '/alumno'
+  if (requiredRole && !canAccessAsStudent && userRole !== requiredRole && !(requiredRole === 'teacher' && userRole === 'admin')) {
+    const target = (userRole === 'teacher' || userRole === 'admin') ? '/docente' : '/alumno'
     return <Navigate to={target} replace />
   }
 
@@ -78,7 +78,7 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   // Si ya está logueado y tenemos su perfil, lo sacamos de las páginas públicas
   if (isAuthenticated && user) {
     const userRole = (user as any)?.role || 'student';
-    const target = userRole === 'teacher' ? '/docente' : '/alumno'
+    const target = (userRole === 'teacher' || userRole === 'admin') ? '/docente' : '/alumno'
     return <Navigate to={target} replace />
   }
 
@@ -150,7 +150,7 @@ function DashboardRedirect() {
   }
 
   const userRole = (user as any)?.role || 'student';
-  const target = userRole === 'teacher' ? '/docente' : '/alumno'
+  const target = (userRole === 'teacher' || userRole === 'admin') ? '/docente' : '/alumno'
   
   console.log("✅ DashboardRedirect: Success! Target:", target);
   return <Navigate to={target} replace />

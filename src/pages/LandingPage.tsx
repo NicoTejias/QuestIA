@@ -50,7 +50,8 @@ export default function LandingPage() {
     // 1. Redirigir al dashboard si ya está autenticado y tenemos su perfil
     useEffect(() => {
         if (isAuthenticated && userProfile) {
-            const target = (userProfile as any).role === 'teacher' ? '/docente' : '/alumno'
+            const userRole = (userProfile as any).role || 'student'
+            const target = (userRole === 'teacher' || userRole === 'admin') ? '/docente' : '/alumno'
             navigate(target, { replace: true })
         }
     }, [isAuthenticated, userProfile, navigate]);
