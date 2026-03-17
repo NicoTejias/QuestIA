@@ -536,15 +536,15 @@ export const submitQuiz = mutation({
         // Si el usuario es docente o admin, devolvemos el resultado pero NO guardamos nada más
         // ni afectamos rachas ni puntos reales.
         if (user.role === "teacher" || user.role === "admin") {
-            const { pushNotification } = await import("./notifications");
-            await pushNotification(ctx, user._id, "🧪 TEST: Quiz Completado", `Has completado el quiz "${quiz.title}" con un ${scorePct}%. (Modo Simulación)`, "system");
+            const basePoints = (quiz.num_questions || 5) * (quiz.difficulty === 'dificil' ? 20 : quiz.difficulty === 'medio' ? 15 : 10);
+            const potentialEarned = Math.round((scorePct / 100) * basePoints);
             
             return {
                 success: true,
                 score: scorePct,
-                earned: 0,
+                earned: potentialEarned,
                 is_simulation: true,
-                message: "MODO PRUEBA: No se han guardado puntos ni registros.",
+                message: `MODO PRUEBA: Hubieras ganado ${potentialEarned} puntos. No se han guardado registros.`,
                 selected_options: attempt.selected_options
             };
         }

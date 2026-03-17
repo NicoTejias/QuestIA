@@ -46,7 +46,7 @@ export default function RegisterPage() {
                             }
                         }}
                         signInUrl="/login"
-                        forceRedirectUrl="/dashboard"
+                        forceRedirectUrl={window.location.origin + "/dashboard"}
                     />
                 </div>
 

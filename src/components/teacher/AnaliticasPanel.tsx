@@ -1,6 +1,6 @@
 import { useQuery, useConvex, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { BarChart3, Loader2, Sparkles, Download } from 'lucide-react'
+import { BarChart3, Loader2, Sparkles, Download, Trash2, FileText, TrendingUp, Users, Calendar, Award, BookOpen, Target } from 'lucide-react'
 import { useState } from "react"
 import { exportToExcel } from "../../utils/ExportData"
 import { toast } from "sonner"
@@ -69,6 +69,9 @@ export default function AnaliticasPanel() {
 
     const maxBelbin = Math.max(...(Object.values(stats.belbinDistribution) as number[]), 1)
 
+    const [cleaning, setCleaning] = useState(false)
+    const cleanAllWhitelists = useMutation(api.courses.cleanAllMyWhitelists)
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
@@ -76,15 +79,35 @@ export default function AnaliticasPanel() {
                     <h2 className="text-2xl font-black text-white">Analíticas del Docente</h2>
                     <p className="text-slate-400">Métricas de rendimiento y participación de tus alumnos.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                    <button 
+                         onClick={async () => {
+                            if (!confirm("Esto eliminará duplicados y normalizará los RUTs en TODAS tus listas de alumnos. ¿Continuar?")) return
+                            setCleaning(true)
+                            try {
+                                const res = await cleanAllWhitelists()
+                                toast.success(`Limpieza lista: ${res.totalDeleted} duplicados eliminados en ${res.coursesCount} ramos.`)
+                            } catch (err: any) {
+                                toast.error("Error al limpiar: " + err.message)
+                            } finally {
+                                setCleaning(false)
+                            }
+                        }}
+                        disabled={cleaning}
+                        className="flex items-center gap-2 px-4 py-2 bg-accent/10 hover:bg-accent/20 text-accent-light border border-accent/20 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
+                        title="Limpiar duplicados de RUT en todas las whitelists"
+                    >
+                        {cleaning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        Limpiar Whitelists
+                    </button>
                     <button 
                         onClick={handleUnify}
                         disabled={unifying}
                         className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary-light border border-primary/20 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
-                        title="Unificar alumnos duplicados por RUT"
+                        title="Unificar alumnos duplicados por RUT que ya están registrados"
                     >
                         {unifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                        Unificar Alumnos
+                        Unificar Usuarios
                     </button>
                     <button 
                         onClick={() => handleExport('TODOS')}

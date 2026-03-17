@@ -65,7 +65,7 @@ export default function LoginPage() {
                             }
                         }}
                         signUpUrl="/registro"
-                        forceRedirectUrl="/dashboard"
+                        forceRedirectUrl={window.location.origin + "/dashboard"}
                     />
                 </div>
 

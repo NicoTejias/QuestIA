@@ -314,19 +314,32 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                                             : 'Bien hecho, has finalizado el quiz satisfactoriamente.'}
                                     </p>
 
-                                    <div className="grid grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
+                                    <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
                                         <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
                                             <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-1">PUNTUACIÓN</span>
                                             <span className="text-2xl md:text-3xl font-black text-white">{quizResult?.score}%</span>
                                         </div>
                                         <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
-                                            <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-1">PUNTOS</span>
+                                            <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-1">
+                                                {quizResult?.is_simulation ? 'PUNTOS POTENCIALES' : 'PUNTOS GANADOS'}
+                                            </span>
                                             <div className="flex items-center justify-center gap-1">
                                                 <Coins className="w-4 h-4 md:w-5 md:h-5 text-gold" />
-                                                <span className="text-2xl md:text-3xl font-black text-gold">+{quizResult?.earned || 0}</span>
+                                                <span className="text-2xl md:text-3xl font-black text-gold">
+                                                    +{quizResult?.is_simulation ? quizResult.potentialEarned : (quizResult?.earned || 0)}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
+
+                                    {quizResult?.is_simulation && (
+                                        <div className="bg-accent/10 border border-accent/20 rounded-xl p-3 mb-6 flex items-center justify-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-accent-light" />
+                                            <p className="text-[10px] font-black text-accent-light uppercase tracking-widest">
+                                                {quizResult.message}
+                                            </p>
+                                        </div>
+                                    )}
 
                                     {quizResult?.daily_bonus_applied && (
                                         <div className="bg-gold/10 border border-gold/20 rounded-xl p-3 mb-6 text-gold flex items-center justify-center gap-2">

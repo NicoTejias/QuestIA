@@ -77,12 +77,14 @@ export default function CourseDetailView({ courseId, onBack, onPlayQuiz }: Cours
                     <div className="space-y-4">
                         {quizzes?.map((q: any) => (
                             <div key={q._id} className="group bg-surface-light border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-5 hover:bg-white/5 hover:border-accent/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-4 md:gap-5">
+                                <div className="flex-1 min-w-0 flex items-center gap-4 md:gap-5">
                                     <div className="w-12 h-12 md:w-14 md:h-14 bg-accent/10 rounded-xl md:rounded-2xl flex items-center justify-center text-accent-light group-hover:bg-accent/20 transition-colors shrink-0">
                                         {q.quiz_type === 'flashcard' ? <Brain className="w-6 h-6 md:w-7 md:h-7" /> : <PlayCircle className="w-6 h-6 md:w-7 md:h-7" />}
                                     </div>
-                                    <div className="min-w-0">
-                                        <h4 className="font-bold text-white group-hover:text-accent-light transition-colors text-sm md:text-base truncate">{q.title}</h4>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-white group-hover:text-accent-light transition-colors text-sm md:text-base truncate md:line-clamp-2 md:whitespace-normal">
+                                            {q.title}
+                                        </h4>
                                         <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1.5">
                                             <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
                                                 <Target className="w-2.5 h-2.5" /> {q.num_questions} PREG.
@@ -97,7 +99,7 @@ export default function CourseDetailView({ courseId, onBack, onPlayQuiz }: Cours
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                                <div className="flex shrink-0 flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-white/5">
                                     <div className="flex flex-col items-start sm:items-end">
                                         <div className="flex items-center gap-1.5 mb-1">
                                             <span className="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest">Intentos</span>
@@ -115,7 +117,7 @@ export default function CourseDetailView({ courseId, onBack, onPlayQuiz }: Cours
                                     <button
                                         onClick={() => q.can_take && onPlayQuiz(q)}
                                         disabled={!q.can_take}
-                                        className={`font-black text-[9px] md:text-[10px] tracking-widest px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl transition-all shadow-lg shrink-0
+                                        className={`font-black text-[9px] md:text-[10px] tracking-widest px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl transition-all shadow-lg shrink-0 w-full sm:w-auto
                                             ${!q.can_take
                                                 ? 'bg-green-500/10 text-green-400 border border-green-500/20 cursor-default shadow-none'
                                                 : q.completed

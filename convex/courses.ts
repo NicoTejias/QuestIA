@@ -182,6 +182,59 @@ export const cleanUpWhitelist = mutation({
     }
 });
 
+// Mutación global para limpiar TODAS las whitelists del docente actual
+export const cleanAllMyWhitelists = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const user = await requireTeacher(ctx);
+        const courses = await ctx.db
+            .query("courses")
+            .withIndex("by_teacher", (q) => q.eq("teacher_id", user._id))
+            .collect();
+        
+        let totalDeleted = 0;
+        let totalFixed = 0;
+        let totalProcessed = 0;
+
+        for (const course of courses) {
+            const whitelist = await ctx.db
+                .query("whitelists")
+                .withIndex("by_course", (q) => q.eq("course_id", course._id))
+                .collect();
+
+            const seen = new Map();
+            for (const item of whitelist) {
+                const normalized = normalizeRut(item.student_identifier);
+                if (!normalized || normalized.length < 5) {
+                    await ctx.db.delete(item._id);
+                    totalDeleted++;
+                    continue;
+                }
+
+                if (seen.has(normalized)) {
+                    const originalId = seen.get(normalized);
+                    const original = (await ctx.db.get(originalId)) as any;
+
+                    if (item.student_name && (!original?.student_name || original.student_name === "Pendiente de registro")) {
+                        await ctx.db.patch(originalId, { student_name: item.student_name });
+                    }
+                    await ctx.db.delete(item._id);
+                    totalDeleted++;
+                } else {
+                    if (item.student_identifier !== normalized) {
+                        await ctx.db.patch(item._id, { student_identifier: normalized });
+                        totalFixed++;
+                    }
+                    seen.set(normalized, item._id);
+                }
+            }
+            totalProcessed += whitelist.length;
+        }
+
+        return { totalDeleted, totalFixed, coursesCount: courses.length, totalProcessed };
+    }
+});
+
 // Mutación global para normalizar todas las whitelists del sistema (mantenimiento)
 export const fixAllWhitelists = mutation({
     args: {},
