@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { useConvexAuth } from "convex/react"
 import { useQuery } from "convex/react"
 import { api } from "../convex/_generated/api"
-import { Loader2 } from 'lucide-react'
+import { Loader2, Sparkles } from 'lucide-react'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -50,8 +50,13 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
 
   // 5. Verificación de Rol
   const userRole = (user as any)?.role || 'student';
+  const isSimulating = localStorage.getItem('quest_simulate_student') === 'true';
 
-  if (requiredRole && userRole !== requiredRole) {
+  // Permitir que docentes/admins simulen ser alumnos
+  const canAccessAsStudent = requiredRole === 'student' && 
+    (userRole === 'student' || (isSimulating && (userRole === 'teacher' || userRole === 'admin')));
+
+  if (requiredRole && !canAccessAsStudent && userRole !== requiredRole) {
     const target = userRole === 'teacher' ? '/docente' : '/alumno'
     return <Navigate to={target} replace />
   }
@@ -130,6 +135,23 @@ function App() {
       <PushNotificationManager />
       <UpdateNotification />
       <FeedbackButton />
+      {localStorage.getItem('quest_simulate_student') === 'true' && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black px-4 py-2 flex items-center justify-between text-xs font-black shadow-2xl">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 animate-pulse" />
+            <span>ESTÁS EN MODO PRUEBA (ALUMNO) - LOS DATOS NO SE GUARDARÁN</span>
+          </div>
+          <button 
+            onClick={() => {
+              localStorage.removeItem('quest_simulate_student');
+              window.location.href = '/docente';
+            }}
+            className="bg-black hover:bg-slate-900 text-white px-3 py-1 rounded-full text-center transition-all"
+          >
+            VOLVER A DOCENTE
+          </button>
+        </div>
+      )}
       <Routes>
 
 

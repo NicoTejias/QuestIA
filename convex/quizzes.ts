@@ -242,7 +242,7 @@ export const getQuizzesByCourse = query({
     handler: async (ctx, args) => {
         const quizzes = await ctx.db
             .query("quizzes")
-            .filter((q) => q.eq(q.field("course_id"), args.course_id))
+            .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
             .collect();
 
         try {
@@ -255,6 +255,8 @@ export const getQuizzesByCourse = query({
 
                 const attempts_count = userSubmissions.length;
                 const max_attempts = quiz.max_attempts ?? 1;
+                const num_questions = quiz.questions?.length || 0;
+                
                 const best_score = userSubmissions.length > 0
                     ? Math.max(...userSubmissions.map(s => s.score))
                     : null;
@@ -265,12 +267,12 @@ export const getQuizzesByCourse = query({
                     attempts_count,
                     max_attempts,
                     best_score,
-                    can_take: attempts_count < max_attempts,
+                    can_take: attempts_count < max_attempts && num_questions > 0,
                     score: best_score // Para compatibilidad
                 };
             }));
         } catch {
-            return quizzes;
+            return quizzes.map(q => ({ ...q, can_take: false }));
         }
     },
 });
@@ -369,10 +371,10 @@ export const getOrCreateAttempt = mutation({
         const numQuestions = questions.length;
 
         if (numQuestions === 0) {
-            throw new Error("Este quiz no tiene preguntas.");
+            throw new Error("Este quiz no tiene preguntas asignadas.");
         }
 
-        // 1) Buscar TODOS los intentos del usuario para este quiz
+        // 1) Buscar intentos del usuario para este quiz
         const allAttempts = await ctx.db
             .query("quiz_attempts")
             .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
@@ -380,28 +382,31 @@ export const getOrCreateAttempt = mutation({
 
         const inProgressAttempts = allAttempts.filter(a => a.status === "in_progress");
 
-        // 2) Si hay un intento en progreso, devolverlo (el más reciente)
+        // 2) Si hay un intento en progreso, devolverlo
         if (inProgressAttempts.length > 0) {
-            // Ordenar por más reciente
             inProgressAttempts.sort((a, b) => b.last_updated - a.last_updated);
             const attempt = inProgressAttempts[0];
 
-            // Limpiar duplicados si hay más de uno (race condition)
+            // Limpiar duplicados si existen
             for (let i = 1; i < inProgressAttempts.length; i++) {
                 await ctx.db.patch(inProgressAttempts[i]._id, { status: "completed", last_updated: Date.now() });
             }
 
-            // Verificación de integridad: si el número de preguntas cambió
-            if (attempt.selected_options.length !== numQuestions) {
+            // Validar que las opciones seleccionadas coincidan con el número de preguntas actual
+            if (!attempt.selected_options || attempt.selected_options.length !== numQuestions) {
                 const newSelected: (number | null)[] = new Array(numQuestions).fill(null);
-                for (let i = 0; i < Math.min(attempt.selected_options.length, numQuestions); i++) {
-                    newSelected[i] = attempt.selected_options[i];
+                if (attempt.selected_options) {
+                    for (let i = 0; i < Math.min(attempt.selected_options.length, numQuestions); i++) {
+                        newSelected[i] = attempt.selected_options[i];
+                    }
                 }
+                
                 await ctx.db.patch(attempt._id, { 
                     selected_options: newSelected,
                     current_question_index: Math.min(attempt.current_question_index, numQuestions - 1),
                     last_updated: Date.now()
                 });
+                
                 return { 
                     ...attempt, 
                     selected_options: newSelected,
@@ -409,19 +414,10 @@ export const getOrCreateAttempt = mutation({
                 };
             }
 
-            // Asegurar que current_question_index es válido
-            if (attempt.current_question_index >= numQuestions) {
-                await ctx.db.patch(attempt._id, { 
-                    current_question_index: numQuestions - 1,
-                    last_updated: Date.now()
-                });
-                return { ...attempt, current_question_index: numQuestions - 1 };
-            }
-
             return attempt;
         }
 
-        // 3) No hay intento en progreso: verificar si puede crear uno nuevo (max_attempts)
+        // 3) No hay intento en progreso: verificar límite de intentos
         const completedSubmissions = await ctx.db
             .query("quiz_submissions")
             .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
@@ -429,7 +425,7 @@ export const getOrCreateAttempt = mutation({
 
         const maxAttempts = quiz.max_attempts ?? 1;
         if (completedSubmissions.length >= maxAttempts) {
-            throw new Error(`Ya completaste los ${maxAttempts} intento(s) permitido(s) para este quiz.`);
+            throw new Error(`Limite alcanzado (${maxAttempts} intento(s)).`);
         }
 
         // 4) Crear nuevo intento
@@ -444,6 +440,8 @@ export const getOrCreateAttempt = mutation({
         });
 
         const newAttempt = await ctx.db.get(attemptId);
+        if (!newAttempt) throw new Error("Error al crear la sesión de quiz");
+        
         return newAttempt;
     },
 });
@@ -533,6 +531,23 @@ export const submitQuiz = mutation({
             status: "completed",
             last_updated: Date.now(),
         });
+
+        // --- MODO SIMULACIÓN (DOCENTE/ADMIN) ---
+        // Si el usuario es docente o admin, devolvemos el resultado pero NO guardamos nada más
+        // ni afectamos rachas ni puntos reales.
+        if (user.role === "teacher" || user.role === "admin") {
+            const { pushNotification } = await import("./notifications");
+            await pushNotification(ctx, user._id, "🧪 TEST: Quiz Completado", `Has completado el quiz "${quiz.title}" con un ${scorePct}%. (Modo Simulación)`, "system");
+            
+            return {
+                success: true,
+                score: scorePct,
+                earned: 0,
+                is_simulation: true,
+                message: "MODO PRUEBA: No se han guardado puntos ni registros.",
+                selected_options: attempt.selected_options
+            };
+        }
 
         // --- Lógica de Bono Diario por Racha ---
         const now = Date.now();

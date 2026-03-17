@@ -207,12 +207,18 @@ export const getMyCourses = query({
         try {
             const user = await requireAuth(ctx);
 
-            // Si es docente, devolver sus propios ramos
-            if (user.role === "teacher") {
-                return await ctx.db
+            // Si es docente, devolver sus propios ramos (Simulación de alumno)
+            if (user.role === "teacher" || user.role === "admin") {
+                const teaching = await ctx.db
                     .query("courses")
                     .withIndex("by_teacher", (q) => q.eq("teacher_id", user._id))
                     .collect();
+                
+                return teaching.map(c => ({ 
+                    ...c, 
+                    total_points: 9999, // Puntos infinitos para simulación
+                    is_simulation: true 
+                }));
             }
 
             // Si es alumno, devolver ramos en los que está inscrito

@@ -296,6 +296,31 @@ function PerfilPanel({ user, coursesCount }: { user: any, coursesCount: number }
                         <Settings className="w-4 h-4" />
                         Configurar Perfil
                     </button>
+                    
+                    <button
+                        onClick={() => {
+                            const isSimulating = localStorage.getItem('quest_simulate_student') === 'true';
+                            if (isSimulating) {
+                                localStorage.removeItem('quest_simulate_student');
+                                toast.success("Modo Docente restaurado");
+                                navigate('/docente');
+                            } else {
+                                localStorage.setItem('quest_simulate_student', 'true');
+                                toast.success("Simulación de Alumno Activa");
+                                navigate('/alumno');
+                            }
+                            window.location.reload();
+                        }}
+                        className={`font-bold px-6 py-3 rounded-xl border transition-all flex items-center gap-2 ${
+                            localStorage.getItem('quest_simulate_student') === 'true'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
+                            : 'bg-accent/10 text-accent-light border-accent/20 hover:bg-accent/20'
+                        }`}
+                    >
+                        <User className="w-4 h-4" />
+                        {localStorage.getItem('quest_simulate_student') === 'true' ? 'Salir Modo Alumno' : 'Probar como Alumno'}
+                    </button>
+
                     {user.role !== 'admin' && user.email === 'ni.tejias@profesor.duoc.cl' && (
                         <button
                             onClick={async () => {

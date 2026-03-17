@@ -82,7 +82,20 @@ export const completeMission = mutation({
             .filter((q) => q.eq(q.field("mission_id"), args.mission_id))
             .unique();
 
-        if (existing) throw new Error("Ya completaste esta misión");
+        if (existing && user.role === "student") throw new Error("Ya completaste esta misión");
+
+        // --- MODO SIMULACIÓN ---
+        if (user.role === "teacher" || user.role === "admin") {
+            const { pushNotification } = await import("./notifications");
+            await pushNotification(ctx, user._id, "🧪 TEST: Misión Completada", `Has completado la misión "${mission.title}". (Modo Simulación)`, "system");
+            
+            return {
+                success: true,
+                points_earned: mission.points,
+                is_simulation: true,
+                message: "MODO PRUEBA: Misión completada virtualmente."
+            };
+        }
 
         // Registrar la entrega
         await ctx.db.insert("mission_submissions", {

@@ -94,8 +94,33 @@ export const unifyUsersByRut = mutation({
 export const makeMeAdmin = mutation({
     args: {},
     handler: async (ctx) => {
-        const user = await requireTeacher(ctx);
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("No autenticado en Convex");
+        
+        // Primero intentar buscar por clerkId
+        let user = await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+            .unique();
+            
+        // Si no, intentar por el mail específico del usuario
+        if (!user && identity.email === "ni.tejias@profesor.duoc.cl") {
+            user = await ctx.db
+                .query("users")
+                .withIndex("email", q => q.eq("email", "ni.tejias@profesor.duoc.cl"))
+                .unique();
+        }
+        
+        if (!user) {
+            throw new Error(`Usuario no encontrado para la identidad: ${identity.email || identity.subject}`);
+        }
+
+        // Aplicar el rol de admin
         await ctx.db.patch(user._id, { role: "admin" });
-        return { success: true, message: "Ahora eres Super Admin. Recarga la página." };
+        
+        return { 
+            success: true, 
+            message: "¡Acceso concedido! Ahora eres Administrador. Por favor, recarga la aplicación." 
+        };
     }
 });
