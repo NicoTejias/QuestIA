@@ -12,10 +12,12 @@ export const getTeacherStats = query({
             const userId = user._id;
 
             // Obtener ramos del docente de una vez
-            const courses = await ctx.db
-                .query("courses")
-                .withIndex("by_teacher", (q: any) => q.eq("teacher_id", userId))
-                .collect();
+            const courses = user.role === "admin"
+                ? await ctx.db.query("courses").collect()
+                : await ctx.db
+                    .query("courses")
+                    .withIndex("by_teacher", (q: any) => q.eq("teacher_id", userId))
+                    .collect();
 
             const courseIds = courses.map((c) => c._id);
             if (courseIds.length === 0) {
@@ -275,10 +277,12 @@ export const exportCourseData = query({
         const userId = user._id;
 
         // Buscar todos los cursos con ese nombre (para agregación multicarrera)
-        const courses = await ctx.db
-            .query("courses")
-            .withIndex("by_teacher", (q: any) => q.eq("teacher_id", userId))
-            .collect();
+        const courses = user.role === "admin"
+            ? await ctx.db.query("courses").collect()
+            : await ctx.db
+                .query("courses")
+                .withIndex("by_teacher", (q: any) => q.eq("teacher_id", userId))
+                .collect();
         
         const targetCourses = courses.filter(c => c.name === args.courseName);
         const courseIds = targetCourses.map(c => c._id);

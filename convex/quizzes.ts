@@ -197,7 +197,7 @@ export const saveQuiz = mutation({
         const user = await requireTeacher(ctx);
 
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No tienes permiso para agregar quizzes a este curso");
 
         const quizId = await ctx.db.insert("quizzes", {
@@ -316,7 +316,7 @@ export const deleteQuiz = mutation({
 
         // Verificar que el curso del quiz pertenezca al docente
         const course = await ctx.db.get(quiz.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para eliminar este quiz");
 
         await ctx.db.delete(args.quiz_id);
@@ -334,7 +334,7 @@ export const getQuizSubmissions = query({
 
         // Solo el docente del curso puede ver esto
         const course = await ctx.db.get(quiz.course_id);
-        if (!course || course.teacher_id !== user._id) {
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin")) {
             throw new Error("No autorizado");
         }
 

@@ -13,7 +13,7 @@ export const generateGroups = mutation({
 
         // Verificar que el curso pertenezca al docente
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id) {
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin")) {
             throw new Error("No autorizado para este ramo");
         }
 

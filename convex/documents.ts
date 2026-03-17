@@ -88,11 +88,14 @@ export const getMyDocuments = query({
         const user = await requireAuth(ctx);
         if (!user) return [];
 
-        return await ctx.db
-            .query("course_documents")
-            .withIndex("by_teacher", (q) => q.eq("teacher_id", user._id))
-            .order("desc")
-            .collect();
+        const docs = user.role === "admin"
+            ? await ctx.db.query("course_documents").collect()
+            : await ctx.db
+                .query("course_documents")
+                .withIndex("by_teacher", (q) => q.eq("teacher_id", user._id))
+                .collect();
+        
+        return docs.sort((a, b) => b.uploaded_at - a.uploaded_at);
     },
 });
 

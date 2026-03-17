@@ -11,11 +11,13 @@ export const getPendingForTeacher = query({
             const user = await requireTeacher(ctx);
             const userId = user._id;
 
-            // 1. Obtener los cursos del docente
-            const courses = await ctx.db
-                .query("courses")
-                .withIndex("by_teacher", (q) => q.eq("teacher_id", userId))
-                .collect();
+            // 1. Obtener los cursos del docente (o todos si es admin)
+            const courses = user.role === "admin"
+                ? await ctx.db.query("courses").collect()
+                : await ctx.db
+                    .query("courses")
+                    .withIndex("by_teacher", (q) => q.eq("teacher_id", userId))
+                    .collect();
             const courseIds = new Set(courses.map(c => c._id));
 
             // 2. Obtener todas las pendientes para estos cursos usando los nuevos índices
@@ -166,8 +168,8 @@ export const processTransfer = mutation({
         const sourceCourse = await ctx.db.get(req.from_course_id);
         const targetCourse = await ctx.db.get(req.to_course_id);
 
-        const isSourceTeacher = sourceCourse?.teacher_id === userId;
-        const isTargetTeacher = targetCourse?.teacher_id === userId;
+        const isSourceTeacher = sourceCourse?.teacher_id === userId || user.role === "admin";
+        const isTargetTeacher = targetCourse?.teacher_id === userId || user.role === "admin";
 
         if (!isSourceTeacher && !isTargetTeacher) {
             throw new Error("No autorizado para aprobar esta solicitud");

@@ -16,7 +16,7 @@ export const send = mutation({
             .unique();
 
         const course = await ctx.db.get(args.course_id);
-        const isTeacher = course?.teacher_id === user._id;
+        const isTeacher = course?.teacher_id === user._id || user.role === "admin";
 
         if (!enrollment && !isTeacher) {
             throw new Error("No estás inscrito en este ramo");

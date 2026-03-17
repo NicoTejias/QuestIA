@@ -29,7 +29,7 @@ export const createSession = mutation({
     handler: async (ctx, args) => {
         const user = await requireTeacher(ctx);
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id) throw new Error("No autorizado");
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin")) throw new Error("No autorizado");
 
         // Generar código de 6 dígitos
         const code = Math.floor(100000 + Math.random() * 900000).toString();
