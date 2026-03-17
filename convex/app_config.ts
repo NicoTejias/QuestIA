@@ -6,10 +6,10 @@ export const getLatestConfig = query({
     try {
       // En el futuro esto podría venir de una tabla 'config'
       return {
-        latestVersion: "1.0.3",
-        downloadUrl: "https://duocenc-ia.vercel.app/download-apk", 
+        latestVersion: "1.0.11",
+        downloadUrl: "https://github.com/NicoTejias/DuocencIA/releases/download/v.1.0.11/Quest.1.0.11.apk", 
         isMandatory: true,
-        message: "Hay una nueva versión mayor disponible. Es necesario actualizar para seguir usando todas las funciones de IA y notificaciones."
+        message: "¡Nueva versión 1.0.11 disponible! Hemos solucionado el error de inicio de sesión, optimizado el diseño para móviles y añadido la nueva sección de Ayuda/FAQ."
       };
     } catch (error) {
       console.error("Error in getLatestConfig:", error);

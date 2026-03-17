@@ -1,6 +1,16 @@
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
+
+// Fix for capacitor-community-file-opener ProGuard issue
+def fileOpenerBuildFile = new File(settingsDir, '../node_modules/@capacitor-community/file-opener/android/build.gradle')
+if (fileOpenerBuildFile.exists()) {
+    def content = fileOpenerBuildFile.text
+    if (content.contains("'proguard-android.txt'")) {
+        fileOpenerBuildFile.text = content.replace("'proguard-android.txt'", "'proguard-android-optimize.txt'")
+    }
+}
+
 include ':app'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')

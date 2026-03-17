@@ -3,7 +3,8 @@ import { useEffect } from 'react'
 import { useConvexAuth } from "convex/react"
 import { useQuery } from "convex/react"
 import { api } from "../convex/_generated/api"
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2, Sparkles, ShieldAlert } from 'lucide-react'
+import { useState } from 'react'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -85,6 +86,16 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 function DashboardRedirect() {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
+  const [isStuck, setIsStuck] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        if (!isAuthLoading && isAuthenticated && user === undefined) {
+            setIsStuck(true)
+        }
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [isAuthLoading, isAuthenticated, user])
 
   console.log("🛠️ DashboardRedirect State:", { isAuthLoading, isAuthenticated, userExists: user !== undefined, userProfile: user });
 
@@ -100,6 +111,32 @@ function DashboardRedirect() {
   // 3. Si hay sesión, esperar perfil de DB
   if (user === undefined) {
     console.log("DashboardRedirect: Waiting for user profile from Convex...");
+    if (isStuck) {
+        return (
+            <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-6 text-center">
+                <ShieldAlert className="w-16 h-16 text-amber-500 mb-4" />
+                <h1 className="text-xl font-bold text-white mb-2">Conexión Lenta o Error de Perfil</h1>
+                <p className="text-slate-400 text-sm mb-6">Estamos teniendo problemas para cargar tu perfil de Quest. Prueba cerrando sesión e ingresando de nuevo.</p>
+                <div className="space-y-3 w-full max-w-xs">
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="w-full bg-white/10 text-white font-bold py-3 rounded-xl border border-white/5"
+                    >
+                        Reintentar
+                    </button>
+                    <button 
+                        onClick={() => {
+                            localStorage.clear();
+                            window.location.href = '/login';
+                        }}
+                        className="w-full bg-red-500/20 text-red-500 font-bold py-3 rounded-xl border border-red-500/20"
+                    >
+                        Cerrar Sesión Forzado
+                    </button>
+                </div>
+            </div>
+        )
+    }
     return <LoadingScreen />
   }
   
@@ -127,7 +164,7 @@ function App() {
   const { isLoading, isAuthenticated } = useConvexAuth()
   
   useEffect(() => {
-    console.log("🚀 DuocencIA v1.0.3 - Auth State:", { isLoading, isAuthenticated });
+    console.log("🚀 DuocencIA v1.0.11 - Auth State:", { isLoading, isAuthenticated });
   }, [isLoading, isAuthenticated]);
 
   return (
