@@ -115,6 +115,7 @@ function DashboardRedirect() {
 
 import PushNotificationManager from './components/PushNotificationManager'
 import UpdateNotification from './components/UpdateNotification'
+import FeedbackButton from './components/FeedbackButton'
 
 function App() {
 
@@ -128,6 +129,7 @@ function App() {
     <>
       <PushNotificationManager />
       <UpdateNotification />
+      <FeedbackButton />
       <Routes>
 
 

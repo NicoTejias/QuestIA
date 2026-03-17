@@ -6,16 +6,33 @@ interface DashboardHomeProps {
     totalRanking: number;
     firstName: string;
     onSelectCourse: (id: string) => void;
+    user: any;
 }
 
 export default function DashboardHome({
     courses,
     totalRanking,
     firstName,
-    onSelectCourse
+    onSelectCourse,
+    user
 }: DashboardHomeProps) {
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
+            {/* Mission Banner for Bartle */}
+            {!user.bartle_profile && (
+                <div className="bg-gradient-to-r from-primary to-accent rounded-3xl p-5 md:p-6 flex items-center justify-between shadow-xl shadow-primary/20 border border-white/10 group cursor-default">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 md:w-14 md:h-14 bg-white/20 rounded-2xl flex items-center justify-center text-2xl md:text-3xl animate-bounce-slow">
+                            🚀
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-white font-black text-sm md:text-base leading-tight uppercase tracking-widest">¡Misión Especial Pendiente!</p>
+                            <p className="text-white/80 text-xs md:text-sm font-medium mt-1">Completa tu test de Bartle para descubrir tu rol en el equipo.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Hero Card */}
             <div className="relative overflow-hidden bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border border-white/10 rounded-2xl md:rounded-[2rem] p-6 md:p-10">
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-primary/20 rounded-full blur-[80px]"></div>

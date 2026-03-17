@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../convex/_generated/api"
-import { User, Mail, Shield, Key, Save, Loader2, ArrowLeft, BadgeCheck, IdCard } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, RefreshCw } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Camera, BadgeCheck, User, RefreshCw, Upload, Mail, Shield, Key, Save, Loader2, ArrowLeft, IdCard } from 'lucide-react'
 
 export default function ProfilePage() {
     const user = useQuery(api.users.getProfile)
@@ -149,60 +148,97 @@ export default function ProfilePage() {
                     Volver
                 </button>
 
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 md:mb-12">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 text-center sm:text-left">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-center gap-8 text-center sm:text-left">
                         <div className="relative group">
                             <motion.div 
                                 initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-primary to-accent rounded-[2.5rem] flex items-center justify-center overflow-hidden shadow-2xl shadow-primary/20 shrink-0 border-4 border-white/5"
+                                className="w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-primary to-accent rounded-[2.5rem] flex items-center justify-center overflow-hidden shadow-2xl shadow-primary/20 shrink-0 border-4 border-white/5 relative"
                             >
                                 {user.avatarUrl ? (
                                     <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
                                     <img src="/avatars/duco.png" alt="Duco" className="w-full h-full object-cover" />
                                 )}
+                                
+                                <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-all backdrop-blur-sm">
+                                    <Camera className="w-8 h-8 text-white" />
+                                    <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                                </label>
                             </motion.div>
                             
-                            <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-primary hover:bg-primary-light rounded-full border-4 border-surface items-center justify-center flex cursor-pointer shadow-lg transition-all active:scale-90">
-                                <Camera className="w-5 h-5 text-white" />
-                                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
-                            </label>
-                            
                             {uploading && (
-                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-[2.5rem] flex items-center justify-center">
+                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-[2.5rem] flex items-center justify-center z-10">
                                     <RefreshCw className="w-8 h-8 text-white animate-spin" />
                                 </div>
                             )}
                         </div>
 
                         <div className="min-w-0">
-                            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                                <h1 className="text-2xl md:text-4xl font-black text-white truncate">{user.name}</h1>
-                                {user.is_verified && <BadgeCheck className="w-5 h-5 md:w-6 md:h-6 text-primary-light shrink-0" />}
+                            <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                                <h1 className="text-3xl md:text-5xl font-black text-white truncate">{user.name}</h1>
+                                {user.is_verified && <BadgeCheck className="w-6 h-6 md:w-8 md:h-8 text-primary-light shrink-0" />}
                             </div>
                             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                                <p className="text-slate-500 font-medium text-sm md:text-base truncate">{user.email}</p>
-                                <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-primary-light">
+                                <p className="text-slate-400 font-medium text-base md:text-lg">{user.email}</p>
+                                <span className="px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-[10px] font-black uppercase tracking-widest text-primary-light">
                                     {user.role === 'teacher' ? 'Docente' : 'Alumno'}
                                 </span>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <AnimatePresence>
-                        {user.role === 'student' && user.avatarUrl !== "/avatars/duco.png" && (
-                            <motion.button
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                onClick={setDucoAvatar}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary-light border border-primary/20 text-xs font-bold transition-all"
-                            >
-                                <RefreshCw className="w-3 h-3" /> USAR AVATAR DUCO
-                            </motion.button>
-                        )}
-                    </AnimatePresence>
+                {/* Avatar Selection Section */}
+                <div className="bg-surface-light border border-white/5 rounded-[2.5rem] p-6 mb-12">
+                    <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-6 px-2">Selecciona tu Identidad</h3>
+                    <div className="flex flex-wrap gap-6 justify-center sm:justify-start px-2">
+                        {/* Option DUCO */}
+                        <button 
+                            onClick={setDucoAvatar}
+                            className={`group relative flex flex-col items-center gap-3 transition-all ${user.avatarUrl === "/avatars/duco.png" || !user.avatarUrl ? 'scale-105' : 'opacity-60 hover:opacity-100'}`}
+                        >
+                            <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl overflow-hidden border-4 transition-all shadow-lg
+                                ${user.avatarUrl === "/avatars/duco.png" || !user.avatarUrl ? 'border-primary shadow-primary/20' : 'border-white/10 hover:border-primary/50'}`}>
+                                <img src="/avatars/duco.png" alt="Duco mascot" className="w-full h-full object-cover" />
+                                {(user.avatarUrl === "/avatars/duco.png" || !user.avatarUrl) && (
+                                    <div className="absolute top-2 right-2 bg-primary text-white p-1 rounded-full shadow-md z-10">
+                                        <BadgeCheck className="w-3 h-3" />
+                                    </div>
+                                )}
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 group-hover:text-white transition-colors">DUCO (Clásico)</span>
+                        </button>
+
+                        {/* Option Custom Photo */}
+                        <div className="flex flex-col items-center gap-3">
+                            <label className={`group relative flex flex-col items-center cursor-pointer transition-all ${user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" ? 'scale-105' : 'opacity-60 hover:opacity-100'}`}>
+                                <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl overflow-hidden border-4 transition-all shadow-lg bg-surface
+                                    ${user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" ? 'border-accent shadow-accent/20' : 'border-white/10 hover:border-accent/50 group-hover:bg-white/5'}`}>
+                                    {user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" ? (
+                                        <img src={user.avatarUrl} alt="Custom" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <Upload className="w-6 h-6 text-slate-500 group-hover:text-accent-light transition-colors" />
+                                        </div>
+                                    )}
+                                    {user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" && (
+                                        <div className="absolute top-2 right-2 bg-accent text-white p-1 rounded-full shadow-md z-10">
+                                            <BadgeCheck className="w-3 h-3" />
+                                        </div>
+                                    )}
+                                </div>
+                                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 group-hover:text-white transition-colors">
+                                    {user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" ? 'Personalizada' : 'Cambiar Foto'}
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <p className="mt-6 text-[10px] text-slate-500 font-medium px-2 leading-relaxed italic">
+                        * Consejo: Sube una imagen cuadrada para que se vea mejor en tu perfil y ranking.
+                    </p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

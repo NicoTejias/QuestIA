@@ -1,42 +1,50 @@
 import { query } from "./_generated/server";
-import { v } from "convex/values";
 
-export const checkCourseWhitelist = query({
-    args: { courseName: v.string(), section: v.string() },
-    handler: async (ctx, args) => {
-        // 1. Buscar el ramo (PÚBLICO PARA DEBUG REQUERIDO POR USUARIO)
+export const databaseCheck = query({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) return { error: "No identity" };
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+            .unique();
+        
+        if (!user) return { error: "User not found" };
+
         const courses = await ctx.db
             .query("courses")
+            .withIndex("by_teacher", q => q.eq("teacher_id", user._id))
             .collect();
-        
-        const targetCourse = courses.find(c => 
-            c.name.toLowerCase().includes(args.courseName.toLowerCase()) || 
-            c.code.toLowerCase().includes(args.courseName.toLowerCase())
-        );
 
-        if (!targetCourse) {
-            return { error: "Course not found", availableCourses: courses.map(c => c.name) };
-        }
+        const courseIds = courses.map(c => c._id);
 
-        // 2. Buscar en la whitelist para ese ramo y sección
-        const whitelistEntries = await ctx.db
+        const whitelists = await ctx.db
             .query("whitelists")
-            .withIndex("by_course", q => q.eq("course_id", targetCourse._id))
             .collect();
         
-        const sectionEntries = whitelistEntries.filter(w => 
-            w.section?.toLowerCase().includes(args.section.toLowerCase())
-        );
+        const myWhitelists = whitelists.filter(w => courseIds.includes(w.course_id));
+        const uniqueWhitelistStudents = [...new Set(myWhitelists.map(w => w.student_identifier))];
+
+        const documents = await ctx.db
+            .query("course_documents")
+            .withIndex("by_teacher", q => q.eq("teacher_id", user._id))
+            .collect();
 
         return {
-            course: targetCourse.name,
-            courseId: targetCourse._id,
-            totalWhitelist: whitelistEntries.length,
-            sectionMatches: sectionEntries.length,
-            sampleEntries: sectionEntries.slice(0, 50).map(e => ({
-                id: e.student_identifier,
-                name: e.student_name,
-                section: e.section
+            userName: user.name,
+            role: user.role,
+            courses: courses.map(c => ({ id: c._id, name: c.name, code: c.code })),
+            whitelistCount: myWhitelists.length,
+            uniqueWhitelistStudents: uniqueWhitelistStudents.length,
+            duplicateCheck: myWhitelists.length > 0 ? (myWhitelists.length / uniqueWhitelistStudents.length).toFixed(2) : 0,
+            documents: documents.map(d => ({ 
+                id: d._id, 
+                name: d.file_name, 
+                course: d.course_id, 
+                isMaster: d.is_master_doc, 
+                type: d.master_doc_type 
             }))
         };
     }

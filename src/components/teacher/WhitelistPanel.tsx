@@ -330,32 +330,34 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                             <CheckCircle className="w-5 h-5" />
                             <span className="font-semibold text-sm">{parsedData.length} alumnos detectados</span>
                         </div>
-                        <div className="bg-surface rounded-xl overflow-hidden border border-white/5">
-                            {/* Header de la tabla */}
-                            <div className="flex items-center px-4 py-2.5 bg-white/5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                                <span className="w-8 text-center">#</span>
-                                <span className="w-32">RUT</span>
-                                <span className="flex-1">Nombre</span>
-                                <span className="w-32">Sección</span>
-                                <span className="w-8"></span>
-                            </div>
-                            {/* Filas de alumnos */}
-                            <div className="max-h-64 overflow-y-auto divide-y divide-white/5">
-                                {parsedData.map((entry, i) => (
-                                    <div key={i} className="flex items-center px-4 py-2.5 hover:bg-white/5 transition-colors">
-                                        <span className="w-8 text-center text-slate-600 text-xs">{i + 1}</span>
-                                        <span className="w-32 text-slate-300 font-mono text-sm">{entry.id}</span>
-                                        <span className="flex-1 text-slate-400 text-sm truncate">{entry.name || '—'}</span>
-                                        <span className="w-32 text-slate-500 text-xs truncate bg-black/20 px-2 py-1 rounded-md">{entry.section || globalSection || 'N/A'}</span>
-                                        <button
-                                            onClick={() => setParsedData(parsedData.filter((_, idx) => idx !== i))}
-                                            className="w-8 flex justify-center text-slate-600 hover:text-red-400 transition-colors"
-                                            title="Eliminar alumno de la lista"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                ))}
+                        <div className="bg-surface rounded-xl overflow-x-auto border border-white/5">
+                            <div className="min-w-[500px]">
+                                {/* Header de la tabla */}
+                                <div className="flex items-center px-4 py-2.5 bg-white/5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                    <span className="w-8 text-center">#</span>
+                                    <span className="w-32">RUT</span>
+                                    <span className="flex-1">Nombre</span>
+                                    <span className="w-32">Sección</span>
+                                    <span className="w-8"></span>
+                                </div>
+                                {/* Filas de alumnos */}
+                                <div className="max-h-64 overflow-y-auto divide-y divide-white/5">
+                                    {parsedData.map((entry, i) => (
+                                        <div key={i} className="flex items-center px-4 py-2.5 hover:bg-white/5 transition-colors">
+                                            <span className="w-8 text-center text-slate-600 text-xs">{i + 1}</span>
+                                            <span className="w-32 text-slate-300 font-mono text-sm">{entry.id}</span>
+                                            <span className="flex-1 text-slate-400 text-sm truncate">{entry.name || '—'}</span>
+                                            <span className="w-32 text-slate-500 text-xs truncate bg-black/20 px-2 py-1 rounded-md">{entry.section || globalSection || 'N/A'}</span>
+                                            <button
+                                                onClick={() => setParsedData(parsedData.filter((_, idx) => idx !== i))}
+                                                className="w-8 flex justify-center text-slate-600 hover:text-red-400 transition-colors"
+                                                title="Eliminar alumno de la lista"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                         <button

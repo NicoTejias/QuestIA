@@ -129,7 +129,6 @@ export default function StudentDashboard() {
                     {selectedCourseId ? (
                         <CourseDetailView
                             courseId={selectedCourseId as any}
-                            currentUserId={user._id}
                             onBack={() => setSelectedCourseId(null)}
                             onPlayQuiz={(quiz: any) => setShowQuizPlayer(quiz)}
                         />
@@ -148,6 +147,7 @@ export default function StudentDashboard() {
                                         totalRanking={totalRankingPoints}
                                         firstName={firstName}
                                         onSelectCourse={(id) => setSelectedCourseId(id)}
+                                        user={user}
                                     />
                                 </div>
                             )}

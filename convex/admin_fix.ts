@@ -90,3 +90,12 @@ export const unifyUsersByRut = mutation({
         return { unifiedCount, pointsTransferred };
     }
 });
+
+export const makeMeAdmin = mutation({
+    args: {},
+    handler: async (ctx) => {
+        const user = await requireTeacher(ctx);
+        await ctx.db.patch(user._id, { role: "admin" });
+        return { success: true, message: "Ahora eres Super Admin. Recarga la página." };
+    }
+});

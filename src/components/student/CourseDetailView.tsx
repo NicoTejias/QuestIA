@@ -3,17 +3,15 @@ import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { Loader2, X, PlayCircle, Brain, Target, Star, Flame } from 'lucide-react'
 import { toast } from "sonner"
-import ChatPanel from "../ChatPanel"
 import AttendanceCard from "./AttendanceCard"
 
 interface CourseDetailViewProps {
     courseId: any;
-    currentUserId: any; // ID del usuario actual para el chat
     onBack: () => void;
     onPlayQuiz: (q: any) => void;
 }
 
-export default function CourseDetailView({ courseId, currentUserId, onBack, onPlayQuiz }: CourseDetailViewProps) {
+export default function CourseDetailView({ courseId, onBack, onPlayQuiz }: CourseDetailViewProps) {
     const course = useQuery(api.courses.getCourseById, { courseId })
     const quizzes = useQuery(api.quizzes.getQuizzesByCourse, { course_id: courseId })
     const missions = useQuery(api.missions.getMissions, { course_id: courseId })
@@ -179,10 +177,6 @@ export default function CourseDetailView({ courseId, currentUserId, onBack, onPl
                 </section>
             </div>
 
-            {/* Chat Colaborativo */}
-            <div className="mt-8">
-                <ChatPanel courseId={courseId} currentUserId={currentUserId} />
-            </div>
         </div>
     )
 }

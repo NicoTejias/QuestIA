@@ -1,54 +1,80 @@
-import { mutation } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
+import { v } from "convex/values";
+import { requireAuth } from "./withUser";
 
-export const fixData = mutation({
-  args: {},
+// Verifica si el usuario es Admin
+export const isAdmin = query({
   handler: async (ctx) => {
-    // 1. Obtener bases
-    const allEnrollments = await ctx.db.query("enrollments").collect();
-    const allUsers = await ctx.db.query("users").collect();
-    const whitelists = await ctx.db.query("whitelists").collect();
-    const allCourses = await ctx.db.query("courses").collect();
-
-    let syncedUsers = 0;
-    let syncedEnrollments = 0;
-
-    // 2. Sincronizar por nombre para GESTION DE PROYECTOS I
-    // Esta es la causa de que los puntajes "desaparezcan": el ID del usuario no coincide con el de la whitelist
-    const targetCourse = allCourses.find(c => c.name.includes("GESTION DE PROYECTOS I"));
-    if (targetCourse) {
-      const courseWhitelist = whitelists.filter(w => w.course_id === targetCourse._id);
-      
-      for (const wl of courseWhitelist) {
-        // Normalizar nombres para comparación
-        const wlTokens = wl.student_name ? wl.student_name.toUpperCase().split(' ') : [];
-        if (wlTokens.length < 1) continue;
-
-        const match = allUsers.find(u => {
-          if (!u.name) return false;
-          const uName = u.name.toUpperCase();
-          // Coincidencia si los dos primeros términos del nombre están presentes
-          return uName.includes(wlTokens[0]) && (wlTokens.length < 2 || uName.includes(wlTokens[1]));
-        });
-
-        if (match) {
-          // A. Corregir student_id del usuario para que coincida con whitelist
-          if (match.student_id !== wl.student_identifier) {
-            await ctx.db.patch(match._id, { student_id: wl.student_identifier });
-            syncedUsers++;
-          }
-
-          // B. Corregir enrollment (asegurar que tenga puntos y sección correcta)
-          const en = allEnrollments.find(e => e.user_id === match._id && e.course_id === targetCourse._id);
-          if (en) {
-            if (en.section !== wl.section) {
-              await ctx.db.patch(en._id, { section: wl.section });
-              syncedEnrollments++;
-            }
-          }
-        }
-      }
+    try {
+      const user = await requireAuth(ctx);
+      return user.role === "admin";
+    } catch {
+      return false;
     }
+  },
+});
 
-    return { syncedUsers, syncedEnrollments };
+// Obtener estadísticas globales del sistema
+export const getGlobalStats = query({
+  handler: async (ctx) => {
+    const user = await requireAuth(ctx);
+    if (user.role !== "admin") throw new Error("Acceso denegado");
+
+    const users = await ctx.db.query("users").collect();
+    const courses = await ctx.db.query("courses").collect();
+    const feedBacks = await ctx.db.query("feedback").collect();
+    const quizzes = await ctx.db.query("quizzes").collect();
+    const missions = await ctx.db.query("missions").collect();
+
+    return {
+      totalUsers: users.length,
+      students: users.filter(u => u.role === "student").length,
+      teachers: users.filter(u => u.role === "teacher" || u.role === "admin").length,
+      totalCourses: courses.length,
+      totalFeedback: feedBacks.length,
+      totalQuizzes: quizzes.length,
+      totalMissions: missions.length,
+    };
+  },
+});
+
+// Listar todos los feedbacks
+export const listAllFeedback = query({
+  handler: async (ctx) => {
+    const user = await requireAuth(ctx);
+    if (user.role !== "admin") throw new Error("Acceso denegado");
+
+    const feedbacks = await ctx.db.query("feedback").order("desc").collect();
+    
+    return await Promise.all(feedbacks.map(async (f) => {
+      const userData = await ctx.db.get(f.user_id);
+      return {
+        ...f,
+        userName: userData?.name || "Desconocido",
+        userEmail: userData?.email || "Sin email",
+      };
+    }));
+  },
+});
+
+// Listar usuarios registrados
+export const listAllUsers = query({
+  args: { limit: v.number() },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx);
+    if (user.role !== "admin") throw new Error("Acceso denegado");
+
+    return await ctx.db.query("users").order("desc").take(args.limit);
+  },
+});
+
+// Convertir a un usuario en Docente/Admin (Útil para control manual)
+export const updateUserRole = mutation({
+  args: { targetUserId: v.id("users"), newRole: v.string() },
+  handler: async (ctx, args) => {
+    const user = await requireAuth(ctx);
+    if (user.role !== "admin") throw new Error("Acceso denegado");
+
+    await ctx.db.patch(args.targetUserId, { role: args.newRole });
   },
 });

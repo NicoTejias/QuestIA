@@ -268,4 +268,30 @@ export default defineSchema({
     })
     .index("by_quiz_user", ["quiz_id", "user_id"])
     .index("by_user_status", ["user_id", "status"]),
+
+    feedback: defineTable({
+        user_id: v.id("users"),
+        content: v.string(),
+        type: v.union(v.literal("bug"), v.literal("suggestion"), v.literal("opinion")),
+        created_at: v.number(),
+        page_url: v.optional(v.string()),
+    }).index("by_user", ["user_id"]),
+
+    grading_rubrics: defineTable({
+        course_id: v.id("courses"),
+        teacher_id: v.id("users"),
+        title: v.string(),
+        content_text: v.string(), // Texto de la pauta/rúbrica
+        created_at: v.number(),
+    }).index("by_course", ["course_id"]),
+
+    grading_results: defineTable({
+        rubric_id: v.id("grading_rubrics"),
+        teacher_id: v.id("users"),
+        student_name: v.string(),
+        file_name: v.string(),
+        feedback: v.string(), // Feedback de la IA
+        score: v.number(), // Nota sugerida (1-7 o 0-100)
+        created_at: v.number(),
+    }).index("by_rubric", ["rubric_id"]),
 });

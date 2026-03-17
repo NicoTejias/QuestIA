@@ -366,44 +366,85 @@ export const getOrCreateAttempt = mutation({
         if (!quiz) throw new Error("Quiz no encontrado");
 
         const questions = quiz.questions || [];
+        const numQuestions = questions.length;
 
-        // Buscar si ya hay un intento en progreso
-        const existingAttempts = await ctx.db
+        if (numQuestions === 0) {
+            throw new Error("Este quiz no tiene preguntas.");
+        }
+
+        // 1) Buscar TODOS los intentos del usuario para este quiz
+        const allAttempts = await ctx.db
             .query("quiz_attempts")
             .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
-            .filter((q) => q.eq(q.field("status"), "in_progress"))
             .collect();
 
-        if (existingAttempts.length > 0) {
-            // Si hay varios (por error/race condition), devolvemos el más reciente para evitar bloqueos
-            const attempt = existingAttempts.sort((a, b) => b.last_updated - a.last_updated)[0];
-            
-            // Verificación de integridad: si el número de preguntas cambió, actualizamos el array de respuestas
-            if (attempt.selected_options.length !== questions.length) {
-                const newSelected = new Array(questions.length).fill(null);
-                attempt.selected_options.forEach((opt, idx) => {
-                    if (idx < newSelected.length) newSelected[idx] = opt;
-                });
+        const inProgressAttempts = allAttempts.filter(a => a.status === "in_progress");
+
+        // 2) Si hay un intento en progreso, devolverlo (el más reciente)
+        if (inProgressAttempts.length > 0) {
+            // Ordenar por más reciente
+            inProgressAttempts.sort((a, b) => b.last_updated - a.last_updated);
+            const attempt = inProgressAttempts[0];
+
+            // Limpiar duplicados si hay más de uno (race condition)
+            for (let i = 1; i < inProgressAttempts.length; i++) {
+                await ctx.db.patch(inProgressAttempts[i]._id, { status: "completed", last_updated: Date.now() });
+            }
+
+            // Verificación de integridad: si el número de preguntas cambió
+            if (attempt.selected_options.length !== numQuestions) {
+                const newSelected: (number | null)[] = new Array(numQuestions).fill(null);
+                for (let i = 0; i < Math.min(attempt.selected_options.length, numQuestions); i++) {
+                    newSelected[i] = attempt.selected_options[i];
+                }
                 await ctx.db.patch(attempt._id, { 
                     selected_options: newSelected,
+                    current_question_index: Math.min(attempt.current_question_index, numQuestions - 1),
                     last_updated: Date.now()
                 });
-                return { ...attempt, selected_options: newSelected };
+                return { 
+                    ...attempt, 
+                    selected_options: newSelected,
+                    current_question_index: Math.min(attempt.current_question_index, numQuestions - 1)
+                };
             }
+
+            // Asegurar que current_question_index es válido
+            if (attempt.current_question_index >= numQuestions) {
+                await ctx.db.patch(attempt._id, { 
+                    current_question_index: numQuestions - 1,
+                    last_updated: Date.now()
+                });
+                return { ...attempt, current_question_index: numQuestions - 1 };
+            }
+
             return attempt;
         }
 
-        // Crear nuevo intento
+        // 3) No hay intento en progreso: verificar si puede crear uno nuevo (max_attempts)
+        const completedSubmissions = await ctx.db
+            .query("quiz_submissions")
+            .withIndex("by_quiz_user", (q) => q.eq("quiz_id", args.quiz_id).eq("user_id", user._id))
+            .collect();
+
+        const maxAttempts = quiz.max_attempts ?? 1;
+        if (completedSubmissions.length >= maxAttempts) {
+            throw new Error(`Ya completaste los ${maxAttempts} intento(s) permitido(s) para este quiz.`);
+        }
+
+        // 4) Crear nuevo intento
+        const selectedOptions: (number | null)[] = new Array(numQuestions).fill(null);
         const attemptId = await ctx.db.insert("quiz_attempts", {
             quiz_id: args.quiz_id,
             user_id: user._id,
             current_question_index: 0,
-            selected_options: new Array(questions.length).fill(null),
+            selected_options: selectedOptions,
             status: "in_progress",
             last_updated: Date.now(),
         });
 
-        return await ctx.db.get(attemptId);
+        const newAttempt = await ctx.db.get(attemptId);
+        return newAttempt;
     },
 });
 
@@ -544,7 +585,7 @@ export const submitQuiz = mutation({
             .query("enrollments")
             .withIndex("by_user", (q) => q.eq("user_id", user._id))
             .filter((q) => q.eq(q.field("course_id"), quiz.course_id))
-            .unique();
+            .first();
 
         if (!enrollment) throw new Error("No inscrito");
         

@@ -3,7 +3,9 @@ import { useQuery } from "convex/react"
 import { useClerk } from "@clerk/clerk-react"
 import { useNavigate } from 'react-router-dom'
 import { api } from "../../convex/_generated/api"
-import { BookOpen, Target, Trophy, Gift, Users, BarChart3, LogOut, Menu, X, Settings, FileSpreadsheet, ArrowRightLeft, Sparkles, Loader2, FileText, User, Mail } from 'lucide-react'
+import { BookOpen, Target, Trophy, Gift, Users, BarChart3, LogOut, Menu, X, Settings, FileSpreadsheet, ArrowRightLeft, Sparkles, Loader2, FileText, User, Mail, ShieldCheck, ClipboardCheck, ShieldAlert } from 'lucide-react'
+import { useMutation } from "convex/react"
+import { toast } from 'sonner'
 import RamosPanel from '../components/teacher/RamosPanel'
 import CrearMisionPanel from '../components/teacher/CrearMisionPanel'
 import CrearRecompensaPanel from '../components/teacher/CrearRecompensaPanel'
@@ -15,6 +17,8 @@ import TraspasosPanel from '../components/teacher/TraspasosPanel'
 import GruposPanel from '../components/teacher/GruposPanel'
 import NotificationBell from '../components/NotificationBell'
 import BetaBanner from '../components/BetaBanner'
+import AdminPanel from '../components/teacher/AdminPanel'
+import EvaluadorIAPanel from '../components/teacher/EvaluadorIAPanel'
 
 function getGreeting(): string {
     const h = new Date().getHours()
@@ -33,7 +37,6 @@ export default function TeacherDashboard() {
     const navigate = useNavigate()
     const user = useQuery(api.users.getProfile)
     const courses = useQuery(api.courses.getMyCourses)
-    const stats = useQuery(api.analytics.getTeacherStats)
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [activeTab, setActiveTab] = useState('inicio')
     const [selectedCourse, setSelectedCourse] = useState<any>(null)
@@ -57,7 +60,9 @@ export default function TeacherDashboard() {
         { id: 'whitelist', label: 'Whitelist (CSV)', icon: <FileSpreadsheet className="w-5 h-5" /> },
         { id: 'traspasos', label: 'Gestión de Traspasos', icon: <ArrowRightLeft className="w-5 h-5" /> },
         { id: 'analiticas', label: 'Analíticas', icon: <BarChart3 className="w-5 h-5" /> },
+        { id: 'evaluacion', label: 'Evaluador IA', icon: <ClipboardCheck className="w-5 h-5 text-green-400" /> },
         { id: 'perfil', label: 'Mi Perfil', icon: <User className="w-5 h-5" /> },
+        ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Panel Admin', icon: <ShieldCheck className="w-5 h-5 text-red-500" /> }] : []),
     ]
 
     if (!user) {
@@ -67,12 +72,6 @@ export default function TeacherDashboard() {
             </div>
         )
     }
-
-    console.log("👩‍🏫 TeacherDashboard Render:", { 
-        userId: user._id, 
-        coursesCount: courses?.length, 
-        hasStats: !!stats 
-    });
 
     return (
         <div className="h-screen-dvh bg-surface flex overflow-hidden relative">
@@ -148,7 +147,7 @@ export default function TeacherDashboard() {
 
             {/* Main */}
             <main className="flex-1 h-screen-dvh flex flex-col overflow-hidden">
-                <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 pt-safe flex flex-col shrink-0">
+                <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 flex flex-col shrink-0">
                     <div className="flex items-center justify-between py-4 md:py-6">
 
                     <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
@@ -170,7 +169,6 @@ export default function TeacherDashboard() {
                             firstName={firstName}
                             coursesCount={coursesCount}
                             courses={courses || []}
-                            stats={stats}
                             onSelectCourse={(c) => {
                                 setSelectedCourse(c)
                                 setActiveTab('ramos')
@@ -182,7 +180,6 @@ export default function TeacherDashboard() {
                             courses={courses || []}
                             selectedCourse={selectedCourse}
                             setSelectedCourse={setSelectedCourse}
-                            currentUserId={user._id}
                         />
                     )}
                     {activeTab === 'material' && <MaterialPanel courses={courses || []} />}
@@ -194,18 +191,17 @@ export default function TeacherDashboard() {
                     {activeTab === 'ranking' && <RankingDocentePanel />}
                     {activeTab === 'analiticas' && <AnaliticasPanel />}
                     {activeTab === 'perfil' && <PerfilPanel user={user} coursesCount={coursesCount} />}
+                    {activeTab === 'admin' && user?.role === 'admin' && <AdminPanel />}
+                    {activeTab === 'evaluacion' && <EvaluadorIAPanel courses={courses || []} />}
                 </div>
             </main>
         </div>
     )
 }
 
-// ======== INICIO con saludo personalizado ========
-
-function InicioDocente({ firstName, coursesCount, courses, stats, onSelectCourse }: { firstName: string, coursesCount: number, courses: any[], stats: any, onSelectCourse: (c: any) => void }) {
+function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { firstName: string, coursesCount: number, courses: any[], onSelectCourse: (c: any) => void }) {
     return (
         <div className="space-y-8">
-            {/* Saludo Personalizado */}
             <div className="bg-gradient-to-r from-accent/10 via-primary/5 to-surface-light border border-accent/20 rounded-2xl md:rounded-3xl p-6 md:p-8">
                 <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-accent-light" />
@@ -222,12 +218,11 @@ function InicioDocente({ firstName, coursesCount, courses, stats, onSelectCourse
                 </p>
             </div>
 
-            {/* Stats rápidas */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
                     { label: 'Ramos Activos', value: `${coursesCount}`, color: 'text-accent-light', bg: 'bg-accent/10', icon: <BookOpen className="w-6 h-6" /> },
-                    { label: 'Misiones Creadas', value: stats?.totalMissionsCreated ?? '...', color: 'text-primary-light', bg: 'bg-primary/10', icon: <Target className="w-6 h-6" /> },
-                    { label: 'Alumnos Inscritos', value: stats?.totalStudents ?? '...', color: 'text-gold', bg: 'bg-gold/10', icon: <Users className="w-6 h-6" /> },
+                    { label: 'Misiones Creadas', value: '...', color: 'text-primary-light', bg: 'bg-primary/10', icon: <Target className="w-6 h-6" /> },
+                    { label: 'Alumnos Inscritos', value: '...', color: 'text-gold', bg: 'bg-gold/10', icon: <Users className="w-6 h-6" /> },
                 ].map((stat, i) => (
                     <div key={i} className="bg-surface-light border border-white/5 rounded-2xl p-5 transition-all hover:border-white/10">
                         <div className="flex items-center justify-between mb-3">
@@ -235,14 +230,12 @@ function InicioDocente({ firstName, coursesCount, courses, stats, onSelectCourse
                             <div className={`${stat.bg} p-2 rounded-xl ${stat.color}`}>{stat.icon}</div>
                         </div>
                         <p className={`text-3xl font-black ${stat.color}`}>
-                            {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
+                            {stat.value}
                         </p>
                     </div>
                 ))}
             </div>
 
-
-            {/* Ramos recientes */}
             <div>
                 <h3 className="text-lg font-bold text-white mb-4">Tus Ramos</h3>
                 {courses.length === 0 ? (
@@ -267,40 +260,10 @@ function InicioDocente({ firstName, coursesCount, courses, stats, onSelectCourse
     )
 }
 
-// Extracted: CourseDetail
-
-// ======== RAMOS con creación real ========
-
-// Extracted: RamosPanel
-
-// ======== MISIONES con creación real + Quiz IA ========
-
-// Extracted: CrearMisionPanel
-
-// ======== RECOMPENSAS con creación real ========
-
-// Extracted: CrearRecompensaPanel
-// ======== WHITELIST con upload real (CSV + XLSX) ========
-
-// Extracted: WhitelistPanel
-
-// ======== Sub-componentes con datos demo (se conectarán cuando haya datos) ========
-
-// Extracted: GruposPanel
-
-// Extracted: RankingDocentePanel
-
-// Extracted: AnaliticasPanel
-
-// ======== MATERIAL — Upload de Documentos ========
-
-// Extracted: MaterialPanel
-
-// Extracted: TraspasosPanel
-
-
 function PerfilPanel({ user, coursesCount }: { user: any, coursesCount: number }) {
     const navigate = useNavigate()
+    const makeMeAdmin = useMutation(api.admin_fix.makeMeAdmin)
+
     return (
         <div className="max-w-4xl mx-auto py-10 space-y-8">
             <div className="bg-surface-light border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8">
@@ -325,13 +288,33 @@ function PerfilPanel({ user, coursesCount }: { user: any, coursesCount: number }
                         </div>
                     </div>
                 </div>
-                <button
-                    onClick={() => navigate('/perfil')}
-                    className="bg-white/5 hover:bg-white/10 text-white font-bold px-6 py-3 rounded-xl border border-white/10 transition-all flex items-center gap-2"
-                >
-                    <Settings className="w-4 h-4" />
-                    Configurar Perfil
-                </button>
+                <div className="flex flex-col gap-2">
+                    <button
+                        onClick={() => navigate('/perfil')}
+                        className="bg-white/5 hover:bg-white/10 text-white font-bold px-6 py-3 rounded-xl border border-white/10 transition-all flex items-center gap-2"
+                    >
+                        <Settings className="w-4 h-4" />
+                        Configurar Perfil
+                    </button>
+                    {user.role !== 'admin' && user.email === 'ni.tejias@profesor.duoc.cl' && (
+                        <button
+                            onClick={async () => {
+                                if (window.confirm("¿Activar Modo Super Admin? Esta acción es irreversible.")) {
+                                    try {
+                                        await makeMeAdmin();
+                                        toast.success("¡Bienvenido, Administrador!");
+                                    } catch(e: any) {
+                                        toast.error(e.message);
+                                    }
+                                }
+                            }}
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold px-6 py-3 rounded-xl border border-red-500/20 transition-all flex items-center gap-2"
+                        >
+                            <ShieldAlert className="w-4 h-4" />
+                            MODO DIOS (ADMIN)
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="bg-accent/5 border border-accent/20 rounded-3xl p-8">
@@ -346,4 +329,3 @@ function PerfilPanel({ user, coursesCount }: { user: any, coursesCount: number }
         </div>
     )
 }
-

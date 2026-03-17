@@ -312,75 +312,87 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                 </button>
             </div>
 
-            {/* Lista de documentos subidos */}
+            {/* Resumen de Bóveda Maestra (IA Context) */}
+            {documents && documents.filter((d: any) => d.is_master_doc).length > 0 && (
+                <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-3xl p-6 shadow-xl shadow-primary/5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-white font-black flex items-center gap-2 uppercase tracking-widest text-sm">
+                            <Sparkles className="w-5 h-5 text-primary-light animate-pulse" />
+                            Bóveda Maestra Consolidada
+                        </h3>
+                        <span className="bg-primary/20 text-primary-light px-3 py-1 rounded-full text-[10px] font-black border border-primary/20">
+                            {documents.filter((d: any) => d.is_master_doc).length} DOCUMENTOS DE CONTEXTO IA
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {documents.filter((d: any) => d.is_master_doc).map((doc: any) => {
+                            const course = courses.find((c: any) => c._id === doc.course_id);
+                            return (
+                                <div key={doc._id} className="relative group">
+                                    <div className="absolute -top-2 left-4 z-10 bg-surface px-2 py-0.5 rounded-md border border-white/10 text-[8px] font-bold text-slate-500 uppercase tracking-tighter">
+                                        {course?.name || 'Ramo Desconocido'}
+                                    </div>
+                                    <DocumentCard 
+                                        doc={doc} 
+                                        expandedDoc={expandedDoc}
+                                        setExpandedDoc={setExpandedDoc}
+                                        handleSetMasterType={handleSetMasterType}
+                                        handleDelete={handleDelete}
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            <div className="flex items-center gap-3">
+                <div className="h-px bg-white/5 flex-1"></div>
+                <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Material por Ramo</span>
+                <div className="h-px bg-white/5 flex-1"></div>
+            </div>
+
+            {/* Lista de documentos subidos (Solo material común) */}
             {Object.keys(docsByCourse).length > 0 ? (
                 <div className="space-y-6">
                     {Object.entries(docsByCourse).map(([courseId, docs]) => {
                         const course = courses.find((c: any) => c._id === courseId)
+                        const regularDocs = (docs as any[]).filter(d => !d.is_master_doc);
+                        
+                        if (regularDocs.length === 0) return null;
+
                         return (
-                            <div key={courseId}>
+                            <div key={courseId} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <h3 className="text-white font-bold mb-3 flex items-center gap-2">
                                     <BookOpen className="w-4 h-4 text-accent-light" />
-                                    {course?.name || 'Ramo'} <span className="text-slate-500 text-xs font-mono">({course?.code})</span>
+                                    {course?.name || 'Material sin clasificar'} <span className="text-slate-500 text-xs font-mono">{course?.code ? `(${course.code})` : ''}</span>
                                 </h3>
-                                    {(() => {
-                                        const masterDocs = (docs as any[]).filter(d => d.is_master_doc);
-                                        const regularDocs = (docs as any[]).filter(d => !d.is_master_doc);
-                                        
-                                        return (
-                                            <div className="space-y-4">
-                                                {/* Sección de Documentos Maestros */}
-                                                {masterDocs.length > 0 && (
-                                                    <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-4">
-                                                        <p className="text-[10px] font-black text-primary-light uppercase tracking-[0.2em] mb-3 px-1 flex items-center gap-2">
-                                                            <Sparkles className="w-3 h-3" />
-                                                            Bóveda de Documentación Maestra (IA context)
-                                                        </p>
-                                                        <div className="grid grid-cols-1 gap-3">
-                                                            {masterDocs.map((doc: any) => (
-                                                                <DocumentCard 
-                                                                    key={doc._id} 
-                                                                    doc={doc} 
-                                                                    expandedDoc={expandedDoc}
-                                                                    setExpandedDoc={setExpandedDoc}
-                                                                    handleSetMasterType={handleSetMasterType}
-                                                                    handleDelete={handleDelete}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Sección de Material de Clase */}
-                                                <div className="space-y-2">
-                                                    {regularDocs.map((doc: any) => (
-                                                        <DocumentCard 
-                                                            key={doc._id} 
-                                                            doc={doc} 
-                                                            expandedDoc={expandedDoc}
-                                                            setExpandedDoc={setExpandedDoc}
-                                                            handleSetMasterType={handleSetMasterType}
-                                                            handleDelete={handleDelete}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
+                                <div className="space-y-2">
+                                    {regularDocs.map((doc: any) => (
+                                        <DocumentCard 
+                                            key={doc._id} 
+                                            doc={doc} 
+                                            expandedDoc={expandedDoc}
+                                            setExpandedDoc={setExpandedDoc}
+                                            handleSetMasterType={handleSetMasterType}
+                                            handleDelete={handleDelete}
+                                        />
+                                    ))}
                                 </div>
-                            )
-                        })}
-                    </div>
-                ) : (
-                    <div className="bg-surface-light border border-dashed border-white/10 rounded-2xl p-10 text-center">
-                        <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                        <h4 className="text-white font-semibold mb-2">Sin material aún</h4>
-                        <p className="text-slate-400 text-sm">Sube documentos PDF, DOCX, PPTX o XLSX para que la IA los analice y genere actividades gamificadas.</p>
-                    </div>
-                )}
-            </div>
-        )
-    }
+                            </div>
+                        )
+                    })}
+                </div>
+            ) : (
+                <div className="bg-surface-light border border-dashed border-white/10 rounded-2xl p-10 text-center">
+                    <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                    <h4 className="text-white font-semibold mb-2">Sin material adicional</h4>
+                    <p className="text-slate-400 text-sm">Sube documentos para complementar tus ramos.</p>
+                </div>
+            )}
+        </div>
+    )
+}
 
     // --- Sub-componente interno para cada documento ---
     function DocumentCard({ doc, expandedDoc, setExpandedDoc, handleSetMasterType, handleDelete }: any) {

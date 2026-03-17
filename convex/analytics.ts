@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireTeacher } from "./withUser";
+import { normalizeRut } from "./rutUtils";
 
 // Estadísticas generales de un docente
 export const getTeacherStats = query({
@@ -72,6 +73,11 @@ export const getTeacherStats = query({
             const allDocsArrays = await Promise.all(allDocsPromises);
             const documents = allDocsArrays.flat();
 
+            // Obtener TODAS las entradas de whitelist para un conteo preciso
+            const allWhitelistPromises = courseIds.map((id: any) => ctx.db.query("whitelists").withIndex("by_course", (q: any) => q.eq("course_id", id)).collect());
+            const allWhitelistArrays = await Promise.all(allWhitelistPromises);
+            const allWhitelistEntries = allWhitelistArrays.flat();
+
             // Obtener TODAS las recompensas del docente para luego filtrar las redenciones
             const allRewardsPromises = courseIds.map((id: any) => ctx.db.query("rewards").withIndex("by_course", (q: any) => q.eq("course_id", id)).collect());
             const allRewardsArrays = await Promise.all(allRewardsPromises);
@@ -89,13 +95,23 @@ export const getTeacherStats = query({
             const teacherRedemptions = allRedemptionsArrays.flat();
 
             // Calcular Estadisticas Consolidadas
-            const totalStudents = enrollments.length;
-            const totalUniqueStudents = studentIds.length;
+            // totalWhitelistEntries = todos los registros en whitelists
+            // totalUniqueStudents = RUTs únicos en las whitelists (por si están en varios ramos)
+            // totalRegistered = Alumnos que ya crearon cuenta (enrollments)
+            const totalStudents = allWhitelistEntries.length; // Registros totales
+            const totalRegistered = enrollments.length;
+            
+            const uniqueWhitelistIds = new Set(allWhitelistEntries.map(w => normalizeRut(w.student_identifier)));
+            const totalUniqueStudents = uniqueWhitelistIds.size;
+
+            const registeredUserIds = new Set(enrollments.map(e => e.user_id));
+            const totalRegisteredUniqueUsers = registeredUserIds.size;
             let totalPoints = 0;
             const totalMissionsCompleted = submissions.length + quizSubmissions.length;
             const totalRedemptionsCount = teacherRedemptions.length;
             const totalMissionsCreated = missions.length + quizzes.length;
             const totalDocuments = documents.length;
+            const totalMasterDocs = documents.filter(d => d.is_master_doc).length;
             
             // Promedio de Quiz
             const avgQuizScore = quizSubmissions.length > 0
@@ -134,6 +150,7 @@ export const getTeacherStats = query({
                 const courseEnrollments = enrollments.filter((e: any) => e.course_id === courseId);
                 const courseMissions = missions.filter((m: any) => m.course_id === courseId);
                 const courseQuizzes = quizzes.filter((q: any) => q.course_id === courseId);
+                const courseWhitelist = allWhitelistEntries.filter((w: any) => w.course_id === courseId);
                 
                 const courseMissionIds = new Set(courseMissions.map((m: any) => m._id));
                 const courseQuizIds = new Set(courseQuizzes.map((q: any) => q._id));
@@ -146,12 +163,12 @@ export const getTeacherStats = query({
 
                 const existing = statsByName.get(course.name);
                 if (existing) {
-                    existing.students += courseEnrollments.length;
+                    existing.students += courseWhitelist.length; // Usar whitelist para ser consistentes
+                    existing.registered += courseEnrollments.length;
                     existing.missions += courseMissions.length + courseQuizzes.length;
                     existing.submissions += courseSubmissions.length + courseQuizSubmissions.length;
                     existing.documents += courseDocs.length;
                     existing.totalPoints += coursePoints;
-                    // Mantenemos el código del primero o una lista? Un string concatenado es útil si son pocos
                     if (!existing.code.includes(course.code)) {
                         existing.code += ` / ${course.code}`;
                     }
@@ -159,7 +176,8 @@ export const getTeacherStats = query({
                     statsByName.set(course.name, {
                         name: course.name,
                         code: course.code,
-                        students: courseEnrollments.length,
+                        students: courseWhitelist.length, // Usar whitelist
+                        registered: courseEnrollments.length,
                         missions: courseMissions.length + courseQuizzes.length,
                         submissions: courseSubmissions.length + courseQuizSubmissions.length,
                         documents: courseDocs.length,
@@ -171,8 +189,10 @@ export const getTeacherStats = query({
             const courseStats = Array.from(statsByName.values());
 
             return {
-                totalStudents,
-                totalUniqueStudents,
+                totalStudents, // Total registros en whitelist
+                totalRegistered, // Registros con cuenta
+                totalUniqueStudents, // Alumnos físicos únicos (RUTs)
+                totalRegisteredUniqueUsers, // Usuarios registrados únicos
                 totalMissionsCompleted,
                 totalRedemptions: totalRedemptionsCount,
                 totalPoints,
@@ -181,6 +201,7 @@ export const getTeacherStats = query({
                 avgQuizScore,
                 avgMissionsPerStudent,
                 totalDocuments,
+                totalMasterDocs,
                 belbinDistribution,
                 courseStats,
                 topStudents: calculateTopStudents(enrollments, studentMap),

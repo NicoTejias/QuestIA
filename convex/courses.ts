@@ -244,7 +244,7 @@ export const getEnrollmentStatus = query({
                 .query("enrollments")
                 .withIndex("by_user", (q) => q.eq("user_id", user._id))
                 .filter((q) => q.eq(q.field("course_id"), args.course_id))
-                .unique();
+                .first();
         } catch {
             return null;
         }
@@ -333,7 +333,7 @@ export const getCourseStudents = query({
                         .query("enrollments")
                         .withIndex("by_user", q => q.eq("user_id", uid))
                         .filter(q => q.eq(q.field("course_id"), args.course_id))
-                        .unique()
+                        .first()
                 )
             );
 
