@@ -259,17 +259,24 @@ export default function WhitelistPanel({ courses }: { courses: any[] }) {
                                     setError('Selecciona un ramo antes de importar de Drive.');
                                     return;
                                 }
-                                openPicker(async (file, token) => {
-                                    try {
-                                        setUploading(true);
-                                        const blob = await downloadFile(file.id, token);
-                                        const driveFile = new File([blob], file.name, { type: file.mimeType });
-                                        await processFile(driveFile);
-                                    } catch (err: any) {
-                                        setError(`Error de Drive: ${err.message}`);
-                                    } finally {
-                                        setUploading(false);
+                                openPicker(async (files, token) => {
+                                    setUploading(true);
+                                    setError('');
+                                    setSuccess('');
+
+                                    for (const file of files) {
+                                        try {
+                                            const blob = await downloadFile(file.id, token);
+                                            const driveFile = new File([blob], file.name, { type: file.mimeType });
+                                            await processFile(driveFile);
+                                            // Nota: En WhitelistPanel, processFile sobrescribe parsedData.
+                                            // Si quisiéramos acumular, deberíamos modificar processFile.
+                                            // Por ahora, procesamos el último seleccionado o informamos al usuario.
+                                        } catch (err: any) {
+                                            setError(`Error de Drive con "${file.name}": ${err.message}`);
+                                        }
                                     }
+                                    setUploading(false);
                                 });
                             }}
                             disabled={!isLoaded || uploading}

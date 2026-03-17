@@ -35,7 +35,7 @@ export const batchUploadWhitelist = mutation({
 
         // Verificar que el curso pertenezca al docente
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para este ramo");
 
         // 1. Limpieza opcional previa
@@ -109,7 +109,7 @@ export const deleteCourseWhitelist = mutation({
     handler: async (ctx, args) => {
         const user = await requireTeacher(ctx);
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id) throw new Error("No autorizado");
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin")) throw new Error("No autorizado");
 
         const entries = await ctx.db
             .query("whitelists")
@@ -133,7 +133,7 @@ export const cleanUpWhitelist = mutation({
         const user = await requireTeacher(ctx);
 
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id) throw new Error("No autorizado");
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin")) throw new Error("No autorizado");
 
         const whitelist = await ctx.db
             .query("whitelists")
@@ -470,7 +470,7 @@ export const updateCourse = mutation({
         const user = await requireTeacher(ctx);
 
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para editar este ramo");
 
         await ctx.db.patch(args.course_id, {
@@ -488,7 +488,7 @@ export const deleteCourse = mutation({
         const user = await requireTeacher(ctx);
 
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para eliminar este ramo");
 
         const enrollments = await ctx.db.query("enrollments").withIndex("by_course", q => q.eq("course_id", args.course_id)).collect();
@@ -520,7 +520,7 @@ export const resetCoursePoints = mutation({
         const user = await requireTeacher(ctx);
 
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id) {
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin")) {
             throw new Error("No autorizado para reiniciar este ramo");
         }
 

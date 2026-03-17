@@ -15,7 +15,7 @@ export const createMission = mutation({
         const user = await requireTeacher(ctx);
 
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para crear misiones en este ramo");
 
         const missionId = await ctx.db.insert("missions", {
@@ -199,7 +199,7 @@ export const updateMission = mutation({
         if (!mission) throw new Error("Misión no encontrada");
 
         const course = await ctx.db.get(mission.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para editar esta misión");
 
         await ctx.db.patch(args.mission_id, {
@@ -221,7 +221,7 @@ export const deleteMission = mutation({
 
         // Verificar que el curso de la misión pertenezca al docente
         const course = await ctx.db.get(mission.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para eliminar esta misión");
 
         await ctx.db.delete(args.mission_id);

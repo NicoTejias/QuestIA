@@ -278,22 +278,36 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                             setError('Selecciona un ramo antes de importar de Drive.');
                             return;
                         }
-                        openPicker(async (file, token) => {
-                            try {
-                                setUploading(true);
-                                setUploadProgress(`📥 Descargando "${file.name}" desde Drive...`);
-                                
-                                const blob = await downloadFile(file.id, token);
-                                const driveFile = new File([blob], file.name, { type: file.mimeType });
-                                await processAndUploadFile(driveFile);
-                                
-                                setSuccess(`✅ "${file.name}" importado exitosamente desde Google Drive.`);
-                            } catch (err: any) {
-                                setError(`Error al importar de Drive: ${err.message}`);
-                            } finally {
-                                setUploading(false);
-                                setUploadProgress('');
+                        openPicker(async (files, token) => {
+                            setUploading(true);
+                            setError('');
+                            setSuccess('');
+
+                            for (const file of files) {
+                                try {
+                                    setUploadProgress(`📥 Descargando "${file.name}" de Drive...`);
+                                    
+                                    const blob = await downloadFile(file.id, token);
+                                    let mimeType = file.mimeType;
+                                    
+                                    // Si era un Google Doc, lo exportamos como DOCX (así lo configuraste en el hook)
+                                    if (mimeType.includes('google-apps')) {
+                                        if (mimeType.includes('document')) mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                                        if (mimeType.includes('spreadsheet')) mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                                        if (mimeType.includes('presentation')) mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                                    }
+
+                                    const driveFile = new File([blob], file.name, { type: mimeType });
+                                    await processAndUploadFile(driveFile);
+                                    
+                                    setSuccess(prev => (prev ? prev + '\n' : '') + `✅ "${file.name}" importado.`);
+                                } catch (err: any) {
+                                    setError(prev => (prev ? prev + '\n' : '') + `Error con "${file.name}": ${err.message}`);
+                                }
                             }
+                            
+                            setUploading(false);
+                            setUploadProgress('');
                         });
                     }}
                     disabled={!isLoaded || uploading}

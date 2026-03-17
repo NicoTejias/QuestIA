@@ -6,10 +6,10 @@ export const getLatestConfig = query({
     try {
       // En el futuro esto podría venir de una tabla 'config'
       return {
-        latestVersion: "1.0.11",
-        downloadUrl: "https://github.com/NicoTejias/DuocencIA/releases/download/v.1.0.11/Quest.1.0.11.apk", 
+        latestVersion: "1.0.12",
+        downloadUrl: "https://github.com/NicoTejias/DuocencIA/releases/download/v.1.0.12/Quest.1.0.12.apk", 
         isMandatory: true,
-        message: "¡Nueva versión 1.0.11 disponible! Hemos solucionado el error de inicio de sesión, optimizado el diseño para móviles y añadido la nueva sección de Ayuda/FAQ."
+        message: "Versión 1.0.12: Optimizaciones de sistema y correcciones menores."
       };
     } catch (error) {
       console.error("Error in getLatestConfig:", error);

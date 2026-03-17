@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./withUser";
+import { requireAuth, requireTeacher } from "./withUser";
 
 // Generar URL de upload para Convex File Storage
 export const generateUploadUrl = mutation({
@@ -10,10 +10,7 @@ export const generateUploadUrl = mutation({
             const identity = await ctx.auth.getUserIdentity();
             if (!identity) throw new Error("No se detectó identidad de usuario. Por favor relogea.");
 
-            const user = await requireAuth(ctx);
-            if (user.role !== "teacher") {
-                throw new Error(`Acceso denegado: El usuario ${user.email} tiene rol "${user.role}"`);
-            }
+            await requireTeacher(ctx);
 
             return await ctx.storage.generateUploadUrl();
         } catch (err: any) {
@@ -40,12 +37,11 @@ export const saveDocument = mutation({
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) throw new Error("Sesión expirada al intentar guardar el archivo.");
 
-        const user = await requireAuth(ctx);
-        if (user.role !== "teacher") throw new Error("Solo docentes pueden guardar archivos de material.");
+        const user = await requireTeacher(ctx);
 
         // Verificar que el curso pertenece al docente
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id) {
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin")) {
             throw new Error("No tienes permiso para subir a este ramo");
         }
 
@@ -107,7 +103,7 @@ export const deleteDocument = mutation({
         const user = await requireAuth(ctx);
 
         const doc = await ctx.db.get(args.document_id);
-        if (!doc || doc.teacher_id !== user._id) {
+        if (!doc || (doc.teacher_id !== user._id && user.role !== "admin")) {
             throw new Error("No tienes permiso para eliminar este documento");
         }
 
@@ -135,7 +131,7 @@ export const setAsMasterDoc = mutation({
         const user = await requireAuth(ctx);
         const doc = await ctx.db.get(args.document_id);
         
-        if (!doc || doc.teacher_id !== user._id) {
+        if (!doc || (doc.teacher_id !== user._id && user.role !== "admin")) {
             throw new Error("No tienes permiso sobre este documento");
         }
 

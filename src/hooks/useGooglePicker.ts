@@ -66,7 +66,7 @@ export function useGooglePicker() {
     });
   };
 
-  const openPicker = async (onFileSelected: (file: any, accessToken: string) => void) => {
+  const openPicker = async (onFilesSelected: (files: any[], accessToken: string) => void) => {
     if (!isLoaded) return;
 
     let token = accessToken;
@@ -88,9 +88,10 @@ export function useGooglePicker() {
         .setOAuthToken(token)
         .setDeveloperKey(API_KEY)
         .setOrigin(window.location.origin)
+        .enableFeature(pickerWindow.Feature.MULTISELECT_ENABLED)
         .setCallback((data: any) => {
           if (data.action === pickerWindow.Action.PICKED) {
-            onFileSelected(data.docs[0], token!);
+            onFilesSelected(data.docs, token!);
           }
         });
 

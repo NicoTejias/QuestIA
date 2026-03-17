@@ -39,7 +39,7 @@ export const createReward = mutation({
         const user = await requireTeacher(ctx);
 
         const course = await ctx.db.get(args.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para crear recompensas en este ramo");
 
         // Si no se especifica stock, el default es 1 por alumno inscrito actualmente
@@ -169,7 +169,7 @@ export const updateReward = mutation({
         if (!reward) throw new Error("Recompensa no encontrada");
 
         const course = await ctx.db.get(reward.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para editar esta recompensa");
 
         await ctx.db.patch(args.reward_id, {
@@ -192,7 +192,7 @@ export const deleteReward = mutation({
 
         // Verificar que el curso de la recompensa pertenezca al docente
         const course = await ctx.db.get(reward.course_id);
-        if (!course || course.teacher_id !== user._id)
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para eliminar esta recompensa");
 
         await ctx.db.delete(args.reward_id);
