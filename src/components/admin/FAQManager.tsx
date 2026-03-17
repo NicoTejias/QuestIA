@@ -5,10 +5,10 @@ import { Plus, Trash2, Edit2, Save, X, Loader2, HelpCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function FAQManager() {
-    const faqs = useQuery(api.faq.getFaqs)
-    const createFaq = useMutation(api.faq.createFaq)
-    const updateFaq = useMutation(api.faq.updateFaq)
-    const deleteFaq = useMutation(api.faq.deleteFaq)
+    const faqs = useQuery((api as any).faq.getFaqs)
+    const createFaq = useMutation((api as any).faq.createFaq)
+    const updateFaq = useMutation((api as any).faq.updateFaq)
+    const deleteFaq = useMutation((api as any).faq.deleteFaq)
 
     const [editingId, setEditingId] = useState<string | null>(null)
     const [isAdding, setIsAdding] = useState(false)
@@ -147,7 +147,7 @@ export default function FAQManager() {
             )}
 
             <div className="bg-surface-light border border-white/5 rounded-3xl overflow-hidden divide-y divide-white/5">
-                {faqs.map((faq) => (
+                {(faqs as any[]).map((faq: any) => (
                     <div key={faq._id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-all group">
                         <div className="flex-1 min-w-0 pr-4">
                             <div className="flex items-center gap-2 mb-1">

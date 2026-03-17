@@ -2,7 +2,7 @@ import { useState, useEffect, Component, type ReactNode } from 'react';
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { NATIVE_VERSION } from "../version";
-import { Download, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { Download, AlertCircle, Loader2 } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';

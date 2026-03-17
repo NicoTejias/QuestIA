@@ -4,7 +4,7 @@ import { api } from '../../convex/_generated/api'
 import { ChevronDown, HelpCircle, Loader2 } from 'lucide-react'
 
 export default function FAQSection({ category }: { category?: string }) {
-    const faqs = useQuery(api.faq.getFaqs)
+    const faqs = useQuery((api as any).faq.getFaqs)
     const [openId, setOpenId] = useState<string | null>(null)
 
     if (faqs === undefined) {
@@ -16,7 +16,7 @@ export default function FAQSection({ category }: { category?: string }) {
     }
 
     const filteredFaqs = category 
-        ? faqs.filter(f => f.category === category || f.category === 'general')
+        ? faqs.filter((f: any) => f.category === category || f.category === 'general')
         : faqs
 
     if (filteredFaqs.length === 0) {
@@ -33,7 +33,7 @@ export default function FAQSection({ category }: { category?: string }) {
             </div>
 
             <div className="space-y-4">
-                {filteredFaqs.map((faq) => (
+                {filteredFaqs.map((faq: any) => (
                     <div 
                         key={faq._id}
                         className={`group bg-surface-light border border-white/5 rounded-2xl overflow-hidden transition-all duration-300 ${
