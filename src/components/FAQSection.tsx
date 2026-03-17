@@ -7,7 +7,7 @@ export default function FAQSection({ category }: { category?: string }) {
     const faqs = useQuery((api as any).faq.getFaqs)
     const [openId, setOpenId] = useState<string | null>(null)
 
-    if (faqs === undefined) {
+    if (faqs === undefined || faqs === null) {
         return (
             <div className="flex justify-center py-12">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />

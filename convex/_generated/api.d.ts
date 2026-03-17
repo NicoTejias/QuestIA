@@ -25,6 +25,7 @@ import type * as debug_find_user from "../debug_find_user.js";
 import type * as debug_student from "../debug_student.js";
 import type * as documents from "../documents.js";
 import type * as evaluator from "../evaluator.js";
+import type * as faq from "../faq.js";
 import type * as fcm from "../fcm.js";
 import type * as feedback from "../feedback.js";
 import type * as groups from "../groups.js";
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   debug_student: typeof debug_student;
   documents: typeof documents;
   evaluator: typeof evaluator;
+  faq: typeof faq;
   fcm: typeof fcm;
   feedback: typeof feedback;
   groups: typeof groups;

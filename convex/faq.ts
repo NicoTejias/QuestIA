@@ -7,13 +7,10 @@ export const getFaqs = query({
     args: {},
     handler: async (ctx) => {
         try {
-            // Intentar obtener las FAQs ordenadas por el campo 'order'
-            const faqs = await ctx.db
+            return await ctx.db
                 .query("faqs")
+                .withIndex("by_order", (q) => q)
                 .collect();
-            
-            // Ordenar manualmente si el índice no está listo o para mayor seguridad
-            return faqs.sort((a, b) => (a.order || 0) - (b.order || 0));
         } catch (error) {
             console.error("Error in getFaqs query:", error);
             // Devolver array vacío en lugar de romper la app
