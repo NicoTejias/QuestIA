@@ -51,7 +51,7 @@ export const generateQuiz = action({
         }
 
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const difficultyMap: Record<string, string> = {
             facil: "fácil (conceptos básicos, definiciones directas)",
