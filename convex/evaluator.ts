@@ -13,6 +13,10 @@ export const createRubric = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireTeacher(ctx);
+    const course = await ctx.db.get(args.course_id);
+    if (!course || (course.teacher_id !== user._id && user.role !== "admin")) {
+        throw new Error("No tienes permiso para crear rúbricas en este ramo");
+    }
     return await ctx.db.insert("grading_rubrics", {
       course_id: args.course_id,
       teacher_id: user._id,
@@ -38,7 +42,12 @@ export const getRubrics = query({
 export const deleteRubric = mutation({
     args: { rubric_id: v.id("grading_rubrics") },
     handler: async (ctx, args) => {
-        await requireTeacher(ctx);
+        const user = await requireTeacher(ctx);
+        const rubric = await ctx.db.get(args.rubric_id);
+        if (!rubric || (rubric.teacher_id !== user._id && user.role !== "admin")) {
+            throw new Error("No tienes permiso sobre esta rúbrica");
+        }
+        
         // También borrar resultados asociados
         const results = await ctx.db.query("grading_results").withIndex("by_rubric", q => q.eq("rubric_id", args.rubric_id)).collect();
         for (const r of results) {
@@ -81,7 +90,7 @@ export const evaluateSubmission = action({
 
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash" });
 
     const prompt = `
 Eres un asistente de evaluación académica de alto nivel. 
@@ -150,10 +159,10 @@ export const saveGradingResultInternal = mutation({
         score: v.number(),
     },
     handler: async (ctx, args) => {
-        const uid = await requireTeacher(ctx);
+        const user = await requireTeacher(ctx);
         return await ctx.db.insert("grading_results", {
             ...args,
-            teacher_id: uid._id,
+            teacher_id: user._id,
             created_at: Date.now(),
         });
     }
