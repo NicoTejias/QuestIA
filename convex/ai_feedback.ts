@@ -21,7 +21,7 @@ export const getGroupFeedback = action({
 
         const { GoogleGenerativeAI } = await import("@google/generative-ai");
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash" });
 
         const groupSummary = args.groupsData.map(g => {
             const members = g.members.map(m => `${m.name} (${m.belbinRole} - ${m.belbinCategory})`).join(", ");

@@ -90,7 +90,7 @@ export const evaluateSubmission = action({
 
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash" });
 
     const prompt = `
 Eres un asistente de evaluación académica de alto nivel. 
