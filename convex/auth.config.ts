@@ -1,8 +1,8 @@
 export default {
-    providers: [
-      {
-        domain: "https://first-lynx-9.clerk.accounts.dev",
-        applicationID: "convex",
-      },
-    ],
-  };
+  providers: [
+    {
+      domain:  "https://clerk.questia.cl", // ¡TU NUEVO DOMINIO FRONTEND API DE CLERK!
+      applicationID: "convex",
+    },
+  ],
+};
