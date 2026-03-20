@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { X, AlertCircle, Trophy, Star, Coins, Sparkles, Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { X, AlertCircle, Trophy, Star, Coins, Sparkles, Loader2, CheckCircle2, XCircle, Eye, BookOpen } from 'lucide-react'
 import { toast } from "sonner"
 
 interface QuizPlayerProps {
@@ -263,15 +263,38 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                                 </div>
                             ) : (
                                 <>
-                                    <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl ${quizResult?.is_improvement ? 'bg-gold/20 shadow-gold/20' : 'bg-slate-800 shadow-black/50'}`}>
-                                        {quizResult?.is_improvement ? <Trophy className="w-8 h-8 md:w-10 md:h-10 text-gold" /> : <Star className="w-8 h-8 md:w-10 md:h-10 text-slate-500" />}
+                                    {quizResult?.is_simulation ? (
+                                        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-500/30 rounded-2xl p-4 mb-6">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <Eye className="w-5 h-5 text-amber-400" />
+                                                <span className="text-amber-400 font-black text-sm">MODO VISTA PREVIA DOCENTE</span>
+                                            </div>
+                                            <p className="text-amber-300/80 text-xs mb-3">
+                                                Estás previsualizando cómo verán los alumnos este quiz. 
+                                                Los puntos no se guardan. Revisa las preguntas y respuestas abajo.
+                                            </p>
+                                            <div className="flex items-center gap-2 text-amber-400/80 text-xs">
+                                                <BookOpen className="w-4 h-4" />
+                                                <span>Revisa que las preguntas y opciones sean correctas antes de asignarlo a tus alumnos.</span>
+                                            </div>
+                                        </div>
+                                    ) : null}
+
+                                    <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl ${quizResult?.is_improvement ? 'bg-gold/20 shadow-gold/20' : quizResult?.is_simulation ? 'bg-amber-500/20 shadow-amber-500/20' : 'bg-slate-800 shadow-black/50'}`}>
+                                        {quizResult?.is_improvement ? <Trophy className="w-8 h-8 md:w-10 md:h-10 text-gold" /> : 
+                                         quizResult?.is_simulation ? <Eye className="w-8 h-8 md:w-10 md:h-10 text-amber-400" /> :
+                                         <Star className="w-8 h-8 md:w-10 md:h-10 text-slate-500" />}
                                     </div>
                                     <h2 className="text-2xl md:text-3xl font-black text-white mb-1">
-                                        {quizResult?.is_improvement ? '¡Nuevo Record!' : 'Reto Completado'}
+                                        {quizResult?.is_improvement ? '¡Nuevo Record!' : 
+                                         quizResult?.is_simulation ? 'Vista Previa Completada' : 
+                                         'Reto Completado'}
                                     </h2>
                                     <p className="text-slate-400 mb-6 text-sm md:text-base">
                                         {quizResult?.is_improvement
                                             ? '¡Increíble! Has superado tu puntuación anterior.'
+                                            : quizResult?.is_simulation
+                                            ? 'Esta es la experiencia que tendrán tus alumnos al completar el quiz.'
                                             : 'Bien hecho, has finalizado el quiz satisfactoriamente.'}
                                     </p>
 
@@ -279,28 +302,29 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                                         <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
                                             <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-1">PUNTUACIÓN</span>
                                             <span className="text-2xl md:text-3xl font-black text-white">{quizResult?.score}%</span>
+                                            <div className="text-[10px] text-slate-500 mt-1">
+                                                {quizResult?.score >= 80 ? '✅Excelente' : 
+                                                 quizResult?.score >= 60 ? '⚠️Bueno' : 
+                                                 quizResult?.score >= 40 ? '❌Regular' : '❌Revisar'}
+                                            </div>
                                         </div>
                                         <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
                                             <span className="block text-[8px] font-black uppercase text-slate-500 tracking-widest mb-1">
-                                                {quizResult?.is_simulation ? 'PUNTOS POTENCIALES' : 'PUNTOS GANADOS'}
+                                                {quizResult?.is_simulation ? 'PUNTOS ESTIMADOS' : 'PUNTOS GANADOS'}
                                             </span>
                                             <div className="flex items-center justify-center gap-1">
                                                 <Coins className="w-4 h-4 md:w-5 md:h-5 text-gold" />
                                                 <span className="text-2xl md:text-3xl font-black text-gold">
-                                                    +{quizResult?.is_simulation ? quizResult.potentialEarned : (quizResult?.earned || 0)}
+                                                    +{quizResult?.is_simulation ? (quizResult.earned || 0) : (quizResult?.earned || 0)}
                                                 </span>
                                             </div>
+                                            {quizResult?.is_simulation && (
+                                                <div className="text-[10px] text-amber-400/80 mt-1">
+                                                    ×{questions.length} pts base × dificultad
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-
-                                    {quizResult?.is_simulation && (
-                                        <div className="bg-accent/10 border border-accent/20 rounded-xl p-3 mb-6 flex items-center justify-center gap-2">
-                                            <Sparkles className="w-4 h-4 text-accent-light" />
-                                            <p className="text-[10px] font-black text-accent-light uppercase tracking-widest">
-                                                {quizResult.message}
-                                            </p>
-                                        </div>
-                                    )}
 
                                     {quizResult?.daily_bonus_applied && (
                                         <div className="bg-gold/10 border border-gold/20 rounded-xl p-3 mb-6 text-gold flex items-center justify-center gap-2">
@@ -315,8 +339,13 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                                     <div className="mt-6 md:mt-8 text-left border-t border-white/10 pt-6 md:pt-8">
                                         <h3 className="text-base md:text-lg font-bold text-white mb-4 md:mb-6 flex items-center gap-2">
                                             <AlertCircle className="w-5 h-5 text-accent" />
-                                            Revisión de respuestas
+                                            {quizResult?.is_simulation ? 'Revisión de Preguntas (Vista Previa)' : 'Revisión de respuestas'}
                                         </h3>
+                                        <p className="text-slate-500 text-xs mb-4">
+                                            {quizResult?.is_simulation 
+                                                ? 'Verifica que cada pregunta tenga la respuesta correcta marcada en verde.'
+                                                : 'Revisa tus respuestas a continuación.'}
+                                        </p>
                                         <div className="space-y-4 md:space-y-6">
                                             {questions.map((q: any, i: number) => {
                                                 const selected = quizResult?.selected_options[i]
@@ -356,6 +385,20 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                                                                     <div className="mt-3 md:mt-4 p-3 md:p-4 bg-accent/5 border border-accent/10 rounded-xl">
                                                                         <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-1">Explicación</p>
                                                                         <p className="text-xs md:text-sm text-slate-300 leading-relaxed">{q.explanation}</p>
+                                                                    </div>
+                                                                )}
+                                                                {(q.bloom_level || q.dok_level) && (
+                                                                    <div className="mt-3 flex gap-2 flex-wrap">
+                                                                        {q.bloom_level && (
+                                                                            <span className="px-2 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-black uppercase rounded-lg">
+                                                                                Bloom: {q.bloom_level}
+                                                                            </span>
+                                                                        )}
+                                                                        {q.dok_level && (
+                                                                            <span className="px-2 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[10px] font-black uppercase rounded-lg">
+                                                                                DOK: {q.dok_level}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 )}
                                                             </div>

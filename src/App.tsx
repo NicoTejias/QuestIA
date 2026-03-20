@@ -1,10 +1,9 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useConvexAuth } from "convex/react"
 import { useQuery } from "convex/react"
 import { api } from "../convex/_generated/api"
 import { Loader2, Sparkles, ShieldAlert } from 'lucide-react'
-import { useState } from 'react'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -25,7 +24,7 @@ function LoadingScreen() {
     <div className="min-h-screen bg-surface flex items-center justify-center">
       <div className="text-center">
         <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-        <p className="text-slate-400 font-medium">Cargando...</p>
+        <p className="text-slate-400 font-medium">Cargando QuestIA...</p>
       </div>
     </div>
   )
@@ -156,19 +155,20 @@ function App() {
       <UpdateNotification />
       <FeedbackButton />
       {localStorage.getItem('quest_simulate_student') === 'true' && (
-        <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black px-4 py-2 flex items-center justify-between text-xs font-black shadow-2xl">
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black px-4 py-2 flex items-center justify-between text-xs font-black shadow-2xl pt-[calc(2.5rem+env(safe-area-inset-top))]">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 animate-pulse" />
-            <span>ESTÁS EN MODO PRUEBA (ALUMNO) - LOS DATOS NO SE GUARDARÁN</span>
+            <span className="hidden sm:inline">MODO PRUEBA (ALUMNO) - Puntos NO se guardarán</span>
+            <span className="sm:hidden">MODO PRUEBA</span>
           </div>
           <button 
             onClick={() => {
               localStorage.removeItem('quest_simulate_student');
               window.location.href = '/docente';
             }}
-            className="bg-black hover:bg-slate-900 text-white px-3 py-1 rounded-full text-center transition-all"
+            className="bg-black hover:bg-slate-900 text-white px-3 py-1 rounded-full text-center transition-all text-[10px] sm:text-xs"
           >
-            VOLVER A DOCENTE
+            VOLVER
           </button>
         </div>
       )}

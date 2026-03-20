@@ -335,6 +335,20 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                                             {q.explanation && (
                                                 <p className="text-sm text-slate-500 italic border-t border-white/5 pt-2 mt-2">💡 {q.explanation}</p>
                                             )}
+                                            {(q.bloom_level || q.dok_level) && (
+                                                <div className="mt-2 flex gap-2">
+                                                    {q.bloom_level && (
+                                                        <span className="px-2 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-black uppercase rounded-lg">
+                                                            Bloom: {q.bloom_level}
+                                                        </span>
+                                                    )}
+                                                    {q.dok_level && (
+                                                        <span className="px-2 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[10px] font-black uppercase rounded-lg">
+                                                            DOK: {q.dok_level}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     ))
                                 )}
