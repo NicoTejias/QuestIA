@@ -40,7 +40,7 @@ export const createEvaluacion = mutation({
 export const getEvaluacionesPorCurso = query({
     args: { course_id: v.id("courses") },
     handler: async (ctx, args) => {
-        const user = await requireAuth(ctx);
+        await requireAuth(ctx);
         
         const evaluaciones = await ctx.db
             .query("evaluaciones")

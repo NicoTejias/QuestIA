@@ -2,11 +2,7 @@ import { useQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { FileText, PenSquare, Calendar, Clock, AlertCircle, CheckCircle } from 'lucide-react'
 
-interface EvaluacionesPanelProps {
-    onSelectCourse?: (courseId: string) => void
-}
-
-export default function EvaluacionesPanel({ onSelectCourse }: EvaluacionesPanelProps) {
+export default function EvaluacionesPanel() {
     const evaluaciones = useQuery(api.evaluaciones.getEvaluacionesEstudiante)
 
     if (!evaluaciones) {
@@ -41,7 +37,7 @@ export default function EvaluacionesPanel({ onSelectCourse }: EvaluacionesPanelP
         return 'normal'
     }
 
-    const renderItem = (evaluacion: any, isPrueba: boolean) => {
+    const renderItem = (evaluacion: any) => {
         const urgency = getUrgency(evaluacion.fecha)
         const dateInfo = formatDate(evaluacion.fecha, evaluacion.hora)
         const isPassed = urgency === 'passed'
@@ -129,7 +125,7 @@ export default function EvaluacionesPanel({ onSelectCourse }: EvaluacionesPanelP
                     {pruebas.length === 0 ? (
                         <p className="text-slate-500 text-xs text-center py-4">No hay pruebas programadas</p>
                     ) : (
-                        pruebas.map(ev => renderItem(ev, true))
+                        pruebas.map(ev => renderItem(ev))
                     )}
                 </div>
             </div>
@@ -151,7 +147,7 @@ export default function EvaluacionesPanel({ onSelectCourse }: EvaluacionesPanelP
                     {trabajos.length === 0 ? (
                         <p className="text-slate-500 text-xs text-center py-4">No hay trabajosprogramados</p>
                     ) : (
-                        trabajos.map(ev => renderItem(ev, false))
+                        trabajos.map(ev => renderItem(ev))
                     )}
                 </div>
             </div>
