@@ -786,8 +786,21 @@ export const submitQuiz = mutation({
         const currentAttemptsCount = submissions.length;
         const maxAttempts = quiz.max_attempts ?? 1;
 
+        if (user.role === "teacher" || user.role === "admin") {
+            await ctx.db.patch(attempt._id, { status: "completed", last_updated: Date.now() });
+            const basePoints2 = (quiz.num_questions || 5) * (quiz.difficulty === 'dificil' ? 20 : quiz.difficulty === 'medio' ? 15 : 10);
+            const potentialEarned2 = Math.round((scorePct / 100) * basePoints2);
+            return {
+                success: true, score: scorePct, earned: potentialEarned2,
+                is_simulation: true, remaining_attempts: 999,
+                message: `MODO PRUEBA: Hubieras ganado ${potentialEarned2} puntos. No se guardaron registros.`,
+                selected_options: attempt.selected_options, attempts_used: currentAttemptsCount + 1
+            };
+        }
+
+        // Verificar limite para alumnos (el teacher ya retorno arriba)
         if (maxAttempts !== 99 && currentAttemptsCount >= maxAttempts) {
-            throw new Error(`Has alcanzado el límite de ${maxAttempts} intentos.`);
+            throw new Error(`Limite alcanzado (${maxAttempts} intento(s)).`);
         }
 
         await ctx.db.patch(attempt._id, { status: "completed", last_updated: Date.now() });
