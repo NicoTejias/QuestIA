@@ -34,6 +34,52 @@ const GAME_TYPE_ICONS: Record<string, string> = {
     memory: "🧠",
 };
 
+
+// Pure utility function — placed outside the component to avoid Rules of Hooks issues
+function generateGrid(words: string[], size: number): string[][] {
+    const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(""))
+    const directions = [[0, 1], [1, 0], [1, 1], [-1, 1], [0, -1], [-1, 0], [-1, -1], [1, -1]]
+
+    for (const word of words) {
+        let placed = false
+        for (let attempt = 0; attempt < 100 && !placed; attempt++) {
+            const dir = directions[Math.floor(Math.random() * directions.length)]
+            const maxR = size - (dir[0] >= 0 ? word.length : 1)
+            const maxC = size - (dir[1] >= 0 ? word.length : 1)
+            const minR = dir[0] < 0 ? word.length - 1 : 0
+            const minC = dir[1] < 0 ? word.length - 1 : 0
+            if (maxR < minR || maxC < minC) continue
+
+            const startR = Math.floor(Math.random() * (maxR - minR + 1)) + minR
+            const startC = Math.floor(Math.random() * (maxC - minC + 1)) + minC
+
+            let canPlace = true
+            const cells: { r: number, c: number }[] = []
+            for (let i = 0; i < word.length; i++) {
+                const r = startR + dir[0] * i
+                const c = startC + dir[1] * i
+                if (grid[r][c] !== "" && grid[r][c] !== word[i]) { canPlace = false; break }
+                cells.push({ r, c })
+            }
+            if (canPlace) {
+                for (let i = 0; i < word.length; i++) {
+                    grid[cells[i].r][cells[i].c] = word[i].toUpperCase()
+                }
+                placed = true
+            }
+        }
+    }
+
+    // Fill empty cells with random letters
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+            if (grid[r][c] === "") grid[r][c] = letters[Math.floor(Math.random() * letters.length)]
+        }
+    }
+    return grid
+}
+
 export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
     const getOrCreateAttempt = useMutation(api.quizzes.getOrCreateAttempt)
     const updateAttemptProgress = useMutation(api.quizzes.updateAttemptProgress)
@@ -72,6 +118,9 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
     const [retryCount, setRetryCount] = useState(0)
     const [showHonorCode, setShowHonorCode] = useState(true)
     const [honorAccepted, setHonorAccepted] = useState(false)
+
+    // Word search grid state — must be declared HERE (before any early return) to follow Rules of Hooks
+    const [wordGrid, setWordGrid] = useState<string[][]>([])
 
     // --- Timer logic for trivia & quiz_sprint ---
     const startTimer = useCallback((seconds: number) => {
@@ -161,7 +210,18 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
         return () => { if (timerRef.current) clearInterval(timerRef.current) }
     }, [quiz._id, retryCount, honorAccepted]) // eslint-disable-line
 
+
+    // Word search grid effect — declared here (before any early return) to follow Rules of Hooks
+    useEffect(() => {
+        const q = questions[currentIdx]
+        if (quizType === "word_search" && q?.words) {
+            const size = q.size || 14
+            setWordGrid(generateGrid(q.words, size))
+        }
+    }, [quizType, currentIdx, honorAccepted]) // eslint-disable-line
+
     if (!honorAccepted) {
+
         return (
             <HonorCodeModal
                 isOpen={showHonorCode}
@@ -392,64 +452,7 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
         }
     }
 
-    // ========================
-    // GRID GENERATION (word_search)
-    // ========================
-    const generateGrid = (words: string[], size: number) => {
-        const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(""))
-        const positions: { word: string, cells: { r: number, c: number }[] }[] = []
 
-        const directions = [[0, 1], [1, 0], [1, 1], [-1, 1], [0, -1], [-1, 0], [-1, -1], [1, -1]]
-
-        for (const word of words) {
-            let placed = false
-            for (let attempt = 0; attempt < 100 && !placed; attempt++) {
-                const dir = directions[Math.floor(Math.random() * directions.length)]
-                const maxR = size - (dir[0] >= 0 ? word.length : 1)
-                const maxC = size - (dir[1] >= 0 ? word.length : 1)
-                const minR = dir[0] < 0 ? word.length - 1 : 0
-                const minC = dir[1] < 0 ? word.length - 1 : 0
-                if (maxR < minR || maxC < minC) continue
-
-                const startR = Math.floor(Math.random() * (maxR - minR + 1)) + minR
-                const startC = Math.floor(Math.random() * (maxC - minC + 1)) + minC
-
-                let canPlace = true
-                const cells: { r: number, c: number }[] = []
-                for (let i = 0; i < word.length; i++) {
-                    const r = startR + dir[0] * i
-                    const c = startC + dir[1] * i
-                    if (grid[r][c] !== "" && grid[r][c] !== word[i]) { canPlace = false; break }
-                    cells.push({ r, c })
-                }
-                if (canPlace) {
-                    for (let i = 0; i < word.length; i++) {
-                        grid[cells[i].r][cells[i].c] = word[i].toUpperCase()
-                    }
-                    positions.push({ word, cells })
-                    placed = true
-                }
-            }
-        }
-
-        // Fill empty cells with random letters
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        for (let r = 0; r < size; r++) {
-            for (let c = 0; c < size; c++) {
-                if (grid[r][c] === "") grid[r][c] = letters[Math.floor(Math.random() * letters.length)]
-            }
-        }
-
-        return grid
-    }
-
-    const [wordGrid, setWordGrid] = useState<string[][]>([])
-    useEffect(() => {
-        if (quizType === "word_search" && currentQ.words) {
-            const size = currentQ.size || 14
-            setWordGrid(generateGrid(currentQ.words, size))
-        }
-    }, [quizType, currentIdx]) // eslint-disable-line
 
     // ========================
     // RENDER QUESTION BY TYPE

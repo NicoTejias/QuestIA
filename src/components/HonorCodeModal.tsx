@@ -14,7 +14,7 @@ const HONOR_CODE_TEXT = `Como estudiante de QuestIA, me comprometo a:
 • No buscar ventajas desleales
 • Respetar la integridad académica
 
-Entiendo que cualquier violación será reportada y podrá汉ellas consecuencias académicas.`
+Entiendo que cualquier violación será reportada y podrá tener consecuencias académicas.`
 
 export default function HonorCodeModal({ 
   isOpen, 
