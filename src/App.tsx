@@ -53,7 +53,7 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
 
   // 5. Verificación de Rol
   const userRole = (user as any)?.role || 'student';
-  const isSimulating = localStorage.getItem('quest_simulate_student') === 'true';
+  const isSimulating = localStorage.getItem('questia_simulate_student') === 'true';
 
   // Permitir que docentes/admins simulen ser alumnos
   const canAccessAsStudent = requiredRole === 'student' && 
@@ -154,7 +154,7 @@ function App() {
       <PushNotificationManager />
       <UpdateNotification />
       <FeedbackButton />
-      {localStorage.getItem('quest_simulate_student') === 'true' && (
+      {localStorage.getItem('questia_simulate_student') === 'true' && (
         <div className="fixed top-0 left-0 right-0 z-[9999] bg-amber-500 text-black px-4 py-2 flex items-center justify-between text-xs font-black shadow-2xl pt-[calc(2.5rem+env(safe-area-inset-top))]">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 animate-pulse" />
@@ -163,7 +163,7 @@ function App() {
           </div>
           <button 
             onClick={() => {
-              localStorage.removeItem('quest_simulate_student');
+              localStorage.removeItem('questia_simulate_student');
               window.location.href = '/docente';
             }}
             className="bg-black hover:bg-slate-900 text-white px-3 py-1 rounded-full text-center transition-all text-[10px] sm:text-xs"
