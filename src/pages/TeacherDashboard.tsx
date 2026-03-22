@@ -91,12 +91,12 @@ export default function TeacherDashboard() {
                 <div className="p-6 border-b border-white/5 shrink-0">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-surface/50 rounded-xl flex items-center justify-center border border-white/5 overflow-hidden p-1.5">
-                                <img src="/assets/duco_logo.png" alt="Duco Logo" className="w-full h-full object-contain" />
+                            <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/20 p-1.5">
+                                <Sparkles className="w-6 h-6 text-primary" />
                             </div>
                             <div>
                                 <span className="text-lg font-black text-white block tracking-tighter italic leading-none mb-1">
-                                    Duoc<span className="text-primary">encIA</span>
+                                    Quest<span className="text-primary">IA</span>
                                 </span>
                                 <span className="text-[10px] font-black text-primary uppercase tracking-widest opacity-80 italic">Panel Docente</span>
                             </div>
@@ -150,8 +150,8 @@ export default function TeacherDashboard() {
                         Cerrar Sesión
                     </button>
                     <div className="px-4 py-1 flex items-center justify-between opacity-30 transition-opacity">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Duocencia v1.1.0</span>
-                        <span className="text-[9px] font-medium text-slate-600">DuocUC Identity</span>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Questia v1.1.0</span>
+                        <span className="text-[9px] font-medium text-slate-600">QuestIA Identity</span>
                     </div>
                 </div>
             </aside>
@@ -241,17 +241,15 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
     return (
         <div className="space-y-6">
             <div className="bg-gradient-to-r from-primary/10 via-surface-light to-surface-light border border-primary/20 rounded-2xl md:rounded-3xl p-6 md:p-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-full translate-x-12 opacity-10 pointer-events-none">
-                    <img src="/assets/duco_logo.png" alt="Duco BG" className="w-full h-full object-contain" />
+                <div className="absolute top-0 right-0 w-64 h-full translate-x-12 opacity-5 pointer-events-none flex items-center justify-center">
+                    <Sparkles className="w-48 h-48 text-primary" />
                 </div>
                 
                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                    <div className="shrink-0 hidden md:block group">
-                        <img 
-                            src="/assets/duco_full.png" 
-                            alt="Duco" 
-                            className="w-32 h-auto drop-shadow-xl group-hover:scale-110 transition-transform duration-500"
-                        />
+                    <div className="shrink-0 hidden md:block">
+                        <div className="w-24 h-24 bg-primary/20 rounded-3xl flex items-center justify-center border border-primary/20 shadow-2xl shadow-primary/20">
+                            <Sparkles className="w-12 h-12 text-primary animate-pulse" />
+                        </div>
                     </div>
                     <div>
                         <div className="flex items-center gap-2 mb-2">
@@ -263,8 +261,8 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                         </h2>
                         <p className="text-slate-400 text-base md:text-lg max-w-xl">
                             {coursesCount === 0
-                                ? 'Dale la bienvenida a DuocencIA. Comienza creando tu primer ramo para gamificar tus clases.'
-                                : `Tienes ${coursesCount} ${coursesCount === 1 ? 'ramo activo' : 'ramos activos'} en DuocencIA. ¡Inspiramos el futuro juntos!`
+                                ? 'Dale la bienvenida a QuestIA. Comienza creando tu primer ramo para gamificar tus clases.'
+                                : `Tienes ${coursesCount} ${coursesCount === 1 ? 'ramo activo' : 'ramos activos'} en QuestIA. ¡Inspiramos el futuro juntos!`
                             }
                         </p>
                     </div>
@@ -388,26 +386,26 @@ function PerfilPanel({ user, coursesCount }: { user: any, coursesCount: number }
                     </button>
                     <button
                         onClick={() => {
-                            const isSimulating = localStorage.getItem('duocencia_simulate_student') === 'true';
+                            const isSimulating = localStorage.getItem('questia_simulate_student') === 'true';
                             if (isSimulating) {
-                                localStorage.removeItem('duocencia_simulate_student');
+                                localStorage.removeItem('questia_simulate_student');
                                 toast.success("Modo Docente restaurado");
                                 navigate('/docente');
                             } else {
-                                localStorage.setItem('duocencia_simulate_student', 'true');
+                                localStorage.setItem('questia_simulate_student', 'true');
                                 toast.success("Simulación de Alumno Activa");
                                 navigate('/alumno');
                             }
                             window.location.reload();
                         }}
                         className={`font-bold px-6 py-3 rounded-xl border transition-all flex items-center gap-2 ${
-                            localStorage.getItem('duocencia_simulate_student') === 'true'
+                            localStorage.getItem('questia_simulate_student') === 'true'
                             ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
                             : 'bg-accent/10 text-accent-light border-accent/20 hover:bg-accent/20'
                         }`}
                     >
                         <User className="w-4 h-4" />
-                        {localStorage.getItem('duocencia_simulate_student') === 'true' ? 'Salir Modo Alumno' : 'Probar como Alumno'}
+                        {localStorage.getItem('questia_simulate_student') === 'true' ? 'Salir Modo Alumno' : 'Probar como Alumno'}
                     </button>
                 </div>
             </div>

@@ -54,7 +54,7 @@ export default function FeedbackButton() {
                         <div className="flex items-center justify-between mb-8">
                             <div>
                                 <h2 className="text-2xl font-black text-white">Tu Opinión Importa</h2>
-                                <p className="text-slate-400 text-sm mt-1 italic">Ayúdanos a mejorar <span className="text-primary font-bold">DuocencIA</span> con tus ideas.</p>
+                                <p className="text-slate-400 text-sm mt-1 italic">Ayúdanos a mejorar <span className="text-primary font-bold">QuestIA</span> con tus ideas.</p>
                             </div>
                             <button 
                                 onClick={() => setIsOpen(false)}

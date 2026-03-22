@@ -1,5 +1,5 @@
 import { useNavigate, Link } from "react-router-dom"
-import { Trophy, Mail, Settings, Sparkles } from 'lucide-react'
+import { Trophy, Mail, Settings, Sparkles, User as UserIcon } from 'lucide-react'
 
 interface PerfilPanelProps {
     user: any;
@@ -16,7 +16,9 @@ export default function PerfilPanel({ user, totalPoints, belbinRole }: PerfilPan
                     {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                        <img src="/avatars/duco.png" alt="Duco" className="w-full h-full object-cover" />
+                        <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                            <UserIcon className="w-16 h-16 text-primary" />
+                        </div>
                     )}
                 </div>
                 <div className="text-center md:text-left flex-1">

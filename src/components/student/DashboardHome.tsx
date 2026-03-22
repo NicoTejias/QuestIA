@@ -1,4 +1,4 @@
-import { BookOpen, Trophy, Coins, ChevronRight } from 'lucide-react'
+import { BookOpen, Trophy, Coins, ChevronRight, Sparkles } from 'lucide-react'
 import { getGreeting } from '../../utils/dashboardUtils'
 
 interface DashboardHomeProps {
@@ -38,12 +38,10 @@ export default function DashboardHome({
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-primary/10 rounded-full blur-[100px] animate-pulse"></div>
                 
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 text-center md:text-left">
-                    <div className="shrink-0 hidden md:block group">
-                        <img 
-                            src="/assets/duco_full.png" 
-                            alt="Duco" 
-                            className="w-40 h-auto drop-shadow-2xl group-hover:scale-110 transition-transform duration-500 filter contrast-125"
-                        />
+                    <div className="shrink-0 hidden md:block">
+                        <div className="w-32 h-32 bg-primary/20 rounded-[2rem] flex items-center justify-center border border-primary/20 shadow-3xl shadow-primary/20 group">
+                            <Sparkles className="w-16 h-16 text-primary animate-pulse" />
+                        </div>
                     </div>
                     
                     <div className="flex-1 min-w-0">
@@ -57,8 +55,8 @@ export default function DashboardHome({
                         </h2>
                         <p className="text-slate-400 text-lg md:text-xl max-w-md leading-relaxed mx-auto md:mx-0 font-medium tracking-tight">
                             {courses.length === 0
-                                ? 'Bienvenido a DuocencIA. Tu aventura está por comenzar. Espera a que tu docente te inscriba en un ramo.'
-                                : `Bienvenido a la aventura. Llevas ¹${totalRanking.toLocaleString()} puntos de identidad acumulados en DuocencIA.`
+                                ? 'Bienvenido a QuestIA. Tu aventura está por comenzar. Espera a que tu docente te inscriba en un ramo.'
+                                : `Bienvenido a la aventura. Llevas ¹${totalRanking.toLocaleString()} puntos de identidad acumulados en QuestIA.`
                             }
                         </p>
                     </div>

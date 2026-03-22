@@ -64,7 +64,7 @@ export default function BartlePopup({ user, onComplete }: BartlePopupProps) {
                                 </div>
 
                                 <h2 className="text-3xl md:text-5xl font-black text-white mb-6 leading-tight italic">
-                                    ¡Descubre tu <span className="text-primary tracking-tighter italic">Sello DuocencIA</span>! 🎓
+                                    ¡Descubre tu <span className="text-primary tracking-tighter italic">Sello QuestIA</span>! 🎓
                                 </h2>
 
                                 <p className="text-slate-400 text-lg md:text-xl mb-10 leading-relaxed max-w-lg mx-auto">

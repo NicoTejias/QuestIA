@@ -19,7 +19,7 @@ if (initialHtml) {
       <div style="text-align:center;">
         <div style="width:48px;height:48px;border:4px solid #6366f1;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
         <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-        <p style="color:#94a3b8;font-family:system-ui;">Cargando DuocencIA...</p>
+        <p style="color:#94a3b8;font-family:system-ui;">Cargando QuestIA...</p>
       </div>
     </div>
   `

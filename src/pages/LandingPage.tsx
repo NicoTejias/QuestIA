@@ -67,11 +67,11 @@ export default function LandingPage() {
                 <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
 
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-surface/50 rounded-xl flex items-center justify-center border border-white/5 overflow-hidden p-1.5">
-                            <img src="/assets/duco_logo.png" alt="Duco Logo" className="w-full h-full object-contain" />
+                        <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/20 p-1.5">
+                            <Sparkles className="w-6 h-6 text-primary" />
                         </div>
                         <span className="text-xl font-black text-white tracking-tighter italic">
-                            Duoc<span className="text-primary">encIA</span>
+                            Quest<span className="text-primary">IA</span>
                         </span>
                     </div>
                     <div className="flex items-center gap-4">
@@ -188,10 +188,10 @@ export default function LandingPage() {
             <footer className="border-t border-white/5 py-12 px-6">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-surface/50 rounded-lg flex items-center justify-center border border-white/5 overflow-hidden p-1">
-                            <img src="/assets/duco_logo.png" alt="Duco Logo" className="w-full h-full object-contain" />
+                        <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center border border-primary/20 p-1.5 flex-shrink-0">
+                            <Sparkles className="w-4 h-4 text-primary" />
                         </div>
-                        <span className="text-sm text-slate-500 font-bold italic tracking-tighter">Duoc<span className="text-primary">encIA</span> © 2026.</span>
+                        <span className="text-sm text-slate-500 font-bold italic tracking-tighter">Quest<span className="text-primary">IA</span> © 2026.</span>
                     </div>
                     <div className="flex gap-6 text-sm text-slate-500">
                         <a href="#" className="hover:text-white transition-colors">Privacidad</a>

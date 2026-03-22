@@ -124,11 +124,11 @@ export default function ProfilePage() {
         }
     }
 
-    const setDucoAvatar = async () => {
+    const setDefaultAvatar = async () => {
         setUploading(true)
         try {
-            await updateAvatar({ avatarUrl: "/avatars/duco.png" })
-            toast.success('¡Avatar de DUCO activado! 🐦')
+            await updateAvatar({ avatarUrl: "" })
+            toast.success('Avatar restablecido al valor por defecto')
         } catch (err) {
             toast.error('Error al cambiar avatar')
         } finally {
@@ -159,7 +159,9 @@ export default function ProfilePage() {
                                 {user.avatarUrl ? (
                                     <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
-                                    <img src="/avatars/duco.png" alt="Duco" className="w-full h-full object-cover" />
+                                    <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                                        <User className="w-16 h-16 text-primary" />
+                                    </div>
                                 )}
                                 
                                 <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-all backdrop-blur-sm">
@@ -194,36 +196,36 @@ export default function ProfilePage() {
                 <div className="bg-surface-light border border-white/5 rounded-[2.5rem] p-6 mb-12">
                     <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-6 px-2">Selecciona tu Identidad</h3>
                     <div className="flex flex-wrap gap-6 justify-center sm:justify-start px-2">
-                        {/* Option DUCO */}
+                        {/* Option Default */}
                         <button 
-                            onClick={setDucoAvatar}
-                            className={`group relative flex flex-col items-center gap-3 transition-all ${user.avatarUrl === "/avatars/duco.png" || !user.avatarUrl ? 'scale-105' : 'opacity-60 hover:opacity-100'}`}
+                            onClick={setDefaultAvatar}
+                            className={`group relative flex flex-col items-center gap-3 transition-all ${!user.avatarUrl ? 'scale-105' : 'opacity-60 hover:opacity-100'}`}
                         >
-                            <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl overflow-hidden border-4 transition-all shadow-lg
-                                ${user.avatarUrl === "/avatars/duco.png" || !user.avatarUrl ? 'border-primary shadow-primary/20' : 'border-white/10 hover:border-primary/50'}`}>
-                                <img src="/avatars/duco.png" alt="Duco mascot" className="w-full h-full object-cover" />
-                                {(user.avatarUrl === "/avatars/duco.png" || !user.avatarUrl) && (
+                            <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl overflow-hidden border-4 transition-all shadow-lg bg-primary/10 flex items-center justify-center
+                                ${!user.avatarUrl ? 'border-primary shadow-primary/20' : 'border-white/10 hover:border-primary/50'}`}>
+                                <User className="w-10 h-10 text-primary" />
+                                {!user.avatarUrl && (
                                     <div className="absolute top-2 right-2 bg-primary text-white p-1 rounded-full shadow-md z-10">
                                         <BadgeCheck className="w-3 h-3" />
                                     </div>
                                 )}
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 group-hover:text-white transition-colors">DUCO (Clásico)</span>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 group-hover:text-white transition-colors">IDENTIDAD (Global)</span>
                         </button>
 
                         {/* Option Custom Photo */}
                         <div className="flex flex-col items-center gap-3">
-                            <label className={`group relative flex flex-col items-center cursor-pointer transition-all ${user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" ? 'scale-105' : 'opacity-60 hover:opacity-100'}`}>
+                            <label className={`group relative flex flex-col items-center cursor-pointer transition-all ${user.avatarUrl ? 'scale-105' : 'opacity-60 hover:opacity-100'}`}>
                                 <div className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl overflow-hidden border-4 transition-all shadow-lg bg-surface
-                                    ${user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" ? 'border-accent shadow-accent/20' : 'border-white/10 hover:border-accent/50 group-hover:bg-white/5'}`}>
-                                    {user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" ? (
+                                    ${user.avatarUrl ? 'border-accent shadow-accent/20' : 'border-white/10 hover:border-accent/50 group-hover:bg-white/5'}`}>
+                                    {user.avatarUrl ? (
                                         <img src={user.avatarUrl} alt="Custom" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
                                             <Upload className="w-6 h-6 text-slate-500 group-hover:text-accent-light transition-colors" />
                                         </div>
                                     )}
-                                    {user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" && (
+                                    {user.avatarUrl && (
                                         <div className="absolute top-2 right-2 bg-accent text-white p-1 rounded-full shadow-md z-10">
                                             <BadgeCheck className="w-3 h-3" />
                                         </div>
@@ -231,7 +233,7 @@ export default function ProfilePage() {
                                 </div>
                                 <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
                                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 group-hover:text-white transition-colors">
-                                    {user.avatarUrl && user.avatarUrl !== "/avatars/duco.png" ? 'Personalizada' : 'Cambiar Foto'}
+                                    {user.avatarUrl ? 'Personalizada' : 'Cambiar Foto'}
                                 </span>
                             </label>
                         </div>

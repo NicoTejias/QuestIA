@@ -8,7 +8,7 @@ const CONFIG_KEYS = {
     REQUIRE_EMAIL_VERIFICATION: "require_email_verification",
 } as const;
 
-const DEFAULT_ALLOWED_DOMAINS = "@duocuc.cl,@profesor.duoc.cl,@duoc.cl,@gmail.com,@outlook.com";
+const DEFAULT_ALLOWED_DOMAINS = "@questia.cl,@duocuc.cl,@profesor.duoc.cl,@duoc.cl,@gmail.com,@outlook.com";
 
 export const getLatestConfig = query({
     args: {},

@@ -1,4 +1,4 @@
-import { X, Trophy, Coins, Flame, LogOut, ArrowRightLeft } from 'lucide-react'
+import { X, Trophy, Coins, Flame, LogOut, ArrowRightLeft, Sparkles, User as UserIcon } from 'lucide-react'
 
 interface DashboardSidebarProps {
     sidebarOpen: boolean;
@@ -39,12 +39,12 @@ export default function DashboardSidebar({
             <div className="p-6 border-b border-white/5 shrink-0 pt-safe">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-surface/50 rounded-xl flex items-center justify-center border border-white/5 overflow-hidden p-1.5">
-                            <img src="/assets/duco_logo.png" alt="Duco Logo" className="w-full h-full object-contain" />
+                        <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/20 p-1.5">
+                            <Sparkles className="w-6 h-6 text-primary" />
                         </div>
                         <div>
                             <span className="text-lg font-black text-white block tracking-tighter italic leading-none mb-1">
-                                Duoc<span className="text-primary">encIA</span>
+                                Quest<span className="text-primary">IA</span>
                             </span>
                             <span className="text-[10px] font-black text-primary uppercase tracking-widest opacity-80 italic">Panel Alumno</span>
                         </div>
@@ -64,7 +64,9 @@ export default function DashboardSidebar({
                             {user.avatarUrl ? (
                                 <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
-                                <img src="/assets/duco_logo.png" alt="Duco" className="w-full h-full object-contain p-1" />
+                                <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                                    <UserIcon className="w-6 h-6 text-primary" />
+                                </div>
                             )}
                         </div>
                         <div className="overflow-hidden min-w-0">
@@ -147,8 +149,8 @@ export default function DashboardSidebar({
                     Cerrar Sesión
                 </button>
                 <div className="px-4 py-1 flex items-center justify-between opacity-30 transition-opacity">
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Duocencia v1.1.0</span>
-                    <span className="text-[9px] font-medium text-slate-600">DuocUC Identity</span>
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Questia v1.1.0</span>
+                    <span className="text-[9px] font-medium text-slate-600">QuestIA Identity</span>
                 </div>
             </div>
         </aside>

@@ -8,13 +8,13 @@ const CustomPassword = Password({
     const role = (params.role as string) || "student";
     const email = (params.email as string).toLowerCase();
     
-    // 1. RESTRICCIÓN DE DOCENTES: Solo dominios autorizados de Duoc UC
+    // 1. RESTRICCIÓN DE DOCENTES: Solo dominios autorizados de QuestIA
     if (role === "teacher") {
-        const allowedDomains = ["@duocuc.cl", "@profesor.duoc.cl", "@duoc.cl"];
+        const allowedDomains = ["@questia.cl", "@duocuc.cl", "@profesor.duoc.cl", "@duoc.cl"];
         const isAllowed = allowedDomains.some(domain => email.endsWith(domain));
         
         if (!isAllowed) {
-            throw new Error(`Acceso denegado: El correo "${email}" no es institucional. Use @duoc.cl`);
+            throw new Error(`Acceso denegado: El correo "${email}" no es institucional. Use su cuenta autorizada.`);
         }
     }
 
@@ -36,16 +36,16 @@ const CustomPassword = Password({
 const CustomGoogle = Google({
   profile(profile) {
     const email = profile.email?.toLowerCase() || "";
-    const allowedDomains = ["@duocuc.cl", "@profesor.duoc.cl", "@duoc.cl"];
+    const allowedDomains = ["@questia.cl", "@duocuc.cl", "@profesor.duoc.cl", "@duoc.cl"];
     const isAllowed = allowedDomains.some(domain => email.endsWith(domain));
 
     if (!isAllowed) {
-      throw new Error("Solo se permiten correos institucionales de Duoc UC.");
+      throw new Error("Solo se permiten correos institucionales de QuestIA.");
     }
 
     // Por defecto asumimos que un login de Google institucional es un alumno
     // a menos que el correo sea explícitamente de profesor
-    const isTeacherEmail = email.includes("@profesor.duoc.cl") || email.includes("@duoc.cl");
+    const isTeacherEmail = email.includes("@profesor.duoc.cl") || email.includes("@duoc.cl") || email.includes("@questia.cl");
     
     return {
       email,

@@ -50,7 +50,7 @@ export const storeUser = mutation({
             .withIndex("by_key", (q: any) => q.eq("key", "allowed_email_domains"))
             .first();
         
-        const defaultDomains = "@duocuc.cl,@profesor.duoc.cl,@duoc.cl,@gmail.com,@outlook.com";
+        const defaultDomains = "@questia.cl,@duocuc.cl,@profesor.duoc.cl,@duoc.cl,@gmail.com,@outlook.com";
         const allowedDomains = allowedDomainsConfig 
             ? allowedDomainsConfig.value.split(",").filter(d => d.trim().length > 0)
             : defaultDomains.split(",");
@@ -61,7 +61,7 @@ export const storeUser = mutation({
             throw new Error("Este correo no está autorizado para acceder a QuestIA. Usa tu cuenta institucional.");
         }
 
-        const isTeacherEmail = email.includes("@profesor.") || email.includes("@admin.") || email.includes("@duoc.cl");
+        const isTeacherEmail = email.includes("@profesor.") || email.includes("@admin.") || email.includes("@duoc.cl") || email.includes("@questia.cl");
 
         return await ctx.db.insert("users", {
             name: identity.name,
@@ -70,7 +70,7 @@ export const storeUser = mutation({
             clerkId: identity.subject,
             role: isTeacherEmail ? "teacher" : "student",
             is_verified: true,
-            avatarUrl: !isTeacherEmail ? "/avatars/duco.png" : identity.pictureUrl,
+            avatarUrl: !isTeacherEmail ? "" : identity.pictureUrl,
         });
     },
 });

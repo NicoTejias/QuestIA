@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { SignUp, useUser } from "@clerk/clerk-react"
 import { useEffect } from 'react'
+import { Sparkles } from 'lucide-react'
 
 export default function RegisterPage() {
     const navigate = useNavigate()
@@ -17,10 +18,12 @@ export default function RegisterPage() {
     return (
         <div className="min-h-screen bg-surface flex items-center justify-center p-6">
             <div className="max-w-xl w-full flex flex-col items-center">
-                <div className="flex flex-col items-center gap-4 mb-10">
-                    <img src="/assets/duco_logo.png" alt="Duco" className="h-16 w-auto drop-shadow-lg" />
+                <div className="flex flex-col items-center gap-4 mb-10 text-center">
+                    <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-2xl shadow-primary/20 mb-2">
+                        <Sparkles className="w-10 h-10 text-primary animate-pulse" />
+                    </div>
                     <span className="text-3xl font-black text-white tracking-tighter uppercase italic">
-                        Duoc<span className="text-primary">encIA</span>
+                        Quest<span className="text-primary">IA</span>
                     </span>
                 </div>
 

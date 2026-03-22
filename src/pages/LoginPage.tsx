@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { SignIn, useUser } from "@clerk/clerk-react"
 import { useConvexAuth } from "convex/react"
 import { useEffect } from 'react'
+import { Sparkles } from 'lucide-react'
 
 export default function LoginPage() {
     const navigate = useNavigate()
@@ -24,18 +25,14 @@ export default function LoginPage() {
                 <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-accent/10 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '1s' }} />
 
                 <div className="relative z-10 text-center px-12">
-                    <div className="mb-8 transform hover:scale-105 transition-transform duration-500">
-                        <img 
-                            src="/assets/duco_full.png" 
-                            alt="Duco Mascota Duoc" 
-                            className="w-80 h-auto drop-shadow-[0_20px_50px_rgba(255,214,51,0.3)] filter contrast-125"
-                        />
+                    <div className="mb-8 transform hover:scale-110 transition-transform duration-500 w-32 h-32 bg-primary/20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-primary/20 border border-primary/20">
+                        <Sparkles className="w-16 h-16 text-primary animate-pulse" />
                     </div>
                     <h2 className="text-5xl font-black text-white mb-4 tracking-tighter uppercase italic">
-                        Duoc<span className="text-primary">encIA</span>
+                        Quest<span className="text-primary">IA</span>
                     </h2>
                     <p className="text-slate-400 text-xl font-medium leading-relaxed max-w-md mx-auto">
-                        Potenciando tu aprendizaje con inteligencia artificial y la identidad de Duoc UC.
+                        Potenciando tu aprendizaje con inteligencia artificial y la identidad de QuestIA.
                     </p>
                 </div>
             </div>
@@ -43,13 +40,11 @@ export default function LoginPage() {
             {/* Panel Derecho - Clerk SignIn */}
             <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-8 bg-surface">
                 <div className="lg:hidden flex flex-col items-center gap-4 mb-10">
-                    <img 
-                        src="/assets/duco_logo.png" 
-                        alt="Duoc Logo" 
-                        className="h-16 w-auto"
-                    />
+                    <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/20">
+                        <Sparkles className="w-8 h-8 text-primary" />
+                    </div>
                     <span className="text-3xl font-black text-white tracking-tighter uppercase italic">
-                        Duoc<span className="text-primary">encIA</span>
+                        Quest<span className="text-primary">IA</span>
                     </span>
                 </div>
 

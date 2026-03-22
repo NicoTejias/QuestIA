@@ -29,14 +29,14 @@ export const generateQuiz = action({
             throw new Error("El documento no tiene suficiente texto para generar un quiz.");
         }
 
-        // Obtener documentos maestros (PDA, PIA, PA) para alineación pedagógica oficial de Duoc UC
+        // Obtener documentos maestros (PDA, PIA, PA) para alineación pedagógica oficial de QuestIA
         const masterDocs = await ctx.runQuery(api.documents.getMasterDocuments, {
             course_id: doc.course_id,
         });
 
         let masterContext = "";
         if (masterDocs.length > 0) {
-            masterContext = "\n\n=== CONTEXTO MAESTRO DE ASIGNATURA (DUOC UC) ===\n";
+            masterContext = "\n\n=== CONTEXTO MAESTRO DE ASIGNATURA (QUESTIA) ===\n";
             masterDocs.forEach(m => {
                 masterContext += `\nDocumento Ofical ${m.master_doc_type}:\n${m.content_text.substring(0, 4000)}\n`;
             });
@@ -64,8 +64,8 @@ export const generateQuiz = action({
         let prompt = "";
 
         if (type === "multiple_choice") {
-            prompt = `Eres un generador de quizzes educativos de nivel experto para Duoc UC en Chile. 
-Genera EXACTAMENTE ${args.num_questions} preguntas de opción múltiple con ALTA CALIDAD PEDAGÓGICA basándote en el siguiente contenido académico. Considera los estándares institucionales.
+            prompt = `Eres un generador de quizzes educativos de nivel experto para QuestIA 
+Genera EXACTAMENTE ${args.num_questions} preguntas de opción múltiple con ALTA CALIDAD PEDAGÓGICA basándote en el siguiente contenido académico. Considera los estándares de QuestIA.
 
 REGLAS:
 - Cada pregunta tiene EXACTAMENTE 4 opciones (A, B, C, D)

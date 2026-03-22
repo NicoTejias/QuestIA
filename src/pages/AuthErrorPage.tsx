@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
-import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { useClerk } from "@clerk/clerk-react";
+import { ShieldAlert, ArrowLeft, Sparkles } from "lucide-react";
 
 export default function AuthErrorPage() {
     const location = useLocation();
@@ -26,7 +26,7 @@ export default function AuthErrorPage() {
 
     if (details.includes("Solo se permiten correos institucionales")) {
         title = "Correo No Admitido";
-        message = "Para ingresar a DuocencIA, es obligatorio utilizar tu cuenta institucional autorizada.";
+        message = "Para ingresar a QuestIA, es obligatorio utilizar tu cuenta institucional autorizada.";
         details = "Asegúrate de seleccionar el correo de tu institución.";
     }
 
@@ -62,9 +62,9 @@ export default function AuthErrorPage() {
                     </button>
 
                     <div className="pt-8 border-t border-white/5 flex items-center justify-center gap-3">
-                        <img src="/assets/duco_logo.png" alt="Duco" className="w-5 h-5 opacity-40" />
+                        <Sparkles className="w-4 h-4 text-slate-600 opacity-40" />
                         <span className="text-[10px] text-slate-600 font-black uppercase tracking-widest italic leading-none">
-                            Plataforma DuocencIA • Seguridad Estudiantil
+                            Plataforma QuestIA • Seguridad Estudiantil
                         </span>
                     </div>
                 </div>

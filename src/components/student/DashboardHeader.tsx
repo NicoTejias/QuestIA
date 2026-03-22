@@ -30,7 +30,7 @@ export default function DashboardHeader({
                         {selectedCourseId ? 'Detalle del Ramo' : tabs.find(t => t.id === activeTab)?.label}
                     </h1>
                     <p className="hidden xs:block text-[8px] md:text-[10px] text-primary font-black uppercase tracking-widest truncate italic">
-                        {selectedCourseId ? 'Contenido y Desafíos • DuocencIA' : 'Identidad Duoc UC'}
+                        {selectedCourseId ? 'Contenido y Desafíos • QuestIA' : 'Identidad QuestIA'}
                     </p>
                 </div>
             </div>
