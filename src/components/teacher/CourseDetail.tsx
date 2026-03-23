@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import {
-    ChevronRight, ChevronDown, ChevronUp, BookOpen, FileText, Gift,
+    ChevronRight, BookOpen, FileText, Gift,
     Trash2, Target, Flame, Sparkles, Loader2, RefreshCw,
     Users, Trophy, Edit3, X, Search, Star,
     FileSpreadsheet, ClipboardCheck, AlertTriangle, Plus
@@ -10,7 +10,7 @@ import {
 import { toast } from 'sonner'
 import ConfirmModal from '../ConfirmModal'
 import { EditMissionModal, EditRewardModal } from './EditModals'
-import AttendancePanel from './AttendancePanel'
+// import AttendancePanel from './AttendancePanel'
 import WhitelistPanel from './WhitelistPanel'
 import EvaluadorIAPanel from './EvaluadorIAPanel'
 import AgregarEvaluacionModal from './AgregarEvaluacionModal'
