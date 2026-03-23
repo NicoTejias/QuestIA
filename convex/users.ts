@@ -437,6 +437,59 @@ export const fixAllStudentIds = mutation({
     }
 });
 
+// Mutación enfocada en un solo ramo para ser más rápida
+export const fixCourseEnrollments = mutation({
+    args: { course_id: v.id("courses") },
+    handler: async (ctx, args) => {
+        // Obtenemos la whitelist de ese ramo y todos los usuarios
+        const whitelist = await ctx.db
+            .query("whitelists")
+            .withIndex("by_course", q => q.eq("course_id", args.course_id))
+            .collect();
+            
+        const users = await ctx.db.query("users").collect(); // Optimizable con submap si hay muchos
+
+        let enrolled = 0;
+        for (const w of whitelist) {
+            const wNormalized = normalizeRut(w.student_identifier);
+            const wClean = w.student_identifier.replace(/[^\dkK]/g, '').toUpperCase();
+            const wEmail = w.student_identifier.toLowerCase().trim();
+
+            const match = users.find(u => {
+                if (!u.student_id && !u.email) return false;
+                const uId = u.student_id ? normalizeRut(u.student_id) : "";
+                const uEmail = u.email?.toLowerCase().trim() || "";
+
+                return (uId === wNormalized && wNormalized !== "") || 
+                       (uId === wClean && wClean !== "") ||
+                       (uEmail === wEmail && wEmail !== "") ||
+                       (u.email === w.student_identifier);
+            });
+
+            if (match) {
+                const existing = await ctx.db
+                    .query("enrollments")
+                    .withIndex("by_user", q => q.eq("user_id", match._id))
+                    .filter(q => q.eq(q.field("course_id"), args.course_id))
+                    .unique();
+
+                if (!existing) {
+                    await ctx.db.insert("enrollments", {
+                        user_id: match._id,
+                        course_id: args.course_id,
+                        ranking_points: 0,
+                        spendable_points: 0,
+                        total_points: 0,
+                        section: w.section || undefined,
+                    });
+                    enrolled++;
+                }
+            }
+        }
+        return { enrolled };
+    }
+});
+
 // Compra de "Congelar Racha" (Ice Cube)
 export const buyIceCube = mutation({
     args: { course_id: v.id("courses") },

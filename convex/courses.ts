@@ -337,41 +337,42 @@ export const getCourseStudents = query({
             // Paso A: Buscar usuarios que tengan estos IDs
             const users = await Promise.all(
                 identifiers.map(async (id) => {
+                    if (!id) return null;
                     const normalized = normalizeRut(id);
-                    if (!normalized) return null;
 
-                    // 1. Intentar búsqueda por ID normalizado
-                    const userByNormalized = await ctx.db
-                        .query("users")
-                        .withIndex("by_student_id", q => q.eq("student_id", normalized))
-                        .unique();
+                    // 1. Intentar búsqueda por ID normalizado en student_id
+                    if (normalized) {
+                        const userByNormalized = await ctx.db
+                            .query("users")
+                            .withIndex("by_student_id", q => q.eq("student_id", normalized))
+                            .unique();
+                        if (userByNormalized) return userByNormalized;
+                    }
 
-                    if (userByNormalized) return userByNormalized;
-
-                    // 2. Intentar buscar por correo electrónico
+                    // 2. Intentar buscar por correo electrónico (exacto)
                     const userByEmail = await ctx.db
                         .query("users")
                         .withIndex("email", q => q.eq("email", id))
                         .unique();
-                    
                     if (userByEmail) return userByEmail;
 
-                    // 3. Intentar por ID limpio
-                    const clean = normalized.replace(/[^\dkK]/g, '').toUpperCase();
-                    const userByClean = await ctx.db
-                        .query("users")
-                        .withIndex("by_student_id", q => q.eq("student_id", clean))
-                        .unique();
-
-                    if (userByClean) return userByClean;
-
-                    // 4. Match literal
+                    // 3. Intentar por el ID literal tal cual viene en la whitelist
                     const userByRaw = await ctx.db
                         .query("users")
                         .withIndex("by_student_id", q => q.eq("student_id", id.toUpperCase()))
                         .unique();
+                    if (userByRaw) return userByRaw;
 
-                    return userByRaw;
+                    // 4. Intentar búsqueda por email pero con el ID normalizado (por si acaso)
+                    if (id.includes("@")) {
+                        const userByEmailAgain = await ctx.db
+                            .query("users")
+                            .withIndex("email", q => q.eq("email", id.toLowerCase().trim()))
+                            .unique();
+                        if (userByEmailAgain) return userByEmailAgain;
+                    }
+
+                    return null;
                 })
             );
 

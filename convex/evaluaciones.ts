@@ -22,6 +22,7 @@ export const createEvaluacion = mutation({
             throw new Error("No tienes permiso para agregar evaluaciones a este curso");
         }
 
+        const now = Date.now();
         const evaluacionId = await ctx.db.insert("evaluaciones", {
             course_id: args.course_id,
             teacher_id: user._id,
@@ -33,41 +34,54 @@ export const createEvaluacion = mutation({
             puntos: args.puntos,
             section: args.section,
             activo: true,
-            created_at: Date.now(),
+            created_at: now,
         });
 
         // Enviar notificación a los estudiantes del curso
-        const enrollments = await ctx.db
+        const allEnrollments = await ctx.db
             .query("enrollments")
             .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
             .collect();
 
+        // Filtrar por sección si es específica
+        const enrollments = args.section 
+            ? allEnrollments.filter(e => e.section === args.section)
+            : allEnrollments;
+
         const typeText = args.tipo === "prueba" ? "nueva prueba" : "nuevo trabajo/informe";
+
+        // Formateador de fecha simple y seguro para evitar problemas de locale en el servidor
+        const formatDate = (ts: number) => {
+            const d = new Date(ts);
+            return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+        };
+        
+        const fechaFormateada = formatDate(args.fecha);
         
         for (const enrollment of enrollments) {
-            await ctx.db.insert("notifications", {
-                user_id: enrollment.user_id,
-                title: `📚 Nueva evaluación: ${args.titulo}`,
-                message: `${typeText} en ${course.name}${args.section ? ` (Sección ${args.section})` : ''}. Fecha: ${new Date(args.fecha).toLocaleDateString('es-CL')}`,
-                type: "evaluacion_nueva",
-                related_id: evaluacionId.toString(),
-                read: false,
-                created_at: Date.now(),
-            });
+            try {
+                await ctx.db.insert("notifications", {
+                    user_id: enrollment.user_id,
+                    title: `📚 Nueva evaluación: ${args.titulo}`,
+                    message: `${typeText} en ${course.name}${args.section ? ` (Sección ${args.section})` : ''}. Fecha: ${fechaFormateada}`,
+                    type: "evaluacion_nueva",
+                    related_id: evaluacionId.toString(),
+                    read: false,
+                    created_at: now,
+                });
 
-            // Enviar push notification si tiene token
-            const studentUser = await ctx.db.get(enrollment.user_id);
-            if (studentUser?.push_token) {
-                try {
+                // Enviar push notification si tiene token
+                const studentUser = await ctx.db.get(enrollment.user_id);
+                if (studentUser?.push_token) {
                     await ctx.scheduler.runAfter(0, api.fcm.sendPushNotification, {
                         token: studentUser.push_token,
                         title: `📚 Nueva evaluación: ${args.titulo}`,
-                        body: `${typeText} en ${course.name}. Fecha: ${new Date(args.fecha).toLocaleDateString('es-CL')}`,
+                        body: `${typeText} en ${course.name}. Fecha: ${fechaFormateada}`,
                         data: { type: "evaluacion", evaluacion_id: evaluacionId.toString() },
                     });
-                } catch (e) {
-                    console.error("Error enviando push notification:", e);
                 }
+            } catch (e) {
+                console.error(`Error procesando notificación para ${enrollment.user_id}:`, e);
             }
         }
 

@@ -19,7 +19,7 @@ import EvaluacionesPorCurso from './EvaluacionesPorCurso'
 export default function CourseDetail({ course, onBack }: { course: any, onBack: () => void }) {
     const [courseSubTab, setCourseSubTab] = useState<'evaluaciones' | 'evaluacion'>('evaluaciones')
     const [desafiosTab, setDesafiosTab] = useState<'manuales' | 'ia'>('manuales')
-    const fixAllIds = useMutation(api.users.fixAllStudentIds)
+    const fixCourseEnrollments = useMutation(api.users.fixCourseEnrollments)
     const documents = useQuery(api.documents.getDocumentsByCourse, { course_id: course._id })
     const { results: rewards } = usePaginatedQuery(
         api.rewards.getRewardsByCourse,
@@ -329,7 +329,17 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                         
                         <div className="w-px h-8 bg-white/5 mx-2 hidden md:block"></div>
 
-                        <button onClick={async () => { setProcessing(true); try { const res = await fixAllIds(); toast.success(`Sincronización: ${res.fixed} corregidos`); } catch (e: any) { toast.error("Error"); } finally { setProcessing(false); } }} disabled={processing} className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl border border-white/5 transition-all flex items-center gap-1.5 font-bold uppercase tracking-widest text-[9px]">
+                        <button onClick={async () => { 
+                            setProcessing(true); 
+                            try { 
+                                const res = await fixCourseEnrollments({ course_id: course._id }); 
+                                toast.success(`Sincronización: ${res.enrolled} nuevos alumnos vinculados`); 
+                            } catch (e: any) { 
+                                toast.error("Error al sincronizar"); 
+                            } finally { 
+                                setProcessing(false); 
+                            } 
+                        }} disabled={processing} className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl border border-white/5 transition-all flex items-center gap-1.5 font-bold uppercase tracking-widest text-[9px]">
                             {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Sincronizar
                         </button>
                         <button onClick={() => setConfirmDelete({ type: 'cleanup', id: course._id })} className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl border border-white/5 transition-all uppercase tracking-widest text-[9px]">
