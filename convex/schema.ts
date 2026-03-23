@@ -370,6 +370,7 @@ faqs: defineTable({
         fecha: v.number(),
         hora: v.optional(v.string()),
         puntos: v.optional(v.number()),
+        section: v.optional(v.string()),
         activo: v.boolean(),
         created_at: v.number(),
     })

@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireTeacher } from "./withUser";
+import { api } from "./_generated/api";
 
 export const createEvaluacion = mutation({
     args: {
@@ -11,6 +12,7 @@ export const createEvaluacion = mutation({
         fecha: v.number(),
         hora: v.optional(v.string()),
         puntos: v.optional(v.number()),
+        section: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const user = await requireTeacher(ctx);
@@ -29,9 +31,45 @@ export const createEvaluacion = mutation({
             fecha: args.fecha,
             hora: args.hora,
             puntos: args.puntos,
+            section: args.section,
             activo: true,
             created_at: Date.now(),
         });
+
+        // Enviar notificación a los estudiantes del curso
+        const enrollments = await ctx.db
+            .query("enrollments")
+            .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
+            .collect();
+
+        const typeText = args.tipo === "prueba" ? "nueva prueba" : "nuevo trabajo/informe";
+        
+        for (const enrollment of enrollments) {
+            await ctx.db.insert("notifications", {
+                user_id: enrollment.user_id,
+                title: `📚 Nueva evaluación: ${args.titulo}`,
+                message: `${typeText} en ${course.name}${args.section ? ` (Sección ${args.section})` : ''}. Fecha: ${new Date(args.fecha).toLocaleDateString('es-CL')}`,
+                type: "evaluacion_nueva",
+                related_id: evaluacionId.toString(),
+                read: false,
+                created_at: Date.now(),
+            });
+
+            // Enviar push notification si tiene token
+            const studentUser = await ctx.db.get(enrollment.user_id);
+            if (studentUser?.push_token) {
+                try {
+                    await ctx.scheduler.runAfter(0, api.fcm.sendPushNotification, {
+                        token: studentUser.push_token,
+                        title: `📚 Nueva evaluación: ${args.titulo}`,
+                        body: `${typeText} en ${course.name}. Fecha: ${new Date(args.fecha).toLocaleDateString('es-CL')}`,
+                        data: { type: "evaluacion", evaluacion_id: evaluacionId.toString() },
+                    });
+                } catch (e) {
+                    console.error("Error enviando push notification:", e);
+                }
+            }
+        }
 
         return evaluacionId;
     },

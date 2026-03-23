@@ -19,6 +19,7 @@ export default function AgregarEvaluacionModal({ courseId, courseName, onClose }
     const [fecha, setFecha] = useState("")
     const [hora, setHora] = useState("")
     const [puntos, setPuntos] = useState("")
+    const [section, setSection] = useState("")
     const [loading, setLoading] = useState(false)
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -45,6 +46,7 @@ export default function AgregarEvaluacionModal({ courseId, courseName, onClose }
                 fecha: fechaTimestamp,
                 hora: hora || undefined,
                 puntos: puntos ? parseInt(puntos) : undefined,
+                section: section || undefined,
             })
 
             toast.success("Evaluación agregada correctamente")
@@ -151,6 +153,20 @@ export default function AgregarEvaluacionModal({ courseId, courseName, onClose }
                             value={puntos}
                             onChange={(e) => setPuntos(e.target.value)}
                             placeholder="100"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-primary"
+                        />
+                    </div>
+
+                    {/* Sección */}
+                    <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
+                            Sección (opcional)
+                        </label>
+                        <input
+                            type="text"
+                            value={section}
+                            onChange={(e) => setSection(e.target.value)}
+                            placeholder="Ej: Sección A, Grupo 1"
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-medium outline-none focus:border-primary"
                         />
                     </div>
