@@ -18,7 +18,7 @@ import EvaluacionesPorCurso from './EvaluacionesPorCurso'
 
 export default function CourseDetail({ course, onBack }: { course: any, onBack: () => void }) {
     const [courseSubTab, setCourseSubTab] = useState<'alumnos' | 'evaluaciones' | 'evaluacion'>('alumnos')
-    const [collapsedDesafios, setCollapsedDesafios] = useState(false)
+    const [desafiosTab, setDesafiosTab] = useState<'manuales' | 'ia'>('manuales')
     const fixAllIds = useMutation(api.users.fixAllStudentIds)
     const documents = useQuery(api.documents.getDocumentsByCourse, { course_id: course._id })
     const { results: rewards } = usePaginatedQuery(
@@ -98,7 +98,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                 <p className="text-slate-400 mt-2">{course.description || 'Sin descripción.'}</p>
             </div>
 
-            <AttendancePanel courseId={course._id} />
+            {/* <AttendancePanel courseId={course._id} /> */}
 
             {documents && (() => {
                 const hasPDA = documents.some((d: any) => d.master_doc_type === 'PDA')
@@ -157,23 +157,25 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                     )}
                 </div>
 
-                <div className="bg-surface-light border border-white/5 rounded-2xl overflow-hidden col-span-1 md:col-span-2">
-                    <button onClick={() => setCollapsedDesafios(!collapsedDesafios)} className="w-full flex items-center justify-between p-6 hover:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-3">
+                <div className="bg-surface-light border border-white/5 rounded-2xl overflow-hidden flex flex-col">
+                    <div className="p-6 border-b border-white/5">
+                        <div className="flex items-center gap-3 mb-4">
                             <Target className="w-5 h-5 text-primary-light" />
                             <h3 className="text-lg font-bold text-white">Desafíos del Ramo</h3>
-                            <span className="text-xs bg-primary/10 text-primary-light px-2.5 py-1 rounded-full">{missions?.length || 0} manuales</span>
-                            <span className="text-xs bg-accent/10 text-accent-light px-2.5 py-1 rounded-full">{quizzes?.length || 0} con IA</span>
                         </div>
-                        {collapsedDesafios ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronUp className="w-5 h-5 text-slate-400" />}
-                    </button>
+                        <div className="flex gap-2">
+                            <button onClick={() => setDesafiosTab('manuales')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'manuales' ? 'bg-primary/20 text-primary-light border border-primary/30' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`}>
+                                <Flame className="w-4 h-4" /> Manuales ({missions?.length || 0})
+                            </button>
+                            <button onClick={() => setDesafiosTab('ia')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'ia' ? 'bg-accent/20 text-accent-light border border-accent/30' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`}>
+                                <Sparkles className="w-4 h-4" /> Con IA ({quizzes?.length || 0})
+                            </button>
+                        </div>
+                    </div>
 
-                    {!collapsedDesafios && (
-                        <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-surface border border-white/5 rounded-xl p-4">
-                                <h4 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
-                                    <Flame className="w-4 h-4 text-primary" /> Misiones Manuales
-                                </h4>
+                    <div className="p-6 flex-1 max-h-[800px] overflow-y-auto custom-scrollbar">
+                        {desafiosTab === 'manuales' ? (
+                            <div className="bg-surface border border-white/5 rounded-xl p-4 h-full">
                                 {missions === undefined ? <Loader2 className="w-5 h-5 animate-spin text-slate-500" /> : missions.length === 0 ? <p className="text-slate-500 text-sm">No hay misiones manuales activas</p> : (
                                     <ul className="space-y-3">
                                         {missions.map((m: any) => (
@@ -200,11 +202,8 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                     </ul>
                                 )}
                             </div>
-
-                            <div className="bg-surface border border-white/5 rounded-xl p-4">
-                                <h4 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-accent" /> Quizzes con IA
-                                </h4>
+                        ) : (
+                            <div className="bg-surface border border-white/5 rounded-xl p-4 h-full">
                                 {quizzes === undefined ? <Loader2 className="w-5 h-5 animate-spin text-slate-500" /> : quizzes.length === 0 ? <p className="text-slate-500 text-sm">No hay quizzes generados con IA</p> : (
                                     <ul className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                         {quizzes.map((q: any) => (
@@ -261,12 +260,11 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                     </ul>
                                 )}
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            <div className="bg-surface-light border border-white/5 rounded-2xl p-6">
+                <div className="bg-surface-light border border-white/5 rounded-2xl p-6 flex flex-col max-h-[800px] overflow-y-auto custom-scrollbar">
                 <div className="flex gap-2 mb-6">
                     {[
                         { id: 'alumnos', label: 'Alumnos', icon: <Users className="w-4 h-4" /> },
@@ -399,6 +397,9 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                 {courseSubTab === 'evaluacion' && (
                     <EvaluadorIAPanel courses={[course]} />
                 )}
+            </div>
+            
+            {/* Cierre del grid principal de 2 columnas */}
             </div>
 
             {viewingQuizResults && (

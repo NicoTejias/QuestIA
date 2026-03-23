@@ -691,10 +691,6 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                 )
             }
 
-            case "quiz_sprint": {
-                return renderQuestion_mcq()
-            }
-
             case "memory": {
                 const pairs = currentQ.pairs || []
                 const allCards = pairs.flatMap((p: any, i: number) => [

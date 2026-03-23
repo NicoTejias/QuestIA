@@ -36,6 +36,7 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
   const location = useLocation()
+  const [stuckCount, setStuckCount] = useState(0)
 
   // 1. Si Convex aún está verificando si hay sesión, esperamos.
   if (isAuthLoading) return <LoadingScreen />
@@ -47,7 +48,13 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
 
   // 3. Si hay sesión, esperamos a que el perfil llegue de la DB.
   // (Solo esperamos si isAuthenticated es true, para evitar el Loading eterno)
-  if (user === undefined) return <LoadingScreen />
+  if (user === undefined) {
+    if (stuckCount > 5) {
+      return <Navigate to="/login" replace />
+    }
+    setTimeout(() => setStuckCount(c => c + 1), 1000)
+    return <LoadingScreen />
+  }
 
   // 4. Si el perfil llegó como null, algo falló, al login.
   if (user === null) return <Navigate to="/login" replace />
@@ -72,14 +79,29 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode,
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
+  const [waitCount, setWaitCount] = useState(0)
 
-  if (isAuthLoading) return <LoadingScreen />
+  useEffect(() => {
+    if (isAuthLoading) {
+      const timer = setTimeout(() => {
+        setWaitCount(c => c + 1)
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [isAuthLoading])
+
+  if (isAuthLoading && waitCount < 2) return <LoadingScreen />
 
   // Si ya está logueado y tenemos su perfil, lo sacamos de las páginas públicas
   if (isAuthenticated && user) {
     const userRole = (user as any)?.role || 'student';
     const target = (userRole === 'teacher' || userRole === 'admin') ? '/docente' : '/alumno'
     return <Navigate to={target} replace />
+  }
+
+  // Si no está autenticado pero la carga tomó demasiado, permitir acceso público
+  if (!isAuthenticated && waitCount >= 2) {
+    return <>{children}</>
   }
 
   return <>{children}</>
@@ -90,18 +112,41 @@ function DashboardRedirect() {
   const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
   const [isStuck, setIsStuck] = useState(false)
+  const [hasRetried, setHasRetried] = useState(false)
+  const [waitCount, setWaitCount] = useState(0)
 
   useEffect(() => {
+    if (!isAuthenticated && !isAuthLoading && !hasRetried && waitCount < 3) {
+      const timer = setTimeout(() => {
+        setWaitCount(c => c + 1)
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [isAuthLoading, isAuthenticated, hasRetried, waitCount])
+
+  useEffect(() => {
+    if (isAuthLoading) return
+    
     const timer = setTimeout(() => {
-        if (!isAuthLoading && isAuthenticated && user === undefined) {
+        if (user === undefined && !hasRetried) {
             setIsStuck(true)
         }
-    }, 5000)
+    }, 8000)
     return () => clearTimeout(timer)
-  }, [isAuthLoading, isAuthenticated, user])
+  }, [isAuthLoading, isAuthenticated, user, hasRetried])
+
+  const handleRetry = () => {
+    setIsStuck(false)
+    setHasRetried(true)
+    window.location.reload()
+  }
 
   if (isAuthLoading) return <LoadingScreen />
   
+  if (!isAuthenticated && waitCount < 3) {
+    return <LoadingScreen />
+  }
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
@@ -111,11 +156,16 @@ function DashboardRedirect() {
         return (
             <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-6 text-center">
                 <ShieldAlert className="w-16 h-16 text-amber-500 mb-4" />
-                <h1 className="text-xl font-bold text-white mb-2">Conexión Lenta o Error de Perfil</h1>
-                <p className="text-slate-400 text-sm mb-6">Estamos teniendo problemas para cargar tu perfil de QuestIA. Prueba cerrando sesión e ingresando de nuevo.</p>
+                <h1 className="text-xl font-bold text-white mb-2">Problema al cargar tu perfil</h1>
+                <p className="text-slate-400 text-sm mb-6">
+                    Estamos tardando más de lo normal. Esto puede ser por:<br/>
+                    • Tu correo no es institucional<br/>
+                    • Problemas de conexión<br/>
+                    • La cuenta no está registrada en QuestIA
+                </p>
                 <div className="space-y-3 w-full max-w-xs">
                     <button 
-                        onClick={() => window.location.reload()}
+                        onClick={handleRetry}
                         className="w-full bg-white/10 text-white font-bold py-3 rounded-xl border border-white/5"
                     >
                         Reintentar
@@ -127,7 +177,7 @@ function DashboardRedirect() {
                         }}
                         className="w-full bg-red-500/20 text-red-500 font-bold py-3 rounded-xl border border-red-500/20"
                     >
-                        Cerrar Sesión Forzado
+                        Cerrar Sesión
                     </button>
                 </div>
             </div>
@@ -137,7 +187,7 @@ function DashboardRedirect() {
   }
   
   if (user === null) {
-      return <Navigate to="/auth-error?error=Perfil no encontrado o correo no institucional" replace />
+      return <Navigate to="/auth-error?error=Perfil no encontrado. Usa tu correo institucional (@duoc.cl, @duocuc.cl, etc.)" replace />
   }
 
   const userRole = (user as any)?.role || 'student';

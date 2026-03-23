@@ -1,40 +1,8 @@
 import { useQuery } from "convex/react"
 import { api } from "../../../convex/_generated/api"
 import { FileText, PenSquare, Calendar, Clock, AlertCircle, CheckCircle } from 'lucide-react'
-import { useQuery as useConvexQuery } from "convex/react"
-
 export default function EvaluacionesPanel() {
-    const isSimulating = localStorage.getItem('questia_simulate_student') === 'true'
-    const isSimulatingTeacher = isSimulating
-    
-    let evaluaciones: any[] = []
-    
-    if (isSimulatingTeacher) {
-        const allCourses = useConvexQuery(api.courses.getMyCourses)
-        if (allCourses && allCourses.length > 0) {
-            const courseIds = allCourses.map((c: any) => c._id)
-            let tempEvaluaciones: any[] = []
-            
-            for (const courseId of courseIds) {
-                const evals = useConvexQuery(api.evaluaciones.getEvaluacionesPorCurso, { course_id: courseId as any })
-                if (evals) {
-                    tempEvaluaciones.push(...evals.map((e: any) => ({
-                        ...e,
-                        course_name: allCourses.find((c: any) => c._id === courseId)?.name,
-                        course_code: allCourses.find((c: any) => c._id === courseId)?.code,
-                    })))
-                }
-            }
-            evaluaciones = tempEvaluaciones.sort((a, b) => a.fecha - b.fecha)
-        }
-    } else {
-        const result = useQuery(api.evaluaciones.getEvaluacionesEstudiante)
-        if (result) {
-            evaluaciones = result
-        }
-    }
-
-    const loading = isSimulatingTeacher && (!evaluaciones || evaluaciones.length === 0)
+    const evaluaciones = useQuery(api.evaluaciones.getEvaluacionesEstudiante)
 
     if (!evaluaciones) {
         return (

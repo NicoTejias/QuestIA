@@ -96,28 +96,37 @@ export const getEvaluacionesEstudiante = query({
         const user = await requireAuth(ctx);
         
         try {
-            const enrollments = await ctx.db
-                .query("enrollments")
-                .withIndex("by_user", (q) => q.eq("user_id", user._id))
-                .collect();
+            let courseIds: string[] = [];
+            
+            if (user.role === "teacher" || user.role === "admin") {
+                const myCourses = await ctx.db
+                    .query("courses")
+                    .withIndex("by_teacher", (q) => q.eq("teacher_id", user._id))
+                    .collect();
+                courseIds = myCourses.map(c => c._id);
+            } else {
+                const enrollments = await ctx.db
+                    .query("enrollments")
+                    .withIndex("by_user", (q) => q.eq("user_id", user._id))
+                    .collect();
+                courseIds = enrollments.map(e => e.course_id);
+            }
 
-            const courseIds = enrollments.map(e => e.course_id);
-
-            let allEvaluaciones: any[] = [];
+            const allEvaluaciones: any[] = [];
             
             for (const courseId of courseIds) {
                 const evals = await ctx.db
                     .query("evaluaciones")
-                    .withIndex("by_course", (q) => q.eq("course_id", courseId))
+                    .withIndex("by_course", (q) => q.eq("course_id", courseId as any))
                     .filter((q) => q.eq(q.field("activo"), true))
                     .collect();
                 
-                const course = await ctx.db.get(courseId);
+                const course = await ctx.db.get(courseId as any);
                 
                 allEvaluaciones.push(...evals.map(e => ({
                     ...e,
-                    course_name: course?.name,
-                    course_code: course?.code,
+                    course_name: (course as any)?.name,
+                    course_code: (course as any)?.code,
                 })));
             }
 
