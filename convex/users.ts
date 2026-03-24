@@ -187,16 +187,14 @@ export const autoEnroll = mutation({
     args: {},
     handler: async (ctx) => {
         const user = await requireAuth(ctx);
-        if (!user || !user.student_id) return { enrolled: 0 };
+        if (!user) return { enrolled: 0 };
 
         await checkRateLimit(ctx, user._id, "auto_enroll");
 
-        // Normalizar el RUT del alumno para que matchee con la whitelist
-        const normalizedId = normalizeRut(user.student_id);
-        const bodyOnly = user.student_id.replace(/[^\d]/g, '');
+        // 1. Intentar match por RUT (si el alumno lo tiene ingresado)
+        const normalizedId = user.student_id ? normalizeRut(user.student_id) : null;
+        const bodyOnly = user.student_id ? user.student_id.replace(/[^\d]/g, '') : null;
 
-        // Obtener TODAS las whitelists del sistema (si crecemos mucho habría que filtrar por índices, pero por ahora está bien)
-        // O mejor: buscar por el identificador normalizado y por una búsqueda de prefijo si es posible.
         const byNormalized = normalizedId
             ? await ctx.db
                 .query("whitelists")
@@ -206,13 +204,14 @@ export const autoEnroll = mutation({
                 .collect()
             : [];
 
-        // Buscar por RUT limpio (solo números)
-        const byBody = await ctx.db
-            .query("whitelists")
-            .withIndex("by_identifier", (q) =>
-                q.eq("student_identifier", bodyOnly)
-            )
-            .collect();
+        const byBody = bodyOnly
+            ? await ctx.db
+                .query("whitelists")
+                .withIndex("by_identifier", (q) =>
+                    q.eq("student_identifier", bodyOnly)
+                )
+                .collect()
+            : [];
 
         // Combinar
         const seen = new Set<string>();
@@ -241,7 +240,7 @@ export const autoEnroll = mutation({
         }
 
         // Búsqueda profunda de fallback: Si no encontramos nada después de RUT e Email, buscar por coincidencia de cuerpo
-        if (matchingWhitelists.length === 0 && bodyOnly.length >= 7) {
+        if (matchingWhitelists.length === 0 && bodyOnly && bodyOnly.length >= 7) {
             const allWhitelists = await ctx.db.query("whitelists").collect();
             for (const w of allWhitelists) {
                 const wId = w.student_identifier.toLowerCase();

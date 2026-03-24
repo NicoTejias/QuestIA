@@ -1,16 +1,6 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-
-type Theme = 'dark' | 'light';
-type FontSize = 'small' | 'medium' | 'large' | 'extra-large';
-
-interface ThemeContextType {
-    theme: Theme;
-    fontSize: FontSize;
-    setTheme: (theme: Theme) => void;
-    setFontSize: (size: FontSize) => void;
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+import { useEffect, useState } from 'react';
+import { ThemeContext } from '../context/ThemeContext';
+import type { Theme, FontSize } from '../context/ThemeContext';
 
 const FONT_SIZES = {
     'small': '14px',
@@ -47,12 +37,4 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             {children}
         </ThemeContext.Provider>
     );
-}
-
-export function useTheme() {
-    const context = useContext(ThemeContext);
-    if (context === undefined) {
-        throw new Error('useTheme must be used within a ThemeProvider');
-    }
-    return context;
 }

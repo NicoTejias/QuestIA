@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { Camera, BadgeCheck, User, RefreshCw, Upload, Mail, Shield, Key, Save, Loader2, ArrowLeft, IdCard, Settings, Sun, Moon, Palette } from 'lucide-react'
-import { useTheme } from '../components/ThemeProvider'
+import { useTheme } from '../context/ThemeContext'
 
 export default function ProfilePage() {
     const user = useQuery(api.users.getProfile)
