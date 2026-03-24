@@ -1,7 +1,7 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireTeacher } from "./withUser";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 export const createEvaluacion = mutation({
     args: {
@@ -37,56 +37,135 @@ export const createEvaluacion = mutation({
             created_at: now,
         });
 
-        // Enviar notificación a los estudiantes del curso
+        // Lanzar proceso de notificaciones en segundo plano para evitar timeouts en la mutación principal
+        await ctx.scheduler.runAfter(0, api.evaluaciones.dispatchNotifications, {
+            evaluacionId,
+            courseId: args.course_id,
+            section: args.section,
+            titulo: args.titulo,
+            tipo: args.tipo,
+        });
+
+        return evaluacionId;
+    },
+});
+
+export const dispatchNotifications = action({
+    args: {
+        evaluacionId: v.id("evaluaciones"),
+        courseId: v.id("courses"),
+        section: v.optional(v.string()),
+        titulo: v.string(),
+        tipo: v.union(v.literal("prueba"), v.literal("trabajo"), v.literal("informe")),
+    },
+    handler: async (ctx, args) => {
+        // Obtenemos los datos del curso (necesario para el mensaje)
+        const course = await ctx.runQuery(api.courses.getCourseById, { courseId: args.courseId });
+        if (!course) return;
+
+        // 1. Crear las notificaciones en la base de datos para todos los alumnos correspondientes
+        // Hacemos esto en una mutación interna
+        const studentUserIds = await ctx.runMutation(internal.evaluaciones.internalCreateNotifications, {
+            courseId: args.courseId,
+            section: args.section,
+            titulo: args.titulo,
+            tipo: args.tipo,
+            evaluacionId: args.evaluacionId,
+            courseName: course.name,
+        });
+
+        if (!studentUserIds || studentUserIds.length === 0) return;
+
+        // 2. Enviar notificaciones push (esto se hace desde la acción para no bloquear la mutación)
+        // Obtenemos los tokens de los alumnos que los tengan
+        const typeText = args.tipo === "prueba" ? "nueva prueba" : "nuevo trabajo/informe";
+        
+        // Formateador de fecha similar al del servidor
+        const evaluacion = await ctx.runQuery(api.evaluaciones.getEvaluacionById, { evaluacionId: args.evaluacionId });
+        if (!evaluacion) return;
+
+        const formatDate = (ts: number) => {
+            const d = new Date(ts);
+            return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+        };
+        const fechaFormateada = formatDate(evaluacion.fecha);
+
+        for (const userId of studentUserIds) {
+            try {
+                // Fetch student token - lo ideal sería traerlos todos juntos pero para push uno a uno está bien en una Action
+                const student = await ctx.runQuery(api.users.getUserById, { userId });
+                if (student?.push_token) {
+                    await ctx.runAction(api.fcm.sendPushNotification, {
+                        token: student.push_token,
+                        title: `📚 Nueva evaluación: ${args.titulo}`,
+                        body: `${typeText} en ${course.name}. Fecha: ${fechaFormateada}`,
+                        data: { type: "evaluacion", evaluacion_id: args.evaluacionId.toString() },
+                    });
+                }
+            } catch (e) {
+                console.error(`Error enviando push notification a ${userId}:`, e);
+            }
+        }
+    },
+});
+
+export const getEvaluacionById = query({
+    args: { evaluacionId: v.id("evaluaciones") },
+    handler: async (ctx, args) => {
+        return await ctx.db.get(args.evaluacionId);
+    }
+});
+
+export const internalCreateNotifications = internalMutation({
+    args: {
+        courseId: v.id("courses"),
+        section: v.optional(v.string()),
+        titulo: v.string(),
+        tipo: v.union(v.literal("prueba"), v.literal("trabajo"), v.literal("informe")),
+        evaluacionId: v.id("evaluaciones"),
+        courseName: v.string(),
+    },
+    handler: async (ctx, args) => {
         const allEnrollments = await ctx.db
             .query("enrollments")
-            .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
+            .withIndex("by_course", (q) => q.eq("course_id", args.courseId))
             .collect();
 
-        // Filtrar por sección si es específica
         const enrollments = args.section 
             ? allEnrollments.filter(e => e.section === args.section)
             : allEnrollments;
 
         const typeText = args.tipo === "prueba" ? "nueva prueba" : "nuevo trabajo/informe";
+        const now = Date.now();
+        
+        const evaluacion = await ctx.db.get(args.evaluacionId);
+        if (!evaluacion) return [];
 
-        // Formateador de fecha simple y seguro para evitar problemas de locale en el servidor
         const formatDate = (ts: number) => {
             const d = new Date(ts);
             return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
         };
-        
-        const fechaFormateada = formatDate(args.fecha);
-        
+        const fechaFormateada = formatDate(evaluacion.fecha);
+
+        const studentUserIds = [];
         for (const enrollment of enrollments) {
             try {
                 await ctx.db.insert("notifications", {
                     user_id: enrollment.user_id,
                     title: `📚 Nueva evaluación: ${args.titulo}`,
-                    message: `${typeText} en ${course.name}${args.section ? ` (Sección ${args.section})` : ''}. Fecha: ${fechaFormateada}`,
+                    message: `${typeText} en ${args.courseName}${args.section ? ` (Sección ${args.section})` : ''}. Fecha: ${fechaFormateada}`,
                     type: "evaluacion_nueva",
-                    related_id: evaluacionId.toString(),
+                    related_id: args.evaluacionId.toString(),
                     read: false,
                     created_at: now,
                 });
-
-                // Enviar push notification si tiene token
-                const studentUser = await ctx.db.get(enrollment.user_id);
-                if (studentUser?.push_token) {
-                    await ctx.scheduler.runAfter(0, api.fcm.sendPushNotification, {
-                        token: studentUser.push_token,
-                        title: `📚 Nueva evaluación: ${args.titulo}`,
-                        body: `${typeText} en ${course.name}. Fecha: ${fechaFormateada}`,
-                        data: { type: "evaluacion", evaluacion_id: evaluacionId.toString() },
-                    });
-                }
+                studentUserIds.push(enrollment.user_id);
             } catch (e) {
-                console.error(`Error procesando notificación para ${enrollment.user_id}:`, e);
+                console.error(`Error insertando notificación DB para ${enrollment.user_id}:`, e);
             }
         }
-
-        return evaluacionId;
-    },
+        return studentUserIds;
+    }
 });
 
 export const getEvaluacionesPorCurso = query({

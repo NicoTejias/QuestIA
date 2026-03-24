@@ -4,6 +4,13 @@ import { normalizeRut } from "./rutUtils";
 import { requireAuth } from "./withUser";
 import { checkRateLimit } from "./rateLimit";
 
+export const getUserById = query({
+    args: { userId: v.id("users") },
+    handler: async (ctx, args) => {
+        return await ctx.db.get(args.userId);
+    },
+});
+
 // Sincroniza el usuario de Clerk con nuestra tabla de users
 export const storeUser = mutation({
     args: {},
