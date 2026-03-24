@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
-import { Plus, Loader2, ChevronRight, CheckCircle, Edit3, Trash2, Search } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Loader2, ChevronRight, CheckCircle, Edit3, Trash2, Search, User } from 'lucide-react'
 import CourseDetail from './CourseDetail'
 import { toast } from 'sonner'
 import ConfirmModal from '../ConfirmModal'
 import { EditCourseModal } from './EditModals'
 
 export default function RamosPanel({ courses, selectedCourse, setSelectedCourse }: { courses: any[], selectedCourse: any, setSelectedCourse: (c: any) => void }) {
+    const navigate = useNavigate()
     const createCourse = useMutation(api.courses.createCourse)
     const deleteCourse = useMutation(api.courses.deleteCourse)
     const [showCreate, setShowCreate] = useState(false)
@@ -61,8 +63,32 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
     }
 
     return (
-        <div>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="space-y-6">
+            {/* Student Simulation Button */}
+            <div className="bg-surface-light border border-white/5 rounded-3xl p-4 flex items-center justify-between gap-4 shadow-xl">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-400/20 rounded-xl flex items-center justify-center border border-amber-400/20">
+                        <User className="w-6 h-6 text-amber-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-white font-black text-sm uppercase tracking-tighter">Vista de Estudiante</h3>
+                        <p className="text-slate-500 text-[10px] font-bold">Prueba el sistema tal como lo ven tus alumnos</p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => {
+                        localStorage.setItem('questia_simulate_student', 'true');
+                        toast.success("Simulación de Alumno Activa");
+                        navigate('/alumno');
+                        window.location.reload();
+                    }}
+                    className="bg-amber-400 hover:bg-amber-300 text-black font-black px-6 py-2.5 rounded-xl transition-all active:scale-95 shadow-lg shadow-amber-400/20 text-xs uppercase tracking-widest"
+                >
+                    Probar como Alumno
+                </button>
+            </div>
+
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex-1 w-full max-w-md relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-accent transition-colors" />
                     <input

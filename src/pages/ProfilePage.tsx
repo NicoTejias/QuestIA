@@ -139,7 +139,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen bg-surface text-white">
+        <div className="min-h-screen bg-surface text-text-main">
             {/* Header / Nav */}
             <div className="max-w-4xl mx-auto px-6 py-8">
                 <button

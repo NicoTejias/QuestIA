@@ -68,22 +68,14 @@
 
 @layer base {
   html {
-    height: 100%;
     width: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
     font-size: var(--font-size-base);
   }
 
   body {
     @apply bg-surface text-text-main font-sans antialiased;
-    overscroll-behavior-y: contain;
-    overflow-x: hidden;
-    overflow-y: auto;
     width: 100%;
-    min-height: 100%;
-    -webkit-overflow-scrolling: touch;
+    min-height: 100vh;
     /* Safe area insets para notch / barra de navegación */
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
