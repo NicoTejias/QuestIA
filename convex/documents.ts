@@ -71,7 +71,7 @@ export const saveDocument = mutation({
             ? args.content_text.substring(0, MAX_TEXT_LENGTH) + "\n\n[El documento fue truncado por exceder el límite de texto]"
             : args.content_text;
 
-        return await ctx.db.insert("course_documents", {
+        const docId = await ctx.db.insert("course_documents", {
             course_id: args.course_id,
             teacher_id: user._id,
             file_id: args.file_id,
@@ -83,6 +83,20 @@ export const saveDocument = mutation({
             is_master_doc: args.is_master_doc,
             master_doc_type: args.master_doc_type,
         });
+
+        // AUTO-GENERACIÓN DE QUIZ IA (QuestIA Core)
+        // Al subir un documento, disparamos la generación automática de un reto de 10 preguntas
+        if (!args.is_master_doc) {
+            await ctx.scheduler.runAfter(0, api.quizzes.generateQuiz, {
+                document_id: docId,
+                num_questions: 10,
+                difficulty: "medio",
+                max_attempts: 3
+            });
+        }
+
+        return docId;
+
     },
 });
 

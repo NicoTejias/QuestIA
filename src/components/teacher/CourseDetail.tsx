@@ -168,9 +168,10 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                             <button onClick={() => setDesafiosTab('manuales')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'manuales' ? 'bg-primary/20 text-primary-light border border-primary/30' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`}>
                                 <Flame className="w-4 h-4" /> Manuales ({missions?.length || 0})
                             </button>
-                            <button onClick={() => setDesafiosTab('ia')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'ia' ? 'bg-accent/20 text-accent-light border border-accent/30' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`}>
-                                <Sparkles className="w-4 h-4" /> Con IA ({quizzes?.length || 0})
-                            </button>
+                            <div className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'ia' ? 'bg-accent/20 text-accent-light border border-accent/30' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`} onClick={() => setDesafiosTab('ia')}>
+                                <Sparkles className="w-4 h-4" /> Autogenerados ({quizzes?.length || 0})
+                            </div>
+
                         </div>
                     </div>
 
@@ -205,7 +206,8 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                             </div>
                         ) : (
                             <div className="bg-surface border border-white/5 rounded-xl p-4 h-full">
-                                {quizzes === undefined ? <Loader2 className="w-5 h-5 animate-spin text-slate-500" /> : quizzes.length === 0 ? <p className="text-slate-500 text-sm">No hay quizzes generados con IA</p> : (
+                                {quizzes === undefined ? <Loader2 className="w-5 h-5 animate-spin text-slate-500" /> : quizzes.length === 0 ? <p className="text-slate-500 text-sm italic">Los desafíos aparecerán automáticamente cuando subas material al curso.</p> : (
+
                                     <ul className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                         {quizzes.map((q: any) => (
                                             <li key={q._id} className="bg-white/5 border border-white/5 p-3 rounded-xl hover:bg-white/10 transition-all cursor-pointer" onClick={() => setExpandedQuiz(expandedQuiz === q._id ? null : q._id)}>
@@ -268,7 +270,8 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                 <div className="bg-surface-light border border-white/5 rounded-2xl p-6 flex flex-col max-h-[800px] overflow-y-auto custom-scrollbar">
                 <div className="flex gap-2 mb-6">
                     {[
-                        { id: 'evaluaciones', label: 'Evaluaciones', icon: <FileText className="w-4 h-4" /> },
+                        { id: 'evaluaciones', label: 'Fechas de Evaluaciones Oficiales', icon: <FileText className="w-4 h-4" /> },
+
                         { id: 'evaluacion', label: 'Evaluador IA', icon: <ClipboardCheck className="w-4 h-4" /> },
                     ].map(tab => (
                         <button

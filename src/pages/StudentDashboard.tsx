@@ -139,18 +139,18 @@ export default function StudentDashboard() {
                                     {user.bartle_profile && (
                                         <BartleProfileDisplay profile={user.bartle_profile} />
                                     )}
-                                    <RetentionProgressWidget 
-                                        user={user} 
-                                        courses={courses || []} 
-                                    />
                                     <DashboardHome
                                         courses={courses || []}
-
                                         totalRanking={totalRankingPoints}
                                         firstName={firstName}
                                         onSelectCourse={(id) => setSelectedCourseId(id)}
                                         user={user}
                                     />
+                                    <RetentionProgressWidget 
+                                        user={user} 
+                                        courses={courses || []} 
+                                    />
+
                                 </div>
                             )}
                             {activeTab === 'notificaciones' && <NotificacionesPanel />}

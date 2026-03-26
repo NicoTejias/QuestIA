@@ -13,7 +13,7 @@ export default function RetentionProgressWidget({ user, courses }: RetentionProg
     // Simulación de progreso semanal (esto idealmente vendría de una query a logs de actividad)
     // Por ahora usamos la racha como driver de "salud"
     const healthPercentage = Math.min(100, (streak * 20) + (totalPoints > 0 ? 30 : 0));
-    const isAtRisk = streak === 0 && totalPoints === 0;
+
 
     return (
         <div className="bg-gradient-to-br from-surface-light to-surface border border-white/5 rounded-[2rem] p-6 shadow-xl relative overflow-hidden group">
@@ -30,11 +30,10 @@ export default function RetentionProgressWidget({ user, courses }: RetentionProg
                         </h3>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Nivel de compromiso esta semana</p>
                     </div>
-                    <div className={`px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest ${
-                        isAtRisk ? 'bg-red-500/20 text-red-400 border border-red-500/20' : 'bg-green-500/20 text-green-400 border border-green-500/20 shadow-lg shadow-green-500/10'
-                    }`}>
-                        {isAtRisk ? '⚠️ Alerta de Deserción' : '✅ En Camino'}
+                    <div className="px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest bg-green-500/20 text-green-400 border border-green-500/20 shadow-lg shadow-green-500/10">
+                        ✅ Mantente Activo
                     </div>
+
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -89,12 +88,13 @@ export default function RetentionProgressWidget({ user, courses }: RetentionProg
 
                         <p className="text-xs text-slate-400 leading-relaxed font-medium">
                             {streak >= 5 
-                                ? "¡Excelente! Estás manteniendo una racha de compromiso muy alta. Tu probabilidad de éxito semestral ha subido."
+                                ? "¡Excelente nivel de constancia! Estás asegurando tu éxito académico con cada reto completado."
                                 : streak >= 1
-                                ? "Buen inicio. Mantén la racha diaria para desbloquear mejores recompensas y asegurar tu retención."
-                                : "¡Cuidado! No has registrado actividad hoy. Entra a un reto para mantener tu racha y evitar alertas."
+                                ? "¡Vas por buen camino! Sigue así para fortalecer tu aprendizaje y desbloquear nuevos logros."
+                                : "¡Comienza tu aventura hoy! Completa un reto para activar tu racha y potenciar tu avance académico."
                             }
                         </p>
+
                     </div>
                 </div>
 
