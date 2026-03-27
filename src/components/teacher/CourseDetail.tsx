@@ -212,8 +212,14 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                         {quizzes.map((q: any) => (
                                             <li key={q._id} className="bg-white/5 border border-white/5 p-3 rounded-xl hover:bg-white/10 transition-all cursor-pointer" onClick={() => setExpandedQuiz(expandedQuiz === q._id ? null : q._id)}>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="font-medium text-white text-sm truncate pr-2">{q.title}</span>
-                                                    <div className="flex items-center gap-1">
+                                                    <div className="flex flex-col truncate pr-2">
+                                                        <span className="font-medium text-white text-sm truncate">{q.title}</span>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            {q.game_type_label && <span className="text-[9px] font-black uppercase text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">{q.game_type_label}</span>}
+                                                            {q.source_file_name && <span className="text-[9px] text-slate-500 truncate max-w-[150px]">📄 {q.source_file_name}</span>}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
                                                         <span className="text-accent-light font-mono text-xs shrink-0 bg-accent/10 px-2 py-0.5 rounded-md mr-1">{q.num_questions} preg.</span>
                                                         <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'quiz', id: q._id }) }} className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-md" title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></button>
                                                     </div>

@@ -11,6 +11,11 @@ interface CourseDetailViewProps {
     onPlayQuiz: (q: any) => void;
 }
 
+const GAME_TYPE_ICONS: Record<string, string> = {
+    multiple_choice: "🎯", match: "🔗", true_false: "✅", fill_blank: "✏️",
+    order_steps: "🔢", trivia: "⚡", word_search: "🧩", quiz_sprint: "🏃", memory: "🧠",
+};
+
 export default function CourseDetailView({ courseId, onBack, onPlayQuiz }: CourseDetailViewProps) {
     const course = useQuery(api.courses.getCourseById, { courseId })
     const quizzes = useQuery(api.quizzes.getQuizzesByCourse, { course_id: courseId })
@@ -86,6 +91,16 @@ export default function CourseDetailView({ courseId, onBack, onPlayQuiz }: Cours
                                             {q.title}
                                         </h4>
                                         <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1.5">
+                                            {q.game_type_label && (
+                                                <span className="text-[9px] md:text-[10px] font-black uppercase px-1.5 py-0.5 rounded-md bg-white/10 text-white border border-white/10">
+                                                    {GAME_TYPE_ICONS[q.quiz_type] || '🎯'} {q.game_type_label}
+                                                </span>
+                                            )}
+                                            {q.source_file_name && (
+                                                <span className="text-[9px] md:text-[10px] font-medium text-slate-500 truncate max-w-[150px]" title={q.source_file_name}>
+                                                    📄 {q.source_file_name}
+                                                </span>
+                                            )}
                                             <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
                                                 <Target className="w-2.5 h-2.5" /> {q.num_questions} PREG.
                                             </span>

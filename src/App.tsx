@@ -206,31 +206,20 @@ function App() {
       <UpdateNotification />
       <FeedbackButton />
       {localStorage.getItem('questia_simulate_student') === 'true' && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] w-fit whitespace-nowrap bg-amber-400 border-2 border-amber-600 text-black px-4 py-2.5 rounded-2xl flex items-center gap-4 shadow-[0_10px_40px_rgba(251,191,36,0.4)] animate-in fade-in slide-in-from-bottom-10 duration-700">
-          <div className="flex items-center gap-3">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-20"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-black"></span>
-            </span>
-            <div className="flex flex-col leading-none">
-              <span className="text-[10px] font-black uppercase tracking-tighter">Vista Previa</span>
-              <span className="text-[12px] font-black uppercase">Modo Alumno</span>
-            </div>
-          </div>
-          
-          <div className="w-px h-6 bg-black/10 mx-1" />
-
+        <div className="fixed bottom-[5.5rem] right-6 z-[59] flex flex-col items-end gap-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <button 
             onClick={() => {
               localStorage.removeItem('questia_simulate_student');
               window.location.href = '/docente';
             }}
-            className="group relative flex items-center justify-center"
+            className="bg-amber-400 hover:bg-amber-300 text-black px-4 py-2 rounded-full shadow-lg shadow-amber-400/30 flex items-center gap-2 transition-all active:scale-95 group"
           >
-            <div className="absolute inset-0 bg-black rounded-xl blur-sm group-hover:blur-md transition-all opacity-20"></div>
-            <div className="relative bg-black hover:bg-slate-900 text-white px-5 py-2 rounded-xl text-[10px] font-black transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
-              SALIR
-            </div>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-30"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-black"></span>
+            </span>
+            <span className="text-[10px] font-black uppercase tracking-wider">Modo Alumno</span>
+            <span className="text-[10px] font-black uppercase bg-black/15 px-2 py-0.5 rounded-full group-hover:bg-black/25 transition-colors">SALIR</span>
           </button>
         </div>
       )}

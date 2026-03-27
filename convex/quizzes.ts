@@ -128,9 +128,12 @@ Genera EXACTAMENTE ${args.num_questions} afirmaciones basadas en el siguiente co
 
 REGLAS:
 - Las afirmaciones deben ser verdaderas o falsas según el contenido.
+- IMPORTANTE: Debe haber una mezcla equilibrada de verdaderas y falsas (aprox. 50/50). NO generes todas verdaderas ni todas falsas.
 - Deben ser frases completas y claras.
 - La propiedad "correct" indica si es verdadera (true) o falsa (false).
-- Si es falsa, incluye "falsify" con la versión corregida.
+- Si es falsa, incluye "falsify" con la versión CORRECTA de la afirmación (la forma en que debería decir para ser verdadera).
+- Si es verdadera, no incluyas "falsify".
+- Incluye una "explanation" breve explicando por qué la afirmación es verdadera o falsa.
 - Nivel: ${difficultyMap[args.difficulty] || "medio"}
 - Idioma: Español chileno formal
 
@@ -146,7 +149,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks:
     {
       "statement": "Afirmación completa que debe evaluarse como verdadera o falsa",
       "correct": true,
-      "falsify": "Versión corregida si fuera falsa (opcional)"
+      "explanation": "Breve explicación de por qué es verdadera o falsa",
+      "falsify": "Versión corregida si fuera falsa (omitir si es verdadera)"
     }
   ]
 }`;
@@ -473,6 +477,18 @@ export const saveQuiz = mutation({
 });
 
 // Obtener quizzes de un ramo con estado de completación
+const GAME_TYPE_LABELS: Record<string, string> = {
+    multiple_choice: "Quiz Clásico",
+    match: "Pareamiento",
+    true_false: "Verdadero o Falso",
+    fill_blank: "Completar",
+    order_steps: "Ordenar Pasos",
+    trivia: "Trivia Flash",
+    word_search: "Sopa de Letras",
+    quiz_sprint: "Sprint",
+    memory: "Memoria",
+};
+
 export const getQuizzesByCourse = query({
     args: { course_id: v.id("courses") },
     handler: async (ctx, args) => {
@@ -480,6 +496,9 @@ export const getQuizzesByCourse = query({
             .query("quizzes")
             .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
             .collect();
+
+        const docs = await ctx.db.query("course_documents").withIndex("by_course", q => q.eq("course_id", args.course_id)).collect();
+        const docMap = new Map(docs.map(d => [d._id, d.file_name]));
 
         try {
             const user = await requireAuth(ctx);
@@ -504,11 +523,13 @@ export const getQuizzesByCourse = query({
                     max_attempts,
                     best_score,
                     can_take: attempts_count < max_attempts && num_questions > 0,
-                    score: best_score // Para compatibilidad
+                    score: best_score,
+                    source_file_name: docMap.get(quiz.document_id) || null,
+                    game_type_label: GAME_TYPE_LABELS[quiz.quiz_type || "multiple_choice"] || quiz.quiz_type,
                 };
             }));
         } catch {
-            return quizzes.map(q => ({ ...q, can_take: false }));
+            return quizzes.map(q => ({ ...q, can_take: false, source_file_name: docMap.get(q.document_id) || null, game_type_label: GAME_TYPE_LABELS[q.quiz_type || "multiple_choice"] || q.quiz_type }));
         }
     },
 });
@@ -521,6 +542,8 @@ export const getQuizzesByDocument = query({
             .query("quizzes")
             .filter((q) => q.eq(q.field("document_id"), args.document_id))
             .collect();
+
+
 
         try {
             const user = await requireAuth(ctx);
@@ -769,6 +792,13 @@ export const submitQuiz = mutation({
             } else if (quizType === "quiz_sprint") {
                 if (selected !== null && selected === (q.correct ?? q.correctAnswerIndex)) {
                     correctCount++;
+                }
+            } else if (quizType === "fill_blank") {
+                // fill_blank: the answer is stored as text in q.answer, options are q.options
+                // The user selects an index. The correct index is the position of q.answer in q.options.
+                if (selected !== null) {
+                    const correctIdx = q.options?.indexOf(q.answer) ?? -1;
+                    if (selected === correctIdx) correctCount++;
                 }
             } else {
                 const correct = q.correct ?? q.correctAnswerIndex;

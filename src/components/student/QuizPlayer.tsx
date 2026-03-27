@@ -785,7 +785,7 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                                 </div>
                             </div>
 
-                            {(quizType === "multiple_choice" || quizType === "trivia" || quizType === "quiz_sprint" || quizType === "fill_blank") && q.options && (
+                            {(quizType === "multiple_choice" || quizType === "trivia" || quizType === "quiz_sprint") && q.options && (
                                 <div className="grid grid-cols-1 gap-2">
                                     {q.options.map((opt: string, optIdx: number) => {
                                         const isCorrectOpt = optIdx === q.correct
@@ -804,14 +804,47 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                                 </div>
                             )}
 
+                            {quizType === "fill_blank" && q.options && (
+                                <div className="grid grid-cols-1 gap-2">
+                                    {q.options.map((opt: string, optIdx: number) => {
+                                        const correctIdx = q.options.indexOf(q.answer)
+                                        const isCorrectOpt = optIdx === correctIdx
+                                        const isSelectedOpt = optIdx === selected
+                                        let cls = "text-xs md:text-sm p-2.5 md:p-3 rounded-lg border "
+                                        if (isCorrectOpt) cls += "bg-green-500/10 border-green-500/30 text-green-400"
+                                        else if (isSelectedOpt) cls += "bg-red-500/10 border-red-500/30 text-red-400"
+                                        else cls += "bg-white/5 border-transparent text-slate-500"
+                                        return (
+                                            <div key={optIdx} className={cls}>
+                                                {opt}{isCorrectOpt && <span className="ml-2 text-[10px] font-black uppercase opacity-70">(Correcta)</span>}
+                                                {isSelectedOpt && !isCorrectOpt && <span className="ml-2 text-[10px] font-black uppercase opacity-70">(Tu elección)</span>}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+
                             {quizType === "true_false" && (
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className={`p-3 rounded-lg border text-center font-bold text-sm ${selected === 1 ? (q.correct === true ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-red-500/10 border-red-500/30 text-red-400") : q.correct === true ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-white/5 border-transparent text-slate-500"}`}>
-                                        ✅ Verdadero {selected === 1 && "(Tu respuesta)"}
+                                <div className="space-y-2">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className={`p-3 rounded-lg border text-center font-bold text-sm ${selected === 1 ? (q.correct === true ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-red-500/10 border-red-500/30 text-red-400") : q.correct === true ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-white/5 border-transparent text-slate-500"}`}>
+                                            ✅ Verdadero {selected === 1 && "(Tu respuesta)"}
+                                        </div>
+                                        <div className={`p-3 rounded-lg border text-center font-bold text-sm ${selected === 0 ? (!q.correct ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-red-500/10 border-red-500/30 text-red-400") : !q.correct ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-white/5 border-transparent text-slate-500"}`}>
+                                            ❌ Falso {selected === 0 && "(Tu respuesta)"}
+                                        </div>
                                     </div>
-                                    <div className={`p-3 rounded-lg border text-center font-bold text-sm ${selected === 0 ? (!q.correct ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-red-500/10 border-red-500/30 text-red-400") : !q.correct ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-white/5 border-transparent text-slate-500"}`}>
-                                        ❌ Falso {selected === 0 && "(Tu respuesta)"}
-                                    </div>
+                                    {!q.correct && q.falsify && (
+                                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                                            <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1">La afirmación es FALSA. La versión correcta es:</p>
+                                            <p className="text-sm text-amber-200 font-medium leading-relaxed">{q.falsify}</p>
+                                        </div>
+                                    )}
+                                    {q.correct && (
+                                        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                                            <p className="text-[10px] font-black text-green-400 uppercase tracking-widest">✅ Esta afirmación es VERDADERA</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

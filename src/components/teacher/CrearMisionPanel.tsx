@@ -10,10 +10,7 @@ const GAME_TYPES = [
     { id: 'match', label: 'Relacionar', icon: '🔗', desc: 'Unir conceptos con sus definiciones', color: 'purple' },
     { id: 'true_false', label: 'Verdadero/Falso', icon: '✅', desc: 'Afirmaciones para clasificar', color: 'green' },
     { id: 'fill_blank', label: 'Completar', icon: '✏️', desc: 'Completar oraciones con palabras', color: 'blue' },
-    { id: 'order_steps', label: 'Ordenar Pasos', icon: '🔢', desc: 'Ordenar la secuencia correcta', color: 'orange' },
-    { id: 'trivia', label: 'Trivia Relámpago', icon: '⚡', desc: 'Preguntas rápidas cronometradas', color: 'yellow' },
     { id: 'word_search', label: 'Sopa de Letras', icon: '🧩', desc: 'Encontrar palabras ocultas', color: 'cyan' },
-    { id: 'quiz_sprint', label: 'Quiz Sprint', icon: '🏃', desc: 'Carrera de preguntas contra reloj', color: 'red' },
     { id: 'memory', label: 'Memory', icon: '🧠', desc: 'Emparejar términos y definiciones', color: 'pink' },
 ]
 

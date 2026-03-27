@@ -14,6 +14,7 @@ import RankingDocentePanel from '../components/teacher/RankingDocentePanel'
 import NotificationBell from '../components/NotificationBell'
 import BetaBanner from '../components/BetaBanner'
 import AdminPanel from '../components/teacher/AdminPanel'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 
 function getGreeting(): string {
     const h = new Date().getHours()
@@ -320,6 +321,58 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {stats && (stats as any).courseStats?.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="bg-surface-light border border-white/5 rounded-2xl p-6">
+                        <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
+                            <User className="w-4 h-4 text-primary" />
+                            Registro por Ramo
+                        </h3>
+                        <div className="h-[250px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={(stats as any).courseStats}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value: any) => String(value).substring(0, 15) + (String(value).length > 15 ? '...' : '')} />
+                                    <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc', fontSize: '12px' }}
+                                        itemStyle={{ color: '#e2e8f0' }}
+                                        cursor={{ fill: '#ffffff05' }}
+                                    />
+                                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                                    <Bar dataKey="students" name="En Whitelist" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="registered" name="Registrados" fill="#4ade80" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-surface-light border border-white/5 rounded-2xl p-6">
+                        <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
+                            <Target className="w-4 h-4 text-accent" />
+                            Actividad de Desafíos
+                        </h3>
+                        <div className="h-[250px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={(stats as any).courseStats}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value: any) => String(value).substring(0, 15) + (String(value).length > 15 ? '...' : '')} />
+                                    <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc', fontSize: '12px' }}
+                                        itemStyle={{ color: '#e2e8f0' }}
+                                        cursor={{ fill: '#ffffff05' }}
+                                    />
+                                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                                    <Bar dataKey="missions" name="Desafíos Creados" fill="#64748b" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="submissions" name="Entregas" fill="#a78bfa" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
                 </div>
             )}
 
