@@ -736,6 +736,7 @@ export const updateAttemptProgress = mutation({
 export const submitQuiz = mutation({
     args: {
         quiz_id: v.id("quizzes"),
+        time_penalty: v.optional(v.number()),
     },
     handler: async (ctx, args) => {
         const user = await requireAuth(ctx);
@@ -819,7 +820,8 @@ export const submitQuiz = mutation({
         if (user.role === "teacher" || user.role === "admin") {
             await ctx.db.patch(attempt._id, { status: "completed", last_updated: Date.now() });
             const basePoints2 = (quiz.num_questions || 5) * (quiz.difficulty === 'dificil' ? 20 : quiz.difficulty === 'medio' ? 15 : 10);
-            const potentialEarned2 = Math.round((scorePct / 100) * basePoints2);
+            const rawEarned2 = Math.round((scorePct / 100) * basePoints2);
+            const potentialEarned2 = Math.max(0, rawEarned2 - (args.time_penalty || 0));
             return {
                 success: true, score: scorePct, earned: potentialEarned2,
                 is_simulation: true, remaining_attempts: 999,
@@ -837,7 +839,8 @@ export const submitQuiz = mutation({
 
         if (user.role === "teacher" || user.role === "admin") {
             const basePoints = (quiz.num_questions || 5) * (quiz.difficulty === 'dificil' ? 20 : quiz.difficulty === 'medio' ? 15 : 10);
-            const potentialEarned = Math.round((scorePct / 100) * basePoints);
+            const rawEarned = Math.round((scorePct / 100) * basePoints);
+            const potentialEarned = Math.max(0, rawEarned - (args.time_penalty || 0));
             const remainingAttempts = maxAttempts === 99 ? 999 : Math.max(0, maxAttempts - currentAttemptsCount - 1);
             return {
                 success: true, score: scorePct, earned: potentialEarned,
@@ -848,7 +851,8 @@ export const submitQuiz = mutation({
         }
 
         const basePoints = (quiz.num_questions || 5) * (quiz.difficulty === 'dificil' ? 20 : quiz.difficulty === 'medio' ? 15 : 10);
-        const earnedPointsThisAttempt = Math.round((scorePct / 100) * basePoints);
+        const rawEarnedThisAttempt = Math.round((scorePct / 100) * basePoints);
+        const earnedPointsThisAttempt = Math.max(0, rawEarnedThisAttempt - (args.time_penalty || 0));
 
         await ctx.db.insert("quiz_submissions", {
             quiz_id: args.quiz_id,

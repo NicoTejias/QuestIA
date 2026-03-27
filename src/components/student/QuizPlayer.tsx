@@ -113,6 +113,18 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
     const [memoryMatched, setMemoryMatched] = useState<number[]>([])
     const memoryLockRef = useRef(false)
 
+    // Game timer state (for word_search and memory)
+    const [gameScore, setGameScore] = useState(100)
+    const [gameElapsed, setGameElapsed] = useState(0)
+    const gameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    // Interactive word search state
+    const [wsFirstCell, setWsFirstCell] = useState<{r: number, c: number} | null>(null)
+    const [wsFoundCells, setWsFoundCells] = useState<{r: number, c: number}[]>([])
+
+    // Stable shuffled cards for memory
+    const [shuffledCards, setShuffledCards] = useState<{idx: number, label: string, type: string}[]>([])
+
     const quizType = quiz.quiz_type || "multiple_choice"
     const questions = quiz.questions || []
     const [retryCount, setRetryCount] = useState(0)
@@ -220,6 +232,49 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
         }
     }, [quizType, currentIdx, honorAccepted]) // eslint-disable-line
 
+    // Game timer for word_search and memory — starts counting elapsed seconds and reduces score every 30s
+    useEffect(() => {
+        if ((quizType === 'word_search' || quizType === 'memory') && honorAccepted) {
+            setGameScore(100)
+            setGameElapsed(0)
+            if (gameTimerRef.current) clearInterval(gameTimerRef.current)
+            gameTimerRef.current = setInterval(() => {
+                setGameElapsed(prev => prev + 1)
+                setGameScore(prev => {
+                    // Lose 10 points every 30 seconds
+                    return prev > 0 ? prev : 0
+                })
+            }, 1000)
+            // Score reduction every 30s
+            const penaltyInterval = setInterval(() => {
+                setGameScore(prev => Math.max(0, prev - 10))
+            }, 30000)
+            return () => {
+                if (gameTimerRef.current) clearInterval(gameTimerRef.current)
+                clearInterval(penaltyInterval)
+            }
+        }
+    }, [quizType, honorAccepted]) // eslint-disable-line
+
+    // Shuffle memory cards once when the question loads
+    useEffect(() => {
+        if (quizType === 'memory' && honorAccepted) {
+            const q = questions[currentIdx]
+            if (q?.pairs) {
+                const cards = q.pairs.flatMap((p: any, i: number) => [
+                    { idx: i * 2, label: p.term, type: 'term' },
+                    { idx: i * 2 + 1, label: p.definition, type: 'definition' },
+                ])
+                // Fisher-Yates shuffle
+                for (let i = cards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [cards[i], cards[j]] = [cards[j], cards[i]]
+                }
+                setShuffledCards(cards)
+            }
+        }
+    }, [quizType, currentIdx, honorAccepted]) // eslint-disable-line
+
     if (!honorAccepted) {
 
         return (
@@ -274,10 +329,12 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
 
     const saveResult = async () => {
         if (timerRef.current) clearInterval(timerRef.current)
+        if (gameTimerRef.current) clearInterval(gameTimerRef.current)
         setSubmitting(true)
         setFinished(true)
         try {
-            const res: any = await submitQuiz({ quiz_id: quiz._id })
+            const penalty = (quizType === 'word_search' || quizType === 'memory') ? Math.max(0, 100 - gameScore) : 0
+            const res: any = await submitQuiz({ quiz_id: quiz._id, time_penalty: penalty })
             setQuizResult(res)
         } catch (err: any) {
             toast.error(err.message || "Error al guardar resultado")
@@ -368,30 +425,60 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
         }
     }
 
-    const handleWordSearchSelect = (word: string) => {
-        if (foundWords.includes(word)) return
-        const newFound = [...foundWords, word]
-        setFoundWords(newFound)
-
-        const newSelected = [...selectedOptions]
-        newSelected[currentIdx] = newFound
-        setSelectedOptions(newSelected)
-        updateState(currentIdx, newSelected)
-
-        if (newFound.length === currentQ.words?.length) {
-            if (questions.length === 1) {
-                saveResult()
-            } else {
-                setFoundWords([])
-                if (currentIdx < questions.length - 1) {
-                    const nextIdx = currentIdx + 1
-                    setCurrentIdx(nextIdx)
-                    updateState(nextIdx, selectedOptions)
-                } else {
-                    saveResult()
-                }
+    const handleWsCellClick = (r: number, c: number) => {
+        if (!wsFirstCell) {
+            setWsFirstCell({ r, c })
+            return
+        }
+        // Second click: check if start->end forms a valid word
+        const dr = Math.sign(r - wsFirstCell.r)
+        const dc = Math.sign(c - wsFirstCell.c)
+        const dist = Math.max(Math.abs(r - wsFirstCell.r), Math.abs(c - wsFirstCell.c))
+        // Must be horizontal, vertical, or diagonal
+        if (dist === 0 || (Math.abs(r - wsFirstCell.r) !== 0 && Math.abs(c - wsFirstCell.c) !== 0 && Math.abs(r - wsFirstCell.r) !== Math.abs(c - wsFirstCell.c))) {
+            setWsFirstCell(null)
+            return
+        }
+        let word = ''
+        const cells: {r: number, c: number}[] = []
+        for (let i = 0; i <= dist; i++) {
+            const cr = wsFirstCell.r + dr * i
+            const cc = wsFirstCell.c + dc * i
+            if (cr < 0 || cr >= wordGrid.length || cc < 0 || cc >= wordGrid[0].length) { setWsFirstCell(null); return }
+            word += wordGrid[cr][cc]
+            cells.push({r: cr, c: cc})
+        }
+        const wordRev = word.split('').reverse().join('')
+        const targetWords = (currentQ.words || []).map((w: string) => w.toUpperCase())
+        const matched = targetWords.find((w: string) => w === word || w === wordRev)
+        if (matched && !foundWords.includes(matched)) {
+            const newFound = [...foundWords, matched]
+            setFoundWords(newFound)
+            setWsFoundCells([...wsFoundCells, ...cells])
+            const newSelected = [...selectedOptions]
+            newSelected[currentIdx] = newFound
+            setSelectedOptions(newSelected)
+            updateState(currentIdx, newSelected)
+            if (newFound.length === targetWords.length) {
+                setTimeout(() => {
+                    if (questions.length === 1) {
+                        saveResult()
+                    } else {
+                        setFoundWords([])
+                        setWsFirstCell(null)
+                        setWsFoundCells([])
+                        if (currentIdx < questions.length - 1) {
+                            const nextIdx = currentIdx + 1
+                            setCurrentIdx(nextIdx)
+                            updateState(nextIdx, selectedOptions)
+                        } else {
+                            saveResult()
+                        }
+                    }
+                }, 600)
             }
         }
+        setWsFirstCell(null)
     }
 
     const handleWordSearchSkip = () => {
@@ -399,6 +486,8 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
             const nextIdx = currentIdx + 1
             setCurrentIdx(nextIdx)
             setFoundWords([])
+            setWsFirstCell(null)
+            setWsFoundCells([])
             updateState(nextIdx, selectedOptions)
         } else {
             saveResult()
@@ -693,17 +782,17 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
 
             case "memory": {
                 const pairs = currentQ.pairs || []
-                const allCards = pairs.flatMap((p: any, i: number) => [
-                    { idx: i * 2, label: p.term, type: "term" as const },
-                    { idx: i * 2 + 1, label: p.definition, type: "definition" as const },
-                ]).sort(() => Math.random() - 0.5)
+                const cardsToRender = shuffledCards.length > 0 ? shuffledCards : pairs.flatMap((p: any, i: number) => [
+                    { idx: i * 2, label: p.term, type: "term" },
+                    { idx: i * 2 + 1, label: p.definition, type: "definition" },
+                ])
 
                 return (
                     <div className="animate-in fade-in duration-300">
                         <h3 className="text-lg md:text-xl font-bold text-white mb-2 text-center">Encuentra las {pairs.length} parejas</h3>
                         <p className="text-slate-500 text-xs text-center mb-4">Toca dos cartas para buscar una pareja (término ↔ definición)</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
-                            {allCards.map((card: { idx: number; label: string; type: "term" | "definition" }) => {
+                            {cardsToRender.map((card: { idx: number; label: string; type: "term" | "definition" }) => {
                                 const isFlipped = flippedCards.includes(card.idx) || memoryMatched.includes(card.idx)
                                 const isMatched = memoryMatched.includes(card.idx)
                                 return (

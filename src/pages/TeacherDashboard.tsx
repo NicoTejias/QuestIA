@@ -14,7 +14,7 @@ import RankingDocentePanel from '../components/teacher/RankingDocentePanel'
 import NotificationBell from '../components/NotificationBell'
 import BetaBanner from '../components/BetaBanner'
 import AdminPanel from '../components/teacher/AdminPanel'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 
 function getGreeting(): string {
     const h = new Date().getHours()
@@ -372,6 +372,37 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {stats && (stats as any).dailyActivity?.length > 0 && (
+                <div className="bg-surface-light border border-white/5 rounded-2xl p-6">
+                    <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
+                        <Sparkles className="w-4 h-4 text-accent" />
+                        Conexiones (Últimos 7 días)
+                    </h3>
+                    <div className="h-[250px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={(stats as any).dailyActivity}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                                <XAxis dataKey="day" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => {
+                                    const d = new Date(val + "T00:00:00");
+                                    return d.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric' });
+                                }} />
+                                <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc', fontSize: '12px' }}
+                                    itemStyle={{ color: '#e2e8f0' }}
+                                    cursor={{ stroke: '#ffffff20', strokeWidth: 2 }}
+                                    labelFormatter={(val) => {
+                                        const d = new Date(val + "T00:00:00");
+                                        return d.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+                                    }}
+                                />
+                                <Line type="monotone" dataKey="count" name="Alumnos Activos" stroke="#ec4899" strokeWidth={3} dot={{ r: 4, fill: '#ec4899', strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 0 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             )}

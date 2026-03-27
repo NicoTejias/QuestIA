@@ -5,7 +5,7 @@ import {
     ChevronRight, BookOpen, FileText, Gift,
     Trash2, Target, Flame, Sparkles, Loader2, RefreshCw,
     Users, Trophy, Edit3, X, Search, Star,
-    FileSpreadsheet, ClipboardCheck, AlertTriangle, Plus
+    FileSpreadsheet, ClipboardCheck, AlertTriangle, Plus, Gamepad2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import ConfirmModal from '../ConfirmModal'
@@ -96,7 +96,19 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                         <span className="text-accent-light text-sm font-mono mt-1 block">{course.code}</span>
                     </div>
                 </div>
-                <p className="text-slate-400 mt-2">{course.description || 'Sin descripción.'}</p>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mt-2">
+                    <p className="text-slate-400">{course.description || 'Sin descripción.'}</p>
+                    <button 
+                        onClick={() => {
+                            localStorage.setItem('questia_simulate_student', 'true');
+                            window.location.href = '/alumno';
+                        }}
+                        className="bg-accent text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-accent-light transition-all shadow-lg shadow-accent/25 hover:shadow-accent/40 active:scale-95 whitespace-nowrap"
+                    >
+                        <Gamepad2 className="w-5 h-5" />
+                        Probar como Alumno
+                    </button>
+                </div>
             </div>
 
             {/* <AttendancePanel courseId={course._id} /> */}

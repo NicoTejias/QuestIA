@@ -80,6 +80,11 @@ export const getTeacherStats = query({
             const allDocsPromises = courseIds.map((id: any) => ctx.db.query("course_documents").withIndex("by_course", (q: any) => q.eq("course_id", id)).collect());
             const allDocsArrays = await Promise.all(allDocsPromises);
             const documents = allDocsArrays.flat();
+            
+            // Obtener TODOS los intentos de quizzes (actividad reciente incluso si no terminan)
+            const allQuizAttemptsPromises = quizIds.map((id: any) => ctx.db.query("quiz_attempts").withIndex("by_quiz_user", (q: any) => q.eq("quiz_id", id)).collect());
+            const allQuizAttemptsArrays = await Promise.all(allQuizAttemptsPromises);
+            const quizAttempts = allQuizAttemptsArrays.flat();
 
             // Obtener TODAS las entradas de whitelist para un conteo preciso
             const allWhitelistPromises = courseIds.map((id: any) => ctx.db.query("whitelists").withIndex("by_course", (q: any) => q.eq("course_id", id)).collect());
@@ -227,7 +232,7 @@ export const getTeacherStats = query({
                 belbinDistribution,
                 courseStats,
                 topStudents: calculateTopStudents(enrollments, studentMap),
-                dailyActivity: calculateDailyActivity(submissions, quizSubmissions),
+                dailyActivity: calculateDailyActivity(submissions, quizSubmissions, quizAttempts),
             };
         } catch (e) {
             console.error("Error in getTeacherStats:", e);
@@ -236,20 +241,31 @@ export const getTeacherStats = query({
     },
 });
 
-function calculateDailyActivity(mSubs: any[], qSubs: any[]) {
+function calculateDailyActivity(mSubs: any[], qSubs: any[], qAttempts: any[]) {
     const days = 7;
     const activity = [];
     const now = new Date();
     
+    // Unificar todos los eventos de actividad con su usuario y timestamp
+    const events = [
+        ...mSubs.map(s => ({ userId: s.user_id, ts: s.completed_at || s._creationTime })),
+        ...qSubs.map(s => ({ userId: s.user_id, ts: s.completed_at || s._creationTime })),
+        ...qAttempts.map(a => ({ userId: a.user_id, ts: a.last_updated || a._creationTime }))
+    ];
+
     for (let i = days - 1; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
         const dayStr = date.toISOString().split('T')[0];
         
-        const count = mSubs.filter(s => new Date(s.created_at).toISOString().split('T')[0] === dayStr).length +
-                      qSubs.filter(s => new Date(s.created_at || s._creationTime).toISOString().split('T')[0] === dayStr).length;
+        // Alumnos únicos que tuvieron actividad este día
+        const uniqueUsersOnDay = new Set(
+            events
+                .filter(e => new Date(e.ts).toISOString().split('T')[0] === dayStr)
+                .map(e => e.userId)
+        );
         
-        activity.push({ day: dayStr, count });
+        activity.push({ day: dayStr, count: uniqueUsersOnDay.size });
     }
     return activity;
 }
