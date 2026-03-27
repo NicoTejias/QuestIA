@@ -115,7 +115,6 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
 
     // Game timer state (for word_search and memory)
     const [gameScore, setGameScore] = useState(100)
-    const [gameElapsed, setGameElapsed] = useState(0)
     const gameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     // Interactive word search state
@@ -236,10 +235,8 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
     useEffect(() => {
         if ((quizType === 'word_search' || quizType === 'memory') && honorAccepted) {
             setGameScore(100)
-            setGameElapsed(0)
             if (gameTimerRef.current) clearInterval(gameTimerRef.current)
             gameTimerRef.current = setInterval(() => {
-                setGameElapsed(prev => prev + 1)
                 setGameScore(prev => {
                     // Lose 10 points every 30 seconds
                     return prev > 0 ? prev : 0
@@ -470,7 +467,7 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                         if (currentIdx < questions.length - 1) {
                             const nextIdx = currentIdx + 1
                             setCurrentIdx(nextIdx)
-                            updateState(nextIdx, selectedOptions)
+                            updateState(nextIdx, newSelected)
                         } else {
                             saveResult()
                         }
@@ -479,6 +476,34 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
             }
         }
         setWsFirstCell(null)
+    }
+
+    const handleWordSearchSelect = (word: string) => {
+        if (foundWords.includes(word)) return
+        const newFound = [...foundWords, word]
+        setFoundWords(newFound)
+        const newSelected = [...selectedOptions]
+        newSelected[currentIdx] = newFound
+        setSelectedOptions(newSelected)
+        updateState(currentIdx, newSelected)
+        if (newFound.length === (currentQ.words || []).length) {
+            setTimeout(() => {
+                if (questions.length === 1) {
+                    saveResult()
+                } else {
+                    setFoundWords([])
+                    setWsFirstCell(null)
+                    setWsFoundCells([])
+                    if (currentIdx < questions.length - 1) {
+                        const nextIdx = currentIdx + 1
+                        setCurrentIdx(nextIdx)
+                        updateState(nextIdx, newSelected)
+                    } else {
+                        saveResult()
+                    }
+                }
+            }, 600)
+        }
     }
 
     const handleWordSearchSkip = () => {
@@ -759,12 +784,17 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                             <div className="inline-grid gap-[2px] bg-surface p-2 rounded-xl border border-white/5">
                                 {wordGrid.map((row, r) => (
                                     <div key={r} className="flex gap-[2px]">
-                                        {row.map((cell, c) => (
-                                            <div key={c}
-                                                className="w-5 h-5 md:w-6 md:h-6 bg-white/5 border border-white/5 rounded-sm flex items-center justify-center text-[8px] md:text-[9px] font-mono font-black text-slate-400">
-                                                {cell}
-                                            </div>
-                                        ))}
+                                        {row.map((cell, c) => {
+                                            const isFound = wsFoundCells.some(f => f.r === r && f.c === c)
+                                            const isSelecting = wsFirstCell && wsFirstCell.r === r && wsFirstCell.c === c
+                                            return (
+                                                <button key={c}
+                                                    onClick={() => handleWsCellClick(r, c)}
+                                                    className={`w-5 h-5 md:w-6 md:h-6 border rounded-sm flex items-center justify-center text-[8px] md:text-[9px] font-mono font-black transition-all ${isFound ? 'bg-cyan-500 border-cyan-400 text-white' : isSelecting ? 'bg-accent/40 border-accent text-white animate-pulse' : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'}`}>
+                                                    {cell}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 ))}
                             </div>
