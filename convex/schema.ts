@@ -72,7 +72,8 @@ export default defineSchema({
             v.literal("achiever"), 
             v.literal("socializer"), 
             v.literal("explorer"), 
-            v.literal("competidor")
+            v.literal("competidor"),
+            v.literal("killer")
         )),
         avatarUrl: v.optional(v.string()),
     })

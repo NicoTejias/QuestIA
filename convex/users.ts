@@ -158,7 +158,8 @@ export const saveBartleProfile = mutation({
             v.literal("achiever"),
             v.literal("socializer"),
             v.literal("explorer"),
-            v.literal("competidor")
+            v.literal("competidor"),
+            v.literal("killer")
         ),
     },
     handler: async (ctx, args) => {
