@@ -209,7 +209,10 @@ export const getTeacherStats = query({
                 }
             }
 
-            const courseStats = Array.from(statsByName.values());
+            const courseStats = Array.from(statsByName.values()).map(s => {
+                const { uniqueWhitelistRuts, uniqueRegisteredUserIds, ...rest } = s;
+                return rest;
+            });
 
             return {
                 totalStudents: totalUniqueStudents,
