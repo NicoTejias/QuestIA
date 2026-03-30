@@ -6,7 +6,7 @@ import { exportToExcel } from "../../utils/ExportData"
 import { toast } from "sonner"
 
 export default function AnaliticasPanel() {
-    const stats = useQuery(api.analytics.getTeacherStats)
+    const stats = useQuery(api.analytics.getTeacherStats, {})
     const convex = useConvex()
     const [exporting, setExporting] = useState<string | null>(null)
     const [unifying, setUnifying] = useState(false)

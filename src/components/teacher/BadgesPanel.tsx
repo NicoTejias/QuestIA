@@ -166,7 +166,7 @@ export default function BadgesPanel({ courseId, students }: BadgesPanelProps) {
                 </div>
             ) : (
                 <div className="space-y-2">
-                    {badges.map((badge) => (
+                    {badges.map((badge: any) => (
                         <BadgeRow
                             key={badge._id}
                             badge={badge}
@@ -241,7 +241,7 @@ function BadgeRow({
     const holders = useQuery(api.badges.getBadgeHolders, expanded ? { badge_id: badge._id } : 'skip')
     const [selectedStudent, setSelectedStudent] = useState('')
 
-    const holderIds = new Set(holders?.map((h) => h.user_id.toString()) ?? [])
+    const holderIds = new Set(holders?.map((h: any) => h.user_id.toString()) ?? [])
     const availableStudents = registeredStudents.filter((s) => !holderIds.has(s._id.toString()))
 
     const handleAward = async () => {
