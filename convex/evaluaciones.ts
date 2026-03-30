@@ -93,7 +93,7 @@ export const dispatchNotifications = action({
         for (const userId of studentUserIds) {
             try {
                 // Fetch student token - lo ideal sería traerlos todos juntos pero para push uno a uno está bien en una Action
-                const student = await ctx.runQuery(api.users.getUserById, { userId });
+                const student = await ctx.runQuery(internal.users.internalGetUserById, { userId });
                 if (student?.push_token) {
                     await ctx.runAction(api.fcm.sendPushNotification, {
                         token: student.push_token,

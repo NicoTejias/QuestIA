@@ -7,7 +7,68 @@ import { checkRateLimit } from "./rateLimit";
 export const getUserById = query({
     args: { userId: v.id("users") },
     handler: async (ctx, args) => {
+        const user = await ctx.db.get(args.userId);
+        if (!user) return null;
+
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            // Si no hay sesión, solo devolvemos lo básico (público)
+            return {
+                _id: user._id,
+                name: user.name,
+                image: user.image,
+                role: user.role,
+                avatarUrl: user.avatarUrl,
+            };
+        }
+
+        // Buscar al solicitante
+        const requester = await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+            .first();
+
+        const isOwner = requester?._id === user._id;
+        const isStaff = requester?.role === "teacher" || requester?.role === "admin";
+
+        if (isOwner || isStaff) {
+            return user;
+        }
+
+        // Para otros alumnos, ocultar RUT, Email y Tokens
+        return {
+            _id: user._id,
+            _creationTime: user._creationTime,
+            name: user.name,
+            image: user.image,
+            role: user.role,
+            avatarUrl: user.avatarUrl,
+            belbin_profile: user.belbin_profile ? {
+                role_dominant: user.belbin_profile.role_dominant,
+                category: user.belbin_profile.category
+            } : undefined,
+            bartle_profile: user.bartle_profile
+        };
+    },
+});
+
+// Query interna para que el backend (Actions/Mutations) pueda acceder a todo el objeto
+// incluyendo push_tokens y emails.
+import { internalQuery } from "./_generated/server";
+export const internalGetUserById = internalQuery({
+    args: { userId: v.id("users") },
+    handler: async (ctx, args) => {
         return await ctx.db.get(args.userId);
+    }
+});
+
+export const getUserByClerkId = query({
+    args: { clerkId: v.string() },
+    handler: async (ctx, args) => {
+        return await ctx.db
+            .query("users")
+            .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+            .first();
     },
 });
 
@@ -110,15 +171,6 @@ export const getProfile = query({
     },
 });
 
-export const getProfileByEmail = query({
-    args: { email: v.string() },
-    handler: async (ctx, args) => {
-        return await ctx.db
-            .query("users")
-            .withIndex("email", (q) => q.eq("email", args.email))
-            .first();
-    },
-});
 
 export const saveBelbinProfile = mutation({
 

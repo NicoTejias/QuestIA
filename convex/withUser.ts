@@ -68,3 +68,21 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
     
     throw new Error("Acceso denegado: Se requiere rol de Administrador");
 }
+
+export async function isAdmin(ctx: QueryCtx | MutationCtx) {
+    try {
+        const user = await requireAuth(ctx);
+        if (user.role === "admin") return true;
+        if (user.email) {
+            const admin = await ctx.db
+                .query("admins")
+                .withIndex("by_email", (q) => q.eq("email", user.email!.toLowerCase()))
+                .first();
+            if (admin) return true;
+        }
+        return false;
+    } catch {
+        return false;
+    }
+}
+

@@ -319,6 +319,7 @@ export const getCourseStudents = query({
     handler: async (ctx, args) => {
         try {
             await requireAuth(ctx);
+            const identity = (await ctx.auth.getUserIdentity())!;
 
             // 1. Paginar sobre la Whitelist (nuestra fuente de verdad de quién debería estar en el curso)
             const whitelistPaged = await ctx.db
@@ -414,6 +415,13 @@ export const getCourseStudents = query({
                 if (en) userIdToEnrollmentMap.set(en.user_id, en);
             });
 
+            const requester = await ctx.db
+                .query("users")
+                .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+                .first();
+
+            const isStaff = requester?.role === "teacher" || requester?.role === "admin";
+
             // 3. Cruzar datos
             const page = whitelistPaged.page.map(item => {
                 const iden = item.student_identifier.toLowerCase().trim();
@@ -424,8 +432,9 @@ export const getCourseStudents = query({
                     return {
                         _id: userDoc._id,
                         name: userDoc.name || item.student_name || "Sin nombre",
-                        email: userDoc.email,
-                        student_id: userDoc.student_id,
+                        // SOLO Staff puede ver email y student_id (a menos que seas tú mismo)
+                        email: (isStaff || requester?._id === userDoc._id) ? userDoc.email : undefined,
+                        student_id: (isStaff || requester?._id === userDoc._id) ? userDoc.student_id : undefined,
                         spendable_points: enDoc.spendable_points || enDoc.total_points || 0,
                         ranking_points: enDoc.ranking_points || enDoc.total_points || 0,
                         total_points: enDoc.ranking_points || enDoc.total_points || 0,
@@ -628,6 +637,14 @@ export const getGlobalRanking = query({
                 }
             });
 
+            const identity = await ctx.auth.getUserIdentity();
+            const requester = identity ? await ctx.db
+                .query("users")
+                .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+                .first() : null;
+            
+            const isStaff = requester?.role === "teacher" || requester?.role === "admin";
+
             const results = await Promise.all(allEnrollments.map(async (en) => {
                 const user = await ctx.db.get(en.user_id);
                 const course = courseMap.get(en.course_id);
@@ -642,7 +659,8 @@ export const getGlobalRanking = query({
                 return {
                     _id: en._id,
                     name: user?.name || "Sin nombre",
-                    student_id: user?.student_id,
+                    // Solo Staff ve student_id en el ranking global
+                    student_id: (isStaff || requester?._id === user?._id) ? user?.student_id : undefined,
                     ranking_points: en.ranking_points || en.total_points || 0,
                     section: section || "S/S",
                     courseName: course?.name,

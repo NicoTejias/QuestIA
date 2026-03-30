@@ -492,6 +492,10 @@ const GAME_TYPE_LABELS: Record<string, string> = {
 export const getQuizzesByCourse = query({
     args: { course_id: v.id("courses") },
     handler: async (ctx, args) => {
+        const user = await requireAuth(ctx);
+        const course = await ctx.db.get(args.course_id);
+        const enrollment = await ctx.db.query("enrollments").withIndex("by_user", q => q.eq("user_id", user._id)).filter(q => q.eq(q.field("course_id"), args.course_id)).first();
+        if (user.role !== "admin" && course?.teacher_id !== user._id && !enrollment) throw new Error("No estás inscrito en este ramo.");
         const quizzes = await ctx.db
             .query("quizzes")
             .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
@@ -501,7 +505,6 @@ export const getQuizzesByCourse = query({
         const docMap = new Map(docs.map(d => [d._id, d.file_name]));
 
         try {
-            const user = await requireAuth(ctx);
             return await Promise.all(quizzes.map(async (quiz) => {
                 const userSubmissions = await ctx.db
                     .query("quiz_submissions")
@@ -538,6 +541,11 @@ export const getQuizzesByCourse = query({
 export const getQuizzesByDocument = query({
     args: { document_id: v.id("course_documents") },
     handler: async (ctx, args) => {
+        const user = await requireAuth(ctx);
+        const doc = await ctx.db.get(args.document_id);
+        const course = await ctx.db.get(doc?.course_id as any);
+        const enrollment = await ctx.db.query("enrollments").withIndex("by_user", q => q.eq("user_id", user._id)).filter(q => q.eq(q.field("course_id"), doc?.course_id as any)).first();
+        if (user.role !== "admin" && course?.teacher_id !== user._id && !enrollment) throw new Error("No estás inscrito en este ramo.");
         const quizzes = await ctx.db
             .query("quizzes")
             .filter((q) => q.eq(q.field("document_id"), args.document_id))
@@ -546,7 +554,6 @@ export const getQuizzesByDocument = query({
 
 
         try {
-            const user = await requireAuth(ctx);
             return await Promise.all(quizzes.map(async (quiz) => {
                 const submission = await ctx.db
                     .query("quiz_submissions")
