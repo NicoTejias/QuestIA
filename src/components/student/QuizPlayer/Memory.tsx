@@ -55,7 +55,7 @@ export default function Memory({
             </p>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
-                {cardsToRender.map((card) => {
+                {cardsToRender.map((card: MemoryCard) => {
                     const isFlipped = flippedCards.includes(card.idx) || memoryMatched.includes(card.idx)
                     const isMatched = memoryMatched.includes(card.idx)
                     return (

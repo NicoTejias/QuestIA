@@ -1,4 +1,4 @@
-import { Activity, Star, TrendingUp, Flame } from 'lucide-react'
+import { Activity, Star, Flame } from 'lucide-react'
 
 interface RetentionProgressWidgetProps {
     user: any;

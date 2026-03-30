@@ -101,7 +101,7 @@ export default function PerfilPanel({ user, totalPoints, belbinRole }: PerfilPan
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                        {myBadges.map((ub) => (
+                        {myBadges.map((ub: any) => (
                             <div
                                 key={ub._id}
                                 className="bg-gradient-to-br from-gold/10 to-transparent border border-gold/20 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:border-gold/40 transition-all"
