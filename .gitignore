@@ -24,3 +24,6 @@ Thumbs.db
 *-firebase-adminsdk-*.json
 google-services.json
 node_modules
+# Worktrees
+.worktrees/
+worktrees/
