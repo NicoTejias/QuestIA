@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+
 interface Props {
     questions: any[]
     selectedA: number | null
@@ -6,6 +8,12 @@ interface Props {
 }
 
 export default function MatchGame({ questions, selectedA, matchedPairs, onSelect }: Props) {
+    const shuffledDefinitions = useMemo(() => {
+        return [...questions]
+            .map((q, originalIndex) => ({ ...q, originalIndex }))
+            .sort(() => Math.random() - 0.5);
+    }, [questions]);
+
     return (
         <div className="animate-in fade-in duration-300">
             <h3 className="text-center text-lg md:text-xl font-bold text-slate-300 mb-6 md:mb-8">Empareja los conceptos</h3>
@@ -29,8 +37,8 @@ export default function MatchGame({ questions, selectedA, matchedPairs, onSelect
                     ))}
                 </div>
                 <div className="space-y-2 md:space-y-4">
-                    {[...questions].sort(() => Math.random() - 0.5).map((q: any, i: number) => {
-                        const realIdx = questions.indexOf(q)
+                    {shuffledDefinitions.map((q: any, i: number) => {
+                        const realIdx = q.originalIndex
                         return (
                             <button
                                 key={`right-${i}`}
