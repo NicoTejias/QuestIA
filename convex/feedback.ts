@@ -2,6 +2,14 @@ import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth } from "./withUser";
 
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAuth(ctx);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 export const sendFeedback = mutation({
   args: {
     content: v.string(),
