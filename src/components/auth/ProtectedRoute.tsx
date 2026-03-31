@@ -26,19 +26,18 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
     const location = useLocation()
     const [stuckCount, setStuckCount] = useState(0)
 
+    useEffect(() => {
+        if (isAuthLoading || !isAuthenticated || user !== undefined) return
+        if (stuckCount > 5) return
+        const timer = setTimeout(() => setStuckCount((c) => c + 1), 1000)
+        return () => clearTimeout(timer)
+    }, [user, stuckCount, isAuthLoading, isAuthenticated])
+
     if (isAuthLoading) return <LoadingScreen />
 
     if (!isAuthenticated) {
         return <Navigate to="/login" state={{ from: location }} replace />
     }
-
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => {
-        if (user !== undefined) return
-        if (stuckCount > 5) return
-        const timer = setTimeout(() => setStuckCount((c) => c + 1), 1000)
-        return () => clearTimeout(timer)
-    }, [user, stuckCount])
 
     if (user === undefined) {
         if (stuckCount > 5) return <Navigate to="/login" replace />
