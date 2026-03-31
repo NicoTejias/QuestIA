@@ -335,6 +335,7 @@ export default defineSchema({
         type: v.union(v.literal("bug"), v.literal("suggestion"), v.literal("opinion")),
         created_at: v.number(),
         page_url: v.optional(v.string()),
+        image_urls: v.optional(v.array(v.string())),
     }).index("by_user", ["user_id"]),
 
     grading_rubrics: defineTable({

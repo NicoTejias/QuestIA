@@ -7,6 +7,7 @@ export const sendFeedback = mutation({
     content: v.string(),
     type: v.union(v.literal("bug"), v.literal("suggestion"), v.literal("opinion")),
     page_url: v.optional(v.string()),
+    image_urls: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const user = await requireAuth(ctx);
@@ -16,6 +17,7 @@ export const sendFeedback = mutation({
       content: args.content,
       type: args.type,
       page_url: args.page_url,
+      image_urls: args.image_urls,
       created_at: Date.now(),
     });
   },
