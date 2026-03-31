@@ -12,7 +12,7 @@ interface EditModalProps {
 
 export function EditCourseModal({ isOpen, onClose, data }: EditModalProps) {
     const updateCourse = useMutation(api.courses.updateCourse)
-    const careers = useQuery(api.careers.listCareers)
+    const careers = useQuery((api as any).careers.listCareers)
     const [formData, setFormData] = useState({ name: '', code: '', description: '', career_id: '' })
     const [loading, setLoading] = useState(false)
 

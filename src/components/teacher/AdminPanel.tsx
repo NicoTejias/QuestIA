@@ -440,11 +440,11 @@ function RecentUsersList() {
 }
 
 function CareersManager() {
-    const careers = useQuery(api.careers.getCareers)
-    const createCareer = useMutation(api.careers.createCareer)
-    const updateCareer = useMutation(api.careers.updateCareer)
-    const deleteCareer = useMutation(api.careers.deleteCareer)
-    const sendReports = useMutation(api.careers.sendReportsNow)
+    const careers = useQuery((api as any).careers.getCareers)
+    const createCareer = useMutation((api as any).careers.createCareer)
+    const updateCareer = useMutation((api as any).careers.updateCareer)
+    const deleteCareer = useMutation((api as any).careers.deleteCareer)
+    const sendReports = useMutation((api as any).careers.sendReportsNow)
     const [sending, setSending] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [showForm, setShowForm] = useState(false)

@@ -12,7 +12,7 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
     const navigate = useNavigate()
     const createCourse = useMutation(api.courses.createCourse)
     const deleteCourse = useMutation(api.courses.deleteCourse)
-    const careers = useQuery(api.careers.listCareers)
+    const careers = useQuery((api as any).careers.listCareers)
     const [showCreate, setShowCreate] = useState(false)
     const [formData, setFormData] = useState({ name: '', code: '', description: '', career_id: '' })
     const [creating, setCreating] = useState(false)
