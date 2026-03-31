@@ -72,9 +72,11 @@ export default function Memory({
                             }`}
                         >
                             {isMatched ? (
-                                <div className="flex flex-col items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-pink-400" />
-                                    <span className="text-pink-400 text-[8px] font-black uppercase tracking-tighter">Pareja</span>
+                                <div className="flex flex-col items-center gap-1.5">
+                                    <CheckCircle2 className="w-4 h-4 text-pink-400" />
+                                    <span className={`text-xs md:text-sm font-bold text-center leading-tight break-words px-1 drop-shadow-[0_0_8px_rgba(236,72,153,0.9)] ${card.type === 'term' ? 'text-pink-300' : 'text-slate-200'}`}>
+                                        {card.label}
+                                    </span>
                                 </div>
                             ) : isFlipped ? (
                                 <span className={`text-xs md:text-sm font-bold text-center leading-tight break-words px-2 max-h-full ${card.type === 'term' ? 'text-pink-300' : 'text-slate-200'}`}>

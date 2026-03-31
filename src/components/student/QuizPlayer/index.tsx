@@ -230,14 +230,15 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
 
     const currentQ = questions[currentIdx]
 
-    const saveResult = async () => {
+    const saveResult = async (finalAnswers?: (number | null | number[] | string[] | null)[]) => {
         if (timerRef.current) clearInterval(timerRef.current)
         if (gameTimerRef.current) clearInterval(gameTimerRef.current)
         setSubmitting(true)
         setFinished(true)
         try {
             const penalty = (quizType === 'word_search' || quizType === 'memory') ? Math.max(0, 100 - gameScore) : 0
-            const res: any = await submitQuiz({ quiz_id: quiz._id, time_penalty: penalty })
+            const answers = finalAnswers ?? selectedOptions
+            const res: any = await submitQuiz({ quiz_id: quiz._id, time_penalty: penalty, final_answers: answers as any })
             setQuizResult(res)
         } catch (err: any) {
             toast.error(err.message || "Error al guardar resultado")
@@ -261,7 +262,7 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                 updateState(nextIdx, newSelected)
                 if (quizType === "trivia" || quizType === "quiz_sprint") startTimer(questions[nextIdx].time_limit || 15)
             } else {
-                saveResult()
+                saveResult(newSelected)
             }
         }, 300)
     }
@@ -270,14 +271,15 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
         if (!isRightSide) {
             setSelectedA(idx)
         } else if (selectedA !== null) {
-            const newSelected = [...selectedOptions]
-            newSelected[currentIdx] = [selectedA, idx]
-            setSelectedOptions(newSelected)
-            updateState(currentIdx, newSelected)
             if (selectedA === idx) {
                 const newMatched = [...matchedPairs, idx]
                 setMatchedPairs(newMatched)
-                if (newMatched.length === questions.length) setTimeout(() => saveResult(), 800)
+                // Store the full matched pairs array in selectedOptions[0] for scoring
+                const newSelected = [...selectedOptions]
+                newSelected[0] = newMatched
+                setSelectedOptions(newSelected)
+                updateState(0, newSelected)
+                if (newMatched.length === questions.length) setTimeout(() => saveResult(newSelected), 800)
             }
             setSelectedA(null)
         }
@@ -340,14 +342,14 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
             updateState(currentIdx, newSelected)
             if (newFound.length === targetWords.length) {
                 setTimeout(() => {
-                    if (questions.length === 1) { saveResult() }
+                    if (questions.length === 1) { saveResult(newSelected) }
                     else {
                         setFoundWords([]); setWsFirstCell(null); setWsFoundCells([])
                         if (currentIdx < questions.length - 1) {
                             const nextIdx = currentIdx + 1
                             setCurrentIdx(nextIdx)
                             updateState(nextIdx, newSelected)
-                        } else { saveResult() }
+                        } else { saveResult(newSelected) }
                     }
                 }, 600)
             }
@@ -365,14 +367,14 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
         updateState(currentIdx, newSelected)
         if (newFound.length === (currentQ.words || []).length) {
             setTimeout(() => {
-                if (questions.length === 1) { saveResult() }
+                if (questions.length === 1) { saveResult(newSelected) }
                 else {
                     setFoundWords([]); setWsFirstCell(null); setWsFoundCells([])
                     if (currentIdx < questions.length - 1) {
                         const nextIdx = currentIdx + 1
                         setCurrentIdx(nextIdx)
                         updateState(nextIdx, newSelected)
-                    } else { saveResult() }
+                    } else { saveResult(newSelected) }
                 }
             }, 600)
         }
@@ -388,11 +390,17 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
     }
 
     const handleMemoryFlip = (cardIdx: number) => {
-        if (memoryLockRef.current || memoryMatched.includes(cardIdx) || flippedCards.includes(cardIdx)) return
+        // If locked due to a mismatch, clear mismatch and start new selection with this click
+        if (memoryLockRef.current) {
+            if (memoryMatched.includes(cardIdx)) return
+            setFlippedCards([cardIdx])
+            memoryLockRef.current = false
+            return
+        }
+        if (memoryMatched.includes(cardIdx) || flippedCards.includes(cardIdx)) return
         const newFlipped = [...flippedCards, cardIdx]
         setFlippedCards(newFlipped)
         if (newFlipped.length === 2) {
-            memoryLockRef.current = true
             const [a, b] = newFlipped
             const cardA = shuffledCards.find(c => c.idx === a)
             const cardB = shuffledCards.find(c => c.idx === b)
@@ -405,21 +413,22 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                     newSelected[currentIdx] = newMatched
                     setSelectedOptions(newSelected)
                     updateState(currentIdx, newSelected)
+                    setFlippedCards([])
+                    memoryLockRef.current = false
                     if (newMatched.length === questions[currentIdx]?.pairs?.length * 2) {
-                        if (questions.length === 1) { setTimeout(() => saveResult(), 1500) }
+                        if (questions.length === 1) { setTimeout(() => saveResult(newSelected), 1500) }
                         else {
                             setTimeout(() => {
                                 setFlippedCards([]); setMemoryMatched([])
                                 if (currentIdx < questions.length - 1) setCurrentIdx(c => c + 1)
-                                else saveResult()
+                                else saveResult(newSelected)
                             }, 1000)
                         }
-                        memoryLockRef.current = false
-                        setFlippedCards([])
-                        return
                     }
+                } else {
+                    // Mismatch: keep cards visible, wait for next click to clear
+                    memoryLockRef.current = true
                 }
-                setTimeout(() => { setFlippedCards([]); memoryLockRef.current = false }, isMatch ? 1500 : 3000)
             }, 500)
         }
     }

@@ -768,11 +768,15 @@ export const submitQuiz = mutation({
     args: {
         quiz_id: v.id("quizzes"),
         time_penalty: v.optional(v.number()),
+        final_answers: v.optional(v.array(v.union(v.number(), v.null(), v.array(v.number()), v.array(v.string())))),
     },
     handler: async (ctx, args) => {
         const user = await requireAuth(ctx);
 
-        await checkRateLimit(ctx, user._id, "quiz_submit");
+        // Docentes/admin no tienen rate limit (es modo simulación)
+        if (user.role !== "teacher" && user.role !== "admin") {
+            await checkRateLimit(ctx, user._id, "quiz_submit");
+        }
 
         const quiz = await ctx.db.get(args.quiz_id);
         if (!quiz) throw new Error("Quiz no encontrado");
@@ -786,22 +790,28 @@ export const submitQuiz = mutation({
         const attempt = attempts.sort((a, b) => b.last_updated - a.last_updated)[0];
         if (!attempt) throw new Error("No hay un intento activo para este quiz");
 
+        // Usar respuestas finales del cliente (evita race condition) o las del intento guardado
+        const answersToScore = args.final_answers ?? attempt.selected_options;
+
         let correctCount = 0;
         const totalQuestions = quiz.questions.length;
         const quizType = quiz.quiz_type || "multiple_choice";
 
+        // Match: scoring especial — answers[0] contiene el array de pares correctamente emparejados
+        if (quizType === "match") {
+            const matched = Array.isArray(answersToScore[0]) ? (answersToScore[0] as number[]) : [];
+            correctCount = matched.length;
+        }
+
         quiz.questions.forEach((q: any, idx: number) => {
-            const selected = attempt.selected_options[idx];
+            if (quizType === "match") return; // ya calculado arriba
+            const selected = answersToScore[idx];
 
             if (quizType === "order_steps") {
                 if (Array.isArray(selected) && selected.length === (q.steps?.length || 0)) {
                     (selected as any[]).forEach((s: number, i: number) => {
                         if (s === q.correctOrder[i]) correctCount += 1 / totalQuestions;
                     });
-                }
-            } else if (quizType === "match") {
-                if (selected !== null && Array.isArray(selected) && selected[0] !== undefined && selected[1] !== undefined) {
-                    if (selected[0] === selected[1]) correctCount++;
                 }
             } else if (quizType === "true_false") {
                 if (selected !== null) {
@@ -810,7 +820,8 @@ export const submitQuiz = mutation({
                 }
             } else if (quizType === "word_search") {
                 if (Array.isArray(selected)) {
-                    const found = (selected as any[]).filter((w: string) => q.words?.includes(w)).length;
+                    const qWordsUpper = (q.words || []).map((w: string) => w.toUpperCase());
+                    const found = (selected as any[]).filter((w: string) => qWordsUpper.includes(w.toUpperCase())).length;
                     correctCount += found / (q.words?.length || 1);
                 }
             } else if (quizType === "memory") {
