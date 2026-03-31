@@ -381,15 +381,19 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks:
             }
             // match: the prompt generates {front, back} pairs (same format as flashcard)
             if (type === "match") return { front: String(q.front ?? q.term ?? ''), back: String(q.back ?? q.definition ?? '') };
-            // multiple_choice, trivia: campos comunes
+            // trivia: only allows fun_fact (no explanation/bloom_level/dok_level)
+            if (type === "trivia") {
+                const t: any = { question: String(q.question ?? ''), options: Array.isArray(q.options) ? q.options.map(String) : [], correct: Number(q.correct ?? 0) };
+                if (q.fun_fact) t.fun_fact = String(q.fun_fact);
+                return t;
+            }
+            // multiple_choice: allows explanation, bloom_level, dok_level (no fun_fact/time_limit)
             const mc: any = {
                 question: String(q.question ?? ''),
                 options: Array.isArray(q.options) ? q.options.map(String) : [],
                 correct: Number(q.correct ?? 0),
             };
             if (q.explanation) mc.explanation = String(q.explanation);
-            if (q.fun_fact) mc.fun_fact = String(q.fun_fact);
-            if (q.time_limit) mc.time_limit = Number(q.time_limit);
             if (q.bloom_level) mc.bloom_level = String(q.bloom_level);
             if (q.dok_level != null) mc.dok_level = Number(q.dok_level);
             return mc;
