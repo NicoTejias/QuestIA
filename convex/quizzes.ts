@@ -352,23 +352,48 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks:
             throw new Error("La IA no generó un quiz válido. Intenta de nuevo.");
         }
 
+        // Sanitizar preguntas: eliminar campos extra que Convex no acepta
+        const sanitizedQuestions = quizData.questions.map((q: any) => {
+            if (type === "word_search") {
+                // La IA a veces devuelve un array de palabras en lugar de un objeto con words
+                if (Array.isArray(q)) return { words: q.map(String), size: 14 };
+                return { words: Array.isArray(q.words) ? q.words.map(String) : [], size: q.size ?? 14 };
+            }
+            if (type === "memory") return { pairs: Array.isArray(q.pairs) ? q.pairs.map((p: any) => ({ term: String(p.term ?? ''), definition: String(p.definition ?? '') })) : [] };
+            if (type === "flashcard") return { front: String(q.front ?? ''), back: String(q.back ?? '') };
+            if (type === "true_false") return { statement: String(q.statement ?? q.question ?? ''), correct: Boolean(q.correct), falsify: q.falsify ? String(q.falsify) : undefined };
+            if (type === "order_steps") return { description: String(q.description ?? ''), steps: Array.isArray(q.steps) ? q.steps.map(String) : [], correctOrder: Array.isArray(q.correctOrder) ? q.correctOrder : q.steps?.map((_: any, i: number) => i) ?? [] };
+            if (type === "fill_blank") return { question: String(q.question ?? ''), answer: String(q.answer ?? ''), options: Array.isArray(q.options) ? q.options.map(String) : [], explanation: q.explanation ? String(q.explanation) : undefined };
+            if (type === "quiz_sprint") return { question: String(q.question ?? ''), options: Array.isArray(q.options) ? q.options.map(String) : [], correct: Number(q.correct ?? 0), time_limit: q.time_limit ? Number(q.time_limit) : undefined };
+            if (type === "match") return { question: String(q.question ?? ''), options: Array.isArray(q.options) ? q.options.map(String) : [], correct: Number(q.correct ?? 0), explanation: q.explanation ? String(q.explanation) : undefined };
+            // multiple_choice, trivia: campos comunes
+            return {
+                question: String(q.question ?? ''),
+                options: Array.isArray(q.options) ? q.options.map(String) : [],
+                correct: Number(q.correct ?? 0),
+                explanation: q.explanation ? String(q.explanation) : undefined,
+                fun_fact: q.fun_fact ? String(q.fun_fact) : undefined,
+                time_limit: q.time_limit ? Number(q.time_limit) : undefined,
+            };
+        });
+
         // Guardar el quiz en la BD
         const quizId: any = await ctx.runMutation(api.quizzes.saveQuiz, {
             course_id: doc.course_id,
             document_id: args.document_id,
             title: quizData.title || `Quiz de ${doc.file_name}`,
             quiz_type: type,
-            questions: quizData.questions,
+            questions: sanitizedQuestions,
             difficulty: args.difficulty,
-            num_questions: quizData.questions.length,
+            num_questions: sanitizedQuestions.length,
             max_attempts: args.max_attempts ?? 1,
         });
 
         return {
             quizId,
             title: quizData.title,
-            numQuestions: quizData.questions.length,
-            questions: quizData.questions,
+            numQuestions: sanitizedQuestions.length,
+            questions: sanitizedQuestions,
             quiz_type: type,
         };
     },

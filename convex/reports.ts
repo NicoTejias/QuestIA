@@ -462,7 +462,7 @@ export const sendWeeklyCoordinatorReports = internalMutation({
                 totalQuizScore += courseQuizScore;
                 totalQuizSubs += courseQuizSubs;
 
-                // Missions
+                // Missions (manual + quiz submissions combinados)
                 const missions = await ctx.db.query("missions")
                     .withIndex("by_course", q => q.eq("course_id", course._id))
                     .collect();
@@ -472,6 +472,13 @@ export const sendWeeklyCoordinatorReports = internalMutation({
                         .withIndex("by_mission", q => q.eq("mission_id", m._id))
                         .collect();
                     missionsDone += subs.length;
+                }
+                // Sumar quiz submissions como interacciones de desafío
+                for (const quiz of quizzes) {
+                    const qsubs = await ctx.db.query("quiz_submissions")
+                        .withIndex("by_quiz", q => q.eq("quiz_id", quiz._id))
+                        .collect();
+                    missionsDone += qsubs.length;
                 }
 
                 // Upcoming evaluaciones (next 7 days)
@@ -628,7 +635,7 @@ export const sendMonthlyDirectorReports = internalMutation({
                         : Math.round((teacherEntry.avgQuizScore + avg) / 2);
                 }
 
-                // Missions
+                // Missions (manual + quiz submissions combinados)
                 const missions = await ctx.db.query("missions")
                     .withIndex("by_course", q => q.eq("course_id", course._id))
                     .collect();
@@ -639,6 +646,13 @@ export const sendMonthlyDirectorReports = internalMutation({
                         .withIndex("by_mission", q => q.eq("mission_id", m._id))
                         .collect();
                     courseMissionsDone += subs.length;
+                }
+                // Sumar quiz submissions como interacciones de desafío
+                for (const quiz of quizzes) {
+                    const qsubs = await ctx.db.query("quiz_submissions")
+                        .withIndex("by_quiz", q => q.eq("quiz_id", quiz._id))
+                        .collect();
+                    courseMissionsDone += qsubs.length;
                 }
                 totalMissionsDone += courseMissionsDone;
 

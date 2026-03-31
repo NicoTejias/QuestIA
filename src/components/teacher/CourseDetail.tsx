@@ -20,7 +20,7 @@ import BadgesPanel from './BadgesPanel'
 
 export default function CourseDetail({ course, onBack }: { course: any, onBack: () => void }) {
     const [courseSubTab, setCourseSubTab] = useState<'evaluaciones' | 'evaluacion'>('evaluaciones')
-    const [desafiosTab, setDesafiosTab] = useState<'manuales' | 'ia'>('manuales')
+    const [desafiosTab, setDesafiosTab] = useState<'todos' | 'manuales' | 'ia'>('todos')
     const fixCourseEnrollments = useMutation(api.users.fixCourseEnrollments)
     const documents = useQuery(api.documents.getDocumentsByCourse, { course_id: course._id })
     const { results: rewards } = usePaginatedQuery(
@@ -209,51 +209,58 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                             <h3 className="text-lg font-bold text-white">Desafíos del Ramo</h3>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={() => setDesafiosTab('manuales')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'manuales' ? 'bg-primary/20 text-primary-light border border-primary/30' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`}>
-                                <Flame className="w-4 h-4" /> Manuales ({missions?.length || 0})
+                            <button onClick={() => setDesafiosTab('todos')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'todos' ? 'bg-white/10 text-white border border-white/20' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`}>
+                                Todos ({(missions?.length || 0) + (quizzes?.length || 0)})
                             </button>
-                            <div className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'ia' ? 'bg-accent/20 text-accent-light border border-accent/30' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`} onClick={() => setDesafiosTab('ia')}>
-                                <Sparkles className="w-4 h-4" /> Autogenerados ({quizzes?.length || 0})
-                            </div>
-
+                            <button onClick={() => setDesafiosTab('manuales')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'manuales' ? 'bg-primary/20 text-primary-light border border-primary/30' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`}>
+                                <Flame className="w-4 h-4" /> Manual ({missions?.length || 0})
+                            </button>
+                            <button onClick={() => setDesafiosTab('ia')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${desafiosTab === 'ia' ? 'bg-accent/20 text-accent-light border border-accent/30' : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'}`}>
+                                <Sparkles className="w-4 h-4" /> IA ({quizzes?.length || 0})
+                            </button>
                         </div>
                     </div>
 
                     <div className="p-6 flex-1 max-h-[800px] overflow-y-auto custom-scrollbar">
-                        {desafiosTab === 'manuales' ? (
-                            <div className="bg-surface border border-white/5 rounded-xl p-4 h-full">
-                                {missions === undefined ? <Loader2 className="w-5 h-5 animate-spin text-slate-500" /> : missions.length === 0 ? <p className="text-slate-500 text-sm">No hay misiones manuales activas</p> : (
-                                    <ul className="space-y-3">
-                                        {missions.map((m: any) => (
-                                            <li key={m._id} className="bg-white/5 border border-white/5 p-3 rounded-xl hover:bg-white/10 transition-all cursor-pointer" onClick={() => setExpandedMission(expandedMission === m._id ? null : m._id)}>
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex flex-col truncate pr-2">
-                                                        <span className="font-bold text-white text-sm truncate">{m.title}</span>
-                                                        <span className="text-[10px] font-black text-gold bg-gold/10 border border-gold/20 px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest mt-1 w-fit">
-                                                            <Star className="w-3 h-3 fill-gold" /> {m.points} PTS
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 shrink-0">
-                                                        <button onClick={(e) => { e.stopPropagation(); setEditingMission(m) }} className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Editar"><Edit3 className="w-4 h-4" /></button>
-                                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'mission', id: m._id }) }} className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
-                                                    </div>
+                        {(desafiosTab === 'todos' || desafiosTab === 'manuales') && (missions === undefined || quizzes === undefined) && (
+                            <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+                        )}
+                        {desafiosTab !== 'ia' && missions !== undefined && (
+                            <ul className="space-y-3 mb-3">
+                                {missions.map((m: any) => (
+                                    <li key={m._id} className="bg-white/5 border border-white/5 p-3 rounded-xl hover:bg-white/10 transition-all cursor-pointer" onClick={() => setExpandedMission(expandedMission === m._id ? null : m._id)}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex flex-col truncate pr-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-white text-sm truncate">{m.title}</span>
+                                                    <span className="text-[9px] font-black text-primary-light bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0">Manual</span>
                                                 </div>
-                                                {expandedMission === m._id && (
-                                                    <div className="mt-4 pt-3 border-t border-white/5 text-sm text-slate-400">
-                                                        <p className="leading-relaxed">{m.description}</p>
-                                                    </div>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
+                                                <span className="text-[10px] font-black text-gold bg-gold/10 border border-gold/20 px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest mt-1 w-fit">
+                                                    <Star className="w-3 h-3 fill-gold" /> {m.points} PTS
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                <button onClick={(e) => { e.stopPropagation(); setEditingMission(m) }} className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Editar"><Edit3 className="w-4 h-4" /></button>
+                                                <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'mission', id: m._id }) }} className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
+                                        </div>
+                                        {expandedMission === m._id && (
+                                            <div className="mt-4 pt-3 border-t border-white/5 text-sm text-slate-400">
+                                                <p className="leading-relaxed">{m.description}</p>
+                                            </div>
+                                        )}
+                                    </li>
+                                ))}
+                                {missions.length === 0 && desafiosTab === 'manuales' && (
+                                    <p className="text-slate-500 text-sm">No hay misiones manuales activas</p>
                                 )}
-                            </div>
-                        ) : (
-                            <div className="bg-surface border border-white/5 rounded-xl p-4 h-full">
-                                {quizzes === undefined ? <Loader2 className="w-5 h-5 animate-spin text-slate-500" /> : quizzes.length === 0 ? <p className="text-slate-500 text-sm italic">Los desafíos aparecerán automáticamente cuando subas material al curso.</p> : (
-
-                                    <ul className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {quizzes.map((q: any) => (
+                            </ul>
+                        )}
+                        {desafiosTab !== 'manuales' && (
+                            <div className={desafiosTab === 'ia' ? 'bg-surface border border-white/5 rounded-xl p-4 h-full' : ''}>
+                                {quizzes === undefined ? <Loader2 className="w-5 h-5 animate-spin text-slate-500" /> : quizzes.length === 0 && desafiosTab === 'ia' ? <p className="text-slate-500 text-sm italic">Los desafíos aparecerán automáticamente cuando subas material al curso.</p> : (
+                                    <ul className="space-y-3">
+                                        {quizzes?.map((q: any) => (
                                             <li key={q._id} className="bg-white/5 border border-white/5 p-3 rounded-xl hover:bg-white/10 transition-all cursor-pointer" onClick={() => setExpandedQuiz(expandedQuiz === q._id ? null : q._id)}>
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex flex-col truncate pr-2">

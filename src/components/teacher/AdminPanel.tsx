@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from "convex/react"
 import { api } from "../../../convex/_generated/api"
+import { DUOC_CAREERS, DUOC_SCHOOLS, getCareersBySchool } from '../../data/duocCareers'
 import {
     Users,
     MessageSquare,
@@ -450,6 +451,8 @@ function CareersManager() {
     const [showForm, setShowForm] = useState(false)
     const [form, setForm] = useState({ name: '', coordinator_email: '', director_email: '', jefe_admin_email: '' })
     const [saving, setSaving] = useState(false)
+    const [seedSchool, setSeedSchool] = useState('')
+    const [seeding, setSeeding] = useState(false)
 
     const handleSend = async () => {
         if (!confirm('¿Enviar los reportes a todos los coordinadores y jefes de carrera ahora?')) return
@@ -461,6 +464,27 @@ function CareersManager() {
             toast.error('Error al enviar: ' + err.message)
         } finally {
             setSending(false)
+        }
+    }
+
+    const handleSeedCareers = async () => {
+        const toCreate = seedSchool ? getCareersBySchool(seedSchool) : DUOC_CAREERS
+        if (toCreate.length === 0) { toast.error('No hay carreras para importar'); return }
+        const existing = (careers || []).map((c: any) => c.name.toLowerCase())
+        const news = toCreate.filter(c => !existing.includes(c.name.toLowerCase()))
+        if (news.length === 0) { toast.info('Todas las carreras ya existen'); return }
+        if (!confirm(`Se crearán ${news.length} carrera(s)${seedSchool ? ` de "${seedSchool}"` : ' de todas las escuelas'}. Los emails se pueden completar después. ¿Continuar?`)) return
+        setSeeding(true)
+        try {
+            for (const c of news) {
+                await createCareer({ name: c.name, coordinator_email: '', director_email: '', jefe_admin_email: undefined })
+            }
+            toast.success(`${news.length} carreras importadas correctamente`)
+            setSeedSchool('')
+        } catch (err: any) {
+            toast.error('Error al importar: ' + err.message)
+        } finally {
+            setSeeding(false)
         }
     }
 
@@ -533,6 +557,32 @@ function CareersManager() {
                         Enviar Reportes Ahora
                     </button>
                 </div>
+            </div>
+
+            {/* Importar carreras Duoc */}
+            <div className="bg-black/20 border border-purple-500/10 rounded-2xl p-5 space-y-3">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Importar Carreras Duoc UC</p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <select
+                        value={seedSchool}
+                        onChange={e => setSeedSchool(e.target.value)}
+                        className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500/40"
+                    >
+                        <option value="">Todas las escuelas ({DUOC_CAREERS.length} carreras)</option>
+                        {DUOC_SCHOOLS.map(s => (
+                            <option key={s} value={s}>{s} ({getCareersBySchool(s).length})</option>
+                        ))}
+                    </select>
+                    <button
+                        onClick={handleSeedCareers}
+                        disabled={seeding}
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 rounded-xl font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-50 whitespace-nowrap"
+                    >
+                        {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Building2 className="w-4 h-4" />}
+                        {seeding ? 'Importando...' : 'Importar'}
+                    </button>
+                </div>
+                <p className="text-slate-600 text-[10px]">Solo crea las que aún no existen. Los emails se completan después editando cada carrera.</p>
             </div>
 
             {/* Formulario crear/editar */}
