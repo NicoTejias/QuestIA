@@ -79,7 +79,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
             setSuccess(`✅ "${result.title}" generado con ${result.numQuestions} preguntas.`)
             setTimeout(() => setSuccess(''), 5000)
         } catch (err: any) {
-            setError(err.message || 'Error al generar el quiz')
+            setError(err.data || err.message || 'Error al generar el quiz')
         } finally {
             setGenerating(false)
         }
