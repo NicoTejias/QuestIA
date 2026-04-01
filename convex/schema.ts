@@ -182,6 +182,8 @@ export default defineSchema({
                 explanation: v.optional(v.string()),
                 bloom_level: v.optional(v.string()),
                 dok_level: v.optional(v.number()),
+                fun_fact: v.optional(v.string()),
+                time_limit: v.optional(v.number()),
             }),
             v.object({
                 front: v.string(),
@@ -204,20 +206,8 @@ export default defineSchema({
                 correctOrder: v.array(v.number()),
             }),
             v.object({
-                question: v.string(),
-                options: v.array(v.string()),
-                correct: v.number(),
-                fun_fact: v.optional(v.string()),
-            }),
-            v.object({
                 words: v.array(v.string()),
                 size: v.optional(v.number()),
-            }),
-            v.object({
-                question: v.string(),
-                options: v.array(v.string()),
-                correct: v.number(),
-                time_limit: v.optional(v.number()),
             }),
             v.object({
                 pairs: v.array(v.object({
