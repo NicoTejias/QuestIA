@@ -9,7 +9,7 @@
  * npx convex env set OPENAI_API_KEY sk-...
  */
 
-const GEMINI_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash"];
+const GEMINI_MODELS = ["gemini-2.5-flash"];
 
 function isRateLimitError(err: unknown): boolean {
     const msg = err instanceof Error ? err.message : String(err);
