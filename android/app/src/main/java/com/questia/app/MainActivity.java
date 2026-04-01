@@ -1,4 +1,4 @@
-package com.duocencia.app;
+package com.questia.app;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Quest</string>
-    <string name="title_activity_main">Quest</string>
-    <string name="package_name">com.duocencia.app</string>
-    <string name="custom_url_scheme">com.duocencia.app</string>
+    <string name="app_name">QuestIA</string>
+    <string name="title_activity_main">QuestIA</string>
+    <string name="package_name">com.questia.app</string>
+    <string name="custom_url_scheme">com.questia.app</string>
 </resources>
