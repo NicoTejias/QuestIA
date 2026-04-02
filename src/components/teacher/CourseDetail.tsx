@@ -505,24 +505,23 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                                             <div className="flex gap-4 mt-1 items-center">
                                                                 <span className="text-[10px] text-primary-light font-mono font-bold bg-primary/5 px-2 py-0.5 rounded">ID: {s.identifier || s.student_id || 'S/ID'}</span>
                                                                 <span className="text-[10px] text-slate-400 flex items-center gap-1"><Trophy className="w-3 h-3 text-gold" />: {s.ranking_points || 0}</span>
-                                                                
-                                                                {s.status === 'registered' && (
-                                                                    <button
-                                                                        onClick={(e) => { 
-                                                                            e.stopPropagation();
-                                                                            setGivingPoints({ enrollmentId: s.enrollment_id, studentName: s.name || 'Alumno' }); 
-                                                                        }}
-                                                                        className="ml-2 bg-yellow-500/20 hover:bg-yellow-500 hover:text-black text-yellow-400 text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 border border-yellow-500/20 transition-all cursor-pointer"
-                                                                        title="Dar puntos de participación"
-                                                                    >
-                                                                        <Zap className="w-2.5 h-2.5" /> +PUNTOS
-                                                                    </button>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                                                        <div className="flex flex-col items-end gap-1.5">
+                                                    <div className="flex items-center gap-4 shrink-0 ml-2">
+                                                        {s.status === 'registered' && (
+                                                            <button
+                                                                onClick={(e) => { 
+                                                                    e.stopPropagation();
+                                                                    setGivingPoints({ enrollmentId: s.enrollment_id, studentName: s.name || 'Alumno' }); 
+                                                                }}
+                                                                className="bg-yellow-500/10 hover:bg-yellow-500 hover:text-black text-yellow-500 text-[10px] font-black px-3 py-2 rounded-xl flex items-center gap-2 border border-yellow-500/20 transition-all cursor-pointer shadow-lg shadow-yellow-500/5"
+                                                                title="Dar puntos de participación"
+                                                            >
+                                                                <Zap className="w-3.5 h-3.5" /> +PUNTOS
+                                                            </button>
+                                                        )}
+                                                        <div className="flex flex-col items-end gap-1.5 min-w-[80px]">
                                                             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${s.status === 'registered' ? 'text-green-400 bg-green-400/10 border border-green-400/20' : 'text-orange-400 bg-orange-400/10 border border-orange-400/20'}`}>
                                                                 {s.status === 'registered' ? 'OK' : 'Sin registro'}
                                                             </span>
