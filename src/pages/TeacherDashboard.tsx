@@ -14,7 +14,6 @@ import RankingDocentePanel from '../components/teacher/RankingDocentePanel'
 import NotificationBell from '../components/NotificationBell'
 import BetaBanner from '../components/BetaBanner'
 import AdminPanel from '../components/teacher/AdminPanel'
-import TeacherTour from '../components/teacher/TeacherTour'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 
 function getGreeting(): string {
@@ -160,7 +159,6 @@ export default function TeacherDashboard() {
 
             {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-            {user.role === 'demo_teacher' && <TeacherTour />}
 
             <main className="flex-1 h-screen-dvh flex flex-col overflow-hidden">
                 <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 flex flex-col shrink-0">
