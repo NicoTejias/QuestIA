@@ -512,7 +512,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                                         {s.status === 'registered' && s.enrollment_id && (
                                                             <button
                                                                 onClick={() => { setGivingPoints({ enrollmentId: s.enrollment_id, studentName: s.name || 'Alumno' }); setParticipationPts('10'); setParticipationReason('') }}
-                                                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 text-[10px] font-black px-2.5 py-1.5 rounded-lg flex items-center gap-1"
+                                                                className="bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 text-[10px] font-black px-2.5 py-1.5 rounded-lg flex items-center gap-1 border border-yellow-500/20 transition-all"
                                                                 title="Dar puntos de participación"
                                                             >
                                                                 <Zap className="w-3 h-3" /> +pts
