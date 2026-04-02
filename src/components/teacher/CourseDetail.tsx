@@ -5,7 +5,7 @@ import {
     ChevronRight, BookOpen, FileText, Gift,
     Trash2, Target, Flame, Sparkles, Loader2, RefreshCw,
     Users, Trophy, Edit3, X, Search, Star,
-    FileSpreadsheet, ClipboardCheck, AlertTriangle, Plus, Gamepad2, Download
+    FileSpreadsheet, ClipboardCheck, AlertTriangle, Plus, Gamepad2, Download, Zap, Check
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { exportToExcel } from '../../utils/ExportData'
@@ -51,6 +51,33 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
     const deleteQuiz = useMutation(api.quizzes.deleteQuiz)
     const cleanUpWhitelist = useMutation(api.courses.cleanUpWhitelist)
     const resetCoursePoints = useMutation(api.courses.resetCoursePoints)
+    const giveParticipationPoints = useMutation((api as any).courses.giveParticipationPoints)
+
+    // Estado para dar puntos de participación
+    const [givingPoints, setGivingPoints] = useState<{ enrollmentId: string; studentName: string } | null>(null)
+    const [participationPts, setParticipationPts] = useState('10')
+    const [participationReason, setParticipationReason] = useState('')
+    const [givingPtsLoading, setGivingPtsLoading] = useState(false)
+
+    const handleGivePoints = async () => {
+        if (!givingPoints) return
+        setGivingPtsLoading(true)
+        try {
+            await giveParticipationPoints({
+                enrollment_id: givingPoints.enrollmentId as any,
+                points: parseInt(participationPts) || 10,
+                reason: participationReason || undefined,
+            })
+            toast.success(`+${participationPts} pts dados a ${givingPoints.studentName}`)
+            setGivingPoints(null)
+            setParticipationPts('10')
+            setParticipationReason('')
+        } catch (err: any) {
+            toast.error(err.message || 'Error al dar puntos')
+        } finally {
+            setGivingPtsLoading(false)
+        }
+    }
 
     const [processing, setProcessing] = useState(false)
     const convex = useConvex()
@@ -481,11 +508,22 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex flex-col items-end gap-1.5 shrink-0 ml-4">
-                                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${s.status === 'registered' ? 'text-green-400 bg-green-400/10 border border-green-400/20' : 'text-orange-400 bg-orange-400/10 border border-orange-400/20'}`}>
-                                                            {s.status === 'registered' ? 'OK' : 'Sin registro'}
-                                                        </span>
-                                                        <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">{s.belbin}</span>
+                                                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                        {s.status === 'registered' && s.enrollment_id && (
+                                                            <button
+                                                                onClick={() => { setGivingPoints({ enrollmentId: s.enrollment_id, studentName: s.name || 'Alumno' }); setParticipationPts('10'); setParticipationReason('') }}
+                                                                className="opacity-0 group-hover:opacity-100 transition-opacity bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 text-[10px] font-black px-2.5 py-1.5 rounded-lg flex items-center gap-1"
+                                                                title="Dar puntos de participación"
+                                                            >
+                                                                <Zap className="w-3 h-3" /> +pts
+                                                            </button>
+                                                        )}
+                                                        <div className="flex flex-col items-end gap-1.5">
+                                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${s.status === 'registered' ? 'text-green-400 bg-green-400/10 border border-green-400/20' : 'text-orange-400 bg-orange-400/10 border border-orange-400/20'}`}>
+                                                                {s.status === 'registered' ? 'OK' : 'Sin registro'}
+                                                            </span>
+                                                            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">{s.belbin}</span>
+                                                        </div>
                                                     </div>
                                                 </li>
                                             ))}
@@ -500,6 +538,50 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
 
             {viewingQuizResults && (
                 <QuizResultsModal quizId={viewingQuizResults as any} onClose={() => setViewingQuizResults(null)} />
+            )}
+
+            {/* Mini-modal: dar puntos de participación */}
+            {givingPoints && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setGivingPoints(null)}>
+                    <div className="bg-surface border border-yellow-500/30 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                                <Zap className="w-5 h-5 text-yellow-400" />
+                            </div>
+                            <div>
+                                <p className="text-white font-bold">Dar puntos de participación</p>
+                                <p className="text-slate-400 text-sm">{givingPoints.studentName}</p>
+                            </div>
+                        </div>
+                        <div className="mb-3">
+                            <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1 block">Puntos a otorgar</label>
+                            <div className="flex gap-2 mb-2">
+                                {[5, 10, 25, 50].map(n => (
+                                    <button key={n} onClick={() => setParticipationPts(String(n))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${participationPts === String(n) ? 'bg-yellow-500 text-black' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}>
+                                        +{n}
+                                    </button>
+                                ))}
+                            </div>
+                            <input type="number" value={participationPts} onChange={e => setParticipationPts(e.target.value)} min="1" max="10000"
+                                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white text-center text-xl font-black focus:outline-none focus:border-yellow-500/50" />
+                        </div>
+                        <div className="mb-4">
+                            <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1 block">Motivo (opcional)</label>
+                            <input type="text" value={participationReason} onChange={e => setParticipationReason(e.target.value)}
+                                placeholder="ej. Respondió correctamente en clase"
+                                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-500/50 placeholder:text-slate-600" />
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={() => setGivingPoints(null)} className="flex-1 bg-white/5 text-slate-400 font-bold py-2.5 rounded-xl hover:bg-white/10 transition-all">Cancelar</button>
+                            <button onClick={handleGivePoints} disabled={givingPtsLoading || !participationPts || parseInt(participationPts) < 1}
+                                className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-black py-2.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                                {givingPtsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                Dar +{participationPts} pts
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <EditMissionModal isOpen={!!editingMission} onClose={() => setEditingMission(null)} data={editingMission} />

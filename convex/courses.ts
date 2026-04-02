@@ -424,6 +424,7 @@ export const getCourseStudents = query({
                 if (userDoc && enDoc) {
                     return {
                         _id: userDoc._id,
+                        enrollment_id: enDoc._id,
                         name: userDoc.name || item.student_name || "Sin nombre",
                         email: userDoc.email,
                         student_id: userDoc.student_id,
@@ -582,6 +583,46 @@ export const resetCoursePoints = mutation({
             quizzesReset
         };
     }
+});
+
+// Dar puntos de participación a un alumno (solo docente)
+export const giveParticipationPoints = mutation({
+    args: {
+        enrollment_id: v.id("enrollments"),
+        points: v.number(),
+        reason: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const teacher = await requireTeacher(ctx);
+
+        if (args.points <= 0 || args.points > 10000) throw new Error("Puntos inválidos (1-10000)");
+
+        const enrollment = await ctx.db.get(args.enrollment_id);
+        if (!enrollment) throw new Error("Inscripción no encontrada");
+
+        const course = await ctx.db.get(enrollment.course_id);
+        if (!course || (course.teacher_id !== teacher._id && teacher.role !== "admin"))
+            throw new Error("No autorizado");
+
+        await ctx.db.patch(args.enrollment_id, {
+            total_points: (enrollment.total_points ?? 0) + args.points,
+            spendable_points: (enrollment.spendable_points ?? 0) + args.points,
+            ranking_points: (enrollment.ranking_points ?? 0) + args.points,
+        });
+
+        // Notificar al alumno
+        const reason = args.reason || "Participación en clase";
+        await ctx.db.insert("notifications", {
+            user_id: enrollment.user_id,
+            title: `⭐ +${args.points} puntos de participación`,
+            message: `${teacher.name || "Tu docente"} te dio ${args.points} pts por: ${reason} en ${course.name}.`,
+            type: "participation_points",
+            read: false,
+            created_at: Date.now(),
+        });
+
+        return { success: true };
+    },
 });
 
 // Obtener ranking global
