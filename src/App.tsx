@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { api } from "../convex/_generated/api"
@@ -28,6 +28,16 @@ function App() {
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
   const isTeacher = user && (user.role === 'teacher' || user.role === 'admin' || user.role === 'demo_teacher')
   const isSimulating = localStorage.getItem('questia_simulate_student') === 'true'
+  const isDemoAsStudent = localStorage.getItem('questia_demo_as_student') === 'true'
+
+  // Si el usuario acaba de registrarse como demo alumno, forzamos la simulación
+  useEffect(() => {
+    if (isAuthenticated && user && user.role === 'demo_teacher' && isDemoAsStudent) {
+      localStorage.setItem('questia_simulate_student', 'true');
+      localStorage.removeItem('questia_demo_as_student');
+      window.location.href = '/alumno';
+    }
+  }, [isAuthenticated, user, isDemoAsStudent]);
 
   return (
     <>

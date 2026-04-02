@@ -123,16 +123,32 @@ export default function LandingPage() {
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <Link
                             to="/registro"
-                            className="group bg-gradient-to-r from-primary to-primary-dark hover:from-primary-light hover:to-primary text-white font-bold px-8 py-4 rounded-2xl text-lg transition-all hover:shadow-2xl hover:shadow-primary/30 active:scale-95 flex items-center gap-2"
+                            className="w-full sm:w-auto group bg-gradient-to-r from-primary to-primary-dark hover:from-primary-light hover:to-primary text-white font-bold px-8 py-4 rounded-2xl text-lg transition-all hover:shadow-2xl hover:shadow-primary/30 active:scale-95 flex items-center justify-center gap-3"
                         >
-                            Comenzar Gratis
+                            <span className="p-1 px-2.5 bg-white/20 rounded-lg text-sm">Probar</span>
+                            Modo Docente
                             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <a href="#features" className="text-slate-400 hover:text-white font-medium px-8 py-4 rounded-2xl border border-white/10 hover:border-white/20 transition-all">
-                            Ver Características
-                        </a>
+                        
+                        <Link
+                            to="/registro"
+                            onClick={() => localStorage.setItem('questia_demo_as_student', 'true')}
+                            className="w-full sm:w-auto group bg-white/5 hover:bg-white/10 text-white font-semibold px-8 py-4 rounded-2xl text-lg border border-white/10 hover:border-white/20 transition-all flex items-center justify-center gap-3"
+                        >
+                            <span className="p-1 px-2.5 bg-primary/20 text-primary-light rounded-lg text-sm">Demo</span>
+                            Modo Alumno
+                            <User className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                        </Link>
                     </div>
-                    <p className="text-sm text-slate-500 mt-6">* ¿No tienes cuenta institucional? Regístrate con tu correo personal (ej. Gmail) para acceder al <strong>Modo Testing (Demo)</strong> de 14 días.</p>
+                    
+                    <div className="mt-8 space-y-2">
+                        <p className="text-sm text-slate-400">
+                            <span className="text-primary-light font-bold">✨ Acceso Instantáneo:</span> No necesitas cuenta institucional para probar. Usa tu Gmail personal.
+                        </p>
+                        <p className="text-[11px] text-slate-600 uppercase tracking-widest font-medium">
+                            Los datos de prueba se eliminan automáticamente tras 14 días
+                        </p>
+                    </div>
                 </div>
             </section>
 
