@@ -201,6 +201,20 @@ export const resetBartleTest = mutation({
     },
 });
 
+// Activa el modo demo/prueba para el usuario actual
+export const setDemoMode = mutation({
+    args: {
+        role: v.optional(v.union(v.literal('student'), v.literal('demo_teacher')))
+    },
+    handler: async (ctx, args) => {
+        const user = await requireAuth(ctx);
+        const patch: Record<string, any> = { is_demo: true };
+        if (args.role) patch.role = args.role;
+        await ctx.db.patch(user._id, patch);
+        return { success: true };
+    },
+});
+
 // Auto-enrollment: cruza el student_id con las whitelists activas
 // Normaliza el RUT del alumno antes de comparar para evitar problemas de formato
 export const autoEnroll = mutation({

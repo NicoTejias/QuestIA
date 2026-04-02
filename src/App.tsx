@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { useConvexAuth, useQuery } from 'convex/react'
+import { useConvexAuth, useQuery, useMutation } from 'convex/react'
 import { api } from "../convex/_generated/api"
 import { Loader2 } from 'lucide-react'
 import { Toaster } from 'sonner'
@@ -28,16 +28,46 @@ function App() {
   const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : "skip")
   const isTeacher = user && (user.role === 'teacher' || user.role === 'admin' || user.role === 'demo_teacher')
   const isSimulating = localStorage.getItem('questia_simulate_student') === 'true'
-  const isDemoAsStudent = localStorage.getItem('questia_demo_as_student') === 'true'
+  const setDemoMode = useMutation(api.users.setDemoMode)
 
-  // Si el usuario acaba de registrarse como demo alumno, forzamos la simulación
+  // Maneja el intent de modo demo al autenticarse
   useEffect(() => {
-    if (isAuthenticated && user && user.role === 'demo_teacher' && isDemoAsStudent) {
-      localStorage.setItem('questia_simulate_student', 'true');
-      localStorage.removeItem('questia_demo_as_student');
-      window.location.href = '/alumno';
+    if (!isAuthenticated || !user) return
+    const demoIntent = localStorage.getItem('questia_demo_intent') ||
+                       (localStorage.getItem('questia_demo_as_student') ? 'student' : null)
+    if (!demoIntent) return
+
+    // Limpiar flags de localStorage inmediatamente para evitar bucles
+    localStorage.removeItem('questia_demo_intent')
+    localStorage.removeItem('questia_demo_as_student')
+
+    const isTeacherRole = user.role === 'teacher' || user.role === 'demo_teacher' || user.role === 'admin'
+
+    if (demoIntent === 'student' && isTeacherRole) {
+      // Docente/demo_teacher quiere simular vista de alumno
+      localStorage.setItem('questia_simulate_student', 'true')
+      window.location.href = '/alumno'
+      return
     }
-  }, [isAuthenticated, user, isDemoAsStudent]);
+
+    if (demoIntent === 'teacher' && isTeacherRole) {
+      // Ya es docente, solo redirigir
+      window.location.href = '/docente'
+      return
+    }
+
+    if (user.is_demo) {
+      // Ya está en modo demo, solo redirigir
+      window.location.href = demoIntent === 'teacher' ? '/docente' : '/alumno'
+      return
+    }
+
+    // Usuario normal (gmail) que quiere entrar en modo demo
+    const newRole = demoIntent === 'teacher' ? ('demo_teacher' as const) : undefined
+    setDemoMode({ role: newRole }).then(() => {
+      window.location.href = demoIntent === 'teacher' ? '/docente' : '/alumno'
+    }).catch(() => {})
+  }, [isAuthenticated, user, setDemoMode]);
 
   return (
     <>
