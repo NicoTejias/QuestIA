@@ -21,6 +21,7 @@ import type * as badges from "../badges.js";
 import type * as careers from "../careers.js";
 import type * as courses from "../courses.js";
 import type * as crons from "../crons.js";
+import type * as demo from "../demo.js";
 import type * as documents from "../documents.js";
 import type * as email from "../email.js";
 import type * as evaluaciones from "../evaluaciones.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   careers: typeof careers;
   courses: typeof courses;
   crons: typeof crons;
+  demo: typeof demo;
   documents: typeof documents;
   email: typeof email;
   evaluaciones: typeof evaluaciones;

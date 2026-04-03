@@ -29,6 +29,7 @@ function App() {
   const isTeacher = user && (user.role === 'teacher' || user.role === 'admin' || user.role === 'demo_teacher')
   const isSimulating = localStorage.getItem('questia_simulate_student') === 'true'
   const setDemoMode = useMutation(api.users.setDemoMode)
+  const setupDemoData = useMutation(api.demo.setupDemoData)
 
   // Maneja el intent de modo demo al autenticarse
   useEffect(() => {
@@ -45,29 +46,34 @@ function App() {
 
     if (demoIntent === 'student' && isTeacherRole) {
       // Docente/demo_teacher quiere simular vista de alumno
+      setupDemoData().catch(() => {})
       localStorage.setItem('questia_simulate_student', 'true')
       window.location.href = '/alumno'
       return
     }
 
     if (demoIntent === 'teacher' && isTeacherRole) {
-      // Ya es docente, solo redirigir
+      // Ya es docente, crear datos demo y redirigir
+      setupDemoData().catch(() => {})
       window.location.href = '/docente'
       return
     }
 
     if (user.is_demo) {
-      // Ya está en modo demo, solo redirigir
+      // Ya está en modo demo, asegurar datos y redirigir
+      setupDemoData().catch(() => {})
       window.location.href = demoIntent === 'teacher' ? '/docente' : '/alumno'
       return
     }
 
     // Usuario normal (gmail) que quiere entrar en modo demo
     const newRole = demoIntent === 'teacher' ? ('demo_teacher' as const) : undefined
-    setDemoMode({ role: newRole }).then(() => {
-      window.location.href = demoIntent === 'teacher' ? '/docente' : '/alumno'
-    }).catch(() => {})
-  }, [isAuthenticated, user, setDemoMode]);
+    setDemoMode({ role: newRole })
+      .then(() => setupDemoData())
+      .then(() => {
+        window.location.href = demoIntent === 'teacher' ? '/docente' : '/alumno'
+      }).catch(() => {})
+  }, [isAuthenticated, user, setDemoMode, setupDemoData]);
 
   return (
     <>

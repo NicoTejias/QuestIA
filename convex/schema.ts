@@ -171,7 +171,7 @@ export default defineSchema({
 
     quizzes: defineTable({
         course_id: v.id("courses"),
-        document_id: v.id("course_documents"),
+        document_id: v.optional(v.id("course_documents")),
         teacher_id: v.id("users"),
         title: v.string(),
         quiz_type: v.union(v.literal("multiple_choice"), v.literal("match"), v.literal("flashcard"), v.literal("true_false"), v.literal("fill_blank"), v.literal("order_steps"), v.literal("trivia"), v.literal("word_search"), v.literal("quiz_sprint"), v.literal("memory")),

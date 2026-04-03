@@ -570,12 +570,12 @@ export const getQuizzesByCourse = query({
                     best_score,
                     can_take: attempts_count < max_attempts && num_questions > 0,
                     score: best_score,
-                    source_file_name: docMap.get(quiz.document_id) || null,
+                    source_file_name: quiz.document_id ? (docMap.get(quiz.document_id) || null) : null,
                     game_type_label: GAME_TYPE_LABELS[quiz.quiz_type || "multiple_choice"] || quiz.quiz_type,
                 };
             }));
         } catch {
-            return quizzes.map(q => ({ ...q, can_take: false, source_file_name: docMap.get(q.document_id) || null, game_type_label: GAME_TYPE_LABELS[q.quiz_type || "multiple_choice"] || q.quiz_type }));
+            return quizzes.map(q => ({ ...q, can_take: false, source_file_name: q.document_id ? (docMap.get(q.document_id) || null) : null, game_type_label: GAME_TYPE_LABELS[q.quiz_type || "multiple_choice"] || q.quiz_type }));
         }
     },
 });
