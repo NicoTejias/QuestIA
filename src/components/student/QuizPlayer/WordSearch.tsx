@@ -61,31 +61,33 @@ export default function WordSearch({
                 ))}
             </div>
 
-            <div className="flex justify-center mb-4">
-                <div className="inline-grid gap-[2px] bg-surface p-2 rounded-xl border border-white/5">
-                    {wordGrid.map((row, r) => (
-                        <div key={r} className="flex gap-[2px]">
-                            {row.map((cell, c) => {
-                                const isFound = wsFoundCells.some((f) => f.r === r && f.c === c)
-                                const isSelecting = wsFirstCell && wsFirstCell.r === r && wsFirstCell.c === c
-                                return (
-                                    <button
-                                        key={c}
-                                        onClick={() => onCellClick(r, c)}
-                                        className={`w-5 h-5 md:w-6 md:h-6 border rounded-sm flex items-center justify-center text-[8px] md:text-[9px] font-mono font-black transition-all ${
-                                            isFound
-                                                ? 'bg-cyan-500 border-cyan-400 text-white'
-                                                : isSelecting
-                                                ? 'bg-accent/40 border-accent text-white animate-pulse'
-                                                : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
-                                        }`}
-                                    >
-                                        {cell}
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    ))}
+            <div className="overflow-x-auto mb-4 -mx-2 px-2">
+                <div className="inline-flex justify-center w-full min-w-max">
+                    <div className="inline-grid gap-[3px] bg-surface p-2 rounded-xl border border-white/5">
+                        {wordGrid.map((row, r) => (
+                            <div key={r} className="flex gap-[3px]">
+                                {row.map((cell, c) => {
+                                    const isFound = wsFoundCells.some((f) => f.r === r && f.c === c)
+                                    const isSelecting = wsFirstCell && wsFirstCell.r === r && wsFirstCell.c === c
+                                    return (
+                                        <button
+                                            key={c}
+                                            onClick={() => onCellClick(r, c)}
+                                            className={`w-7 h-7 md:w-8 md:h-8 border rounded flex items-center justify-center text-[11px] md:text-[13px] font-mono font-black transition-all ${
+                                                isFound
+                                                    ? 'bg-cyan-500 border-cyan-400 text-white'
+                                                    : isSelecting
+                                                    ? 'bg-accent/40 border-accent text-white animate-pulse'
+                                                    : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            {cell}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 

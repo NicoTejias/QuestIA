@@ -153,6 +153,10 @@ export default function TeacherTour({ activeTab, isDemo }: TeacherTourProps) {
         const contents = SECTION_TOURS[activeTab];
         if (!contents || contents.length === 0) return;
 
+        // Guardar clave ANTES de mostrar — garantiza que no se repita
+        // aunque el callback de Joyride no dispare correctamente
+        localStorage.setItem(key, 'true');
+
         const sectionSteps = contents.map(makeStep);
         setSteps(sectionSteps);
 

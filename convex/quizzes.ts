@@ -788,8 +788,8 @@ export const submitQuiz = mutation({
     handler: async (ctx, args) => {
         const user = await requireAuth(ctx);
 
-        // Docentes/admin no tienen rate limit (es modo simulación)
-        if (user.role !== "teacher" && user.role !== "admin") {
+        // Docentes/admin/demo no tienen rate limit
+        if (user.role !== "teacher" && user.role !== "admin" && user.role !== "demo_teacher" && !user.is_demo) {
             await checkRateLimit(ctx, user._id, "quiz_submit");
         }
 
@@ -841,11 +841,14 @@ export const submitQuiz = mutation({
                 }
             } else if (quizType === "memory") {
                 if (Array.isArray(selected)) {
-                    const pairs = q.pairs || [];
-                    const correctPairs = pairs.filter((_: any, pi: number) => {
-                        return (selected as number[]).includes(pi * 2) && (selected as number[]).includes(pi * 2 + 1);
-                    }).length;
-                    correctCount += correctPairs / (pairs.length || 1);
+                    // Formato 1: { pairs: [...] }  Formato 2: { front, back } (legado)
+                    const pairsLen = q.pairs ? q.pairs.length : quiz.questions.length;
+                    const matched = selected as number[];
+                    let correctPairs = 0;
+                    for (let pi = 0; pi < pairsLen; pi++) {
+                        if (matched.includes(pi * 2) && matched.includes(pi * 2 + 1)) correctPairs++;
+                    }
+                    correctCount += correctPairs / (pairsLen || 1);
                 }
             } else if (quizType === "quiz_sprint") {
                 if (selected !== null && selected === (q.correct ?? q.correctAnswerIndex)) {

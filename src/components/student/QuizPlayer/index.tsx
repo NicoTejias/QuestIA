@@ -165,8 +165,15 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
     useEffect(() => {
         if (quizType === 'memory' && honorAccepted) {
             const q = questions[currentIdx]
-            if (q?.pairs) {
-                const cards = q.pairs.flatMap((p: any, i: number) => [
+            // Formato 1: una pregunta con { pairs: [{ term, definition }] }
+            // Formato 2: múltiples preguntas con { front, back } (legado/demo)
+            const rawPairs: { term: string; definition: string }[] = q?.pairs
+                ? q.pairs
+                : questions[0]?.front !== undefined
+                    ? questions.map((qq: any) => ({ term: qq.front, definition: qq.back }))
+                    : []
+            if (rawPairs.length > 0) {
+                const cards = rawPairs.flatMap((p, i) => [
                     { idx: i * 2, label: p.term, type: 'term' as const, pairIndex: i },
                     { idx: i * 2 + 1, label: p.definition, type: 'definition' as const, pairIndex: i },
                 ])
@@ -415,7 +422,8 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
                     updateState(currentIdx, newSelected)
                     setFlippedCards([])
                     memoryLockRef.current = false
-                    if (newMatched.length === questions[currentIdx]?.pairs?.length * 2) {
+                    const totalPairs = questions[currentIdx]?.pairs?.length ?? questions.length
+                    if (newMatched.length === totalPairs * 2) {
                         if (questions.length === 1) { setTimeout(() => saveResult(newSelected), 1500) }
                         else {
                             setTimeout(() => {
