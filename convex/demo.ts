@@ -1,5 +1,5 @@
 import { mutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { requireAuth } from "./withUser";
 
 async function createDemoQuizzes(ctx: any, courseId: Id<"courses">, teacherId: Id<"users">) {
