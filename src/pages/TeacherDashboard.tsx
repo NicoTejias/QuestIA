@@ -160,7 +160,7 @@ export default function TeacherDashboard() {
 
             {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-            <TeacherTour activeTab={activeTab} isDemo={!!(user.role === 'demo_teacher' || user.is_demo)} />
+            <TeacherTour activeTab={activeTab} isDemo={!!(user.role === 'demo_teacher' || user.is_demo)} termsAccepted={!!user.terms_accepted_at} />
 
 
             <main className="flex-1 h-screen-dvh flex flex-col overflow-hidden">

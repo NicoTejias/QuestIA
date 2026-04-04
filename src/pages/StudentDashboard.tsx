@@ -137,7 +137,7 @@ export default function StudentDashboard() {
                         <>
                             {activeTab === 'inicio' && (
                                 <div className="space-y-6 overflow-x-hidden">
-                                    {!user.bartle_profile && (
+                                    {!user.bartle_profile && !!user.terms_accepted_at && (
                                         <BartlePopup user={user} onComplete={() => {}} />
                                     )}
                                     {user.bartle_profile && (

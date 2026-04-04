@@ -128,9 +128,10 @@ const SECTION_TOURS: Record<string, React.ReactNode[]> = {
 interface TeacherTourProps {
     activeTab: string;
     isDemo: boolean;
+    termsAccepted: boolean;
 }
 
-export default function TeacherTour({ activeTab, isDemo }: TeacherTourProps) {
+export default function TeacherTour({ activeTab, isDemo, termsAccepted }: TeacherTourProps) {
     const [run, setRun] = useState(false);
     const [steps, setSteps] = useState<any[]>([]);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,7 +142,7 @@ export default function TeacherTour({ activeTab, isDemo }: TeacherTourProps) {
     }, [activeTab]);
 
     useEffect(() => {
-        if (!isDemo) return;
+        if (!isDemo || !termsAccepted) return;
 
         // Limpiar timer anterior
         if (timerRef.current) clearTimeout(timerRef.current);
