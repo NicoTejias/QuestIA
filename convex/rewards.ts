@@ -293,3 +293,61 @@ export const deleteReward = mutation({
         await ctx.db.delete(args.reward_id);
     },
 });
+
+// Obtener todos los canjes de todos los ramos del docente
+export const getTeacherRedemptions = query({
+    args: { status: v.optional(v.union(v.literal("pending"), v.literal("completed"))) },
+    handler: async (ctx, args) => {
+        try {
+            const user = await requireTeacher(ctx);
+            // Obtener todos los cursos del docente
+            const myCourses = await ctx.db
+                .query("courses")
+                .withIndex("by_teacher", (q) => q.eq("teacher_id", user._id))
+                .collect();
+            
+            if (myCourses.length === 0) return [];
+            const courseIds = myCourses.map(c => c._id);
+            const courseMap = new Map(myCourses.map(c => [c._id, c]));
+
+            // Obtener todas las recompensas de esos cursos
+            const allRewards = await ctx.db.query("rewards").collect();
+            const myRewards = allRewards.filter(r => courseIds.includes(r.course_id));
+            if (myRewards.length === 0) return [];
+            
+            const rewardIds = myRewards.map(r => r._id);
+            const rewardMap = new Map(myRewards.map(r => [r._id, r]));
+
+            // Obtener canjes de esas recompensas
+            const allRedemptions = await ctx.db.query("redemptions").collect();
+            const myRedemptions = allRedemptions.filter(r => rewardIds.includes(r.reward_id));
+            
+            // Filtrar por status
+            const filtered = args.status ? myRedemptions.filter(r => r.status === args.status) : myRedemptions;
+            
+            // Ordenar por más reciente
+            const sorted = filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+            // Enriquecer
+            return await Promise.all(sorted.map(async (r) => {
+                const student = await ctx.db.get(r.user_id) as any;
+                const reward = rewardMap.get(r.reward_id);
+                const course = reward ? courseMap.get(reward.course_id) : null;
+                return {
+                    _id: r._id,
+                    timestamp: r.timestamp,
+                    status: r.status,
+                    student_name: student?.name || "Alumno",
+                    student_email: student?.email || "",
+                    reward_name: reward?.name || "Recompensa",
+                    reward_cost: reward?.cost || 0,
+                    course_name: course?.name || "Ramo desconocido",
+                    course_id: course?._id
+                };
+            }));
+        } catch {
+            return [];
+        }
+    }
+});
+

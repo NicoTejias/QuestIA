@@ -1,9 +1,9 @@
 # QuestIA: Gemini 3 & Redemptions Implementation
 
-- [ ] **Tarea 1: Actualizar Modelo AI y Reglas de Idioma**
-    - [ ] Actualizar `GEMINI_MODELS` en `convex/geminiClient.ts`
-    - [ ] Actualizar valor por defecto de `getGeminiModel`
-    - [ ] Crear `GEMINI.md` en la raíz
+- [x] **Tarea 1: Actualizar Modelo AI y Reglas de Idioma**
+    - [x] Actualizar `GEMINI_MODELS` en `convex/geminiClient.ts`
+    - [x] Actualizar valor por defecto de `getGeminiModel`
+    - [x] Crear `GEMINI.md` en la raíz
 - [ ] **Tarea 2: Backend - Queries para Canjes Centralizados**
     - [ ] Crear query `getTeacherRedemptions` en `convex/redemptions.ts`
     - [ ] Asegurar acceso via `requireTeacher`
