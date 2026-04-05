@@ -4,9 +4,9 @@
     - [x] Actualizar `GEMINI_MODELS` en `convex/geminiClient.ts`
     - [x] Actualizar valor por defecto de `getGeminiModel`
     - [x] Crear `GEMINI.md` en la raíz
-- [ ] **Tarea 2: Backend - Queries para Canjes Centralizados**
-    - [ ] Crear query `getTeacherRedemptions` en `convex/redemptions.ts`
-    - [ ] Asegurar acceso via `requireTeacher`
+- [x] **Tarea 2: Backend - Queries para Canjes Centralizados**
+    - [x] Crear query `getTeacherRedemptions` en `convex/rewards.ts`
+    - [x] Asegurar acceso via `requireTeacher`
 - [ ] **Tarea 3: Frontend - Panel de Gestión de Canjes**
     - [ ] Crear `src/components/teacher/GestionCanjesPanel.tsx`
     - [ ] Implementar tabla con filtros y acciones
