@@ -338,8 +338,8 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                             <User className="w-4 h-4 text-primary" />
                             Registro por Ramo
                         </h3>
-                        <div className="h-[250px] w-full">
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
                                 <BarChart data={(stats as any).courseStats}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                     <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value: any) => String(value).substring(0, 15) + (String(value).length > 15 ? '...' : '')} />
@@ -362,8 +362,8 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                             <Target className="w-4 h-4 text-accent" />
                             Actividad de Desafíos
                         </h3>
-                        <div className="h-[250px] w-full">
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
                                 <BarChart data={(stats as any).courseStats}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                     <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value: any) => String(value).substring(0, 15) + (String(value).length > 15 ? '...' : '')} />
@@ -389,8 +389,8 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                         <Sparkles className="w-4 h-4 text-accent" />
                         Conexiones (Últimos 7 días)
                     </h3>
-                    <div className="h-[250px] w-full">
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
                             <LineChart data={(stats as any).dailyActivity}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                 <XAxis dataKey="day" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => {

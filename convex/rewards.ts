@@ -300,7 +300,8 @@ export const getTeacherRedemptions = query({
     handler: async (ctx, args) => {
         try {
             const user = await requireTeacher(ctx);
-            // Obtener todos los cursos del docente
+            
+            // 1. Obtener cursos del docente (usando índice)
             const myCourses = await ctx.db
                 .query("courses")
                 .withIndex("by_teacher", (q) => q.eq("teacher_id", user._id))
@@ -310,27 +311,46 @@ export const getTeacherRedemptions = query({
             const courseIds = myCourses.map(c => c._id);
             const courseMap = new Map(myCourses.map(c => [c._id, c]));
 
-            // Obtener todas las recompensas de esos cursos
-            const allRewards = await ctx.db.query("rewards").collect();
-            const myRewards = allRewards.filter(r => courseIds.includes(r.course_id));
+            // 2. Obtener todas las recompensas de esos cursos (usando índice)
+            const rewardsByCourse = await Promise.all(
+                courseIds.map(courseId => 
+                    ctx.db.query("rewards")
+                        .withIndex("by_course", q => q.eq("course_id", courseId))
+                        .collect()
+                )
+            );
+            const myRewards = rewardsByCourse.flat();
             if (myRewards.length === 0) return [];
             
-            const rewardIds = myRewards.map(r => r._id);
             const rewardMap = new Map(myRewards.map(r => [r._id, r]));
 
-            // Obtener canjes de esas recompensas
-            const allRedemptions = await ctx.db.query("redemptions").collect();
-            const myRedemptions = allRedemptions.filter(r => rewardIds.includes(r.reward_id));
+            // 3. Obtener canjes de ESAS recompensas específicamente (usando índice)
+            const redemptionsByReward = await Promise.all(
+                myRewards.map(reward => 
+                    ctx.db.query("redemptions")
+                        .withIndex("by_reward", q => q.eq("reward_id", reward._id))
+                        .collect()
+                )
+            );
             
-            // Filtrar por status
-            const filtered = args.status ? myRedemptions.filter(r => r.status === args.status) : myRedemptions;
+            const allMyRedemptions = redemptionsByReward.flat();
+            
+            // 4. Filtrar por status si se pide
+            const filtered = args.status 
+                ? allMyRedemptions.filter(r => r.status === args.status) 
+                : allMyRedemptions;
             
             // Ordenar por más reciente
             const sorted = filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
-            // Enriquecer
-            return await Promise.all(sorted.map(async (r) => {
-                const student = await ctx.db.get(r.user_id) as any;
+            // 5. Cargar alumnos de forma eficiente (Unique IDs)
+            const uniqueStudentIds = [...new Set(sorted.map(r => r.user_id))];
+            const students = await Promise.all(uniqueStudentIds.map(id => ctx.db.get(id)));
+            const studentMap = new Map(students.filter(s => !!s).map(s => [s!._id, s]));
+
+            // 6. Enriquecer datos
+            return sorted.map((r) => {
+                const student = studentMap.get(r.user_id) as any;
                 const reward = rewardMap.get(r.reward_id);
                 const course = reward ? courseMap.get(reward.course_id) : null;
                 return {
@@ -344,10 +364,12 @@ export const getTeacherRedemptions = query({
                     course_name: course?.name || "Ramo desconocido",
                     course_id: course?._id
                 };
-            }));
-        } catch {
+            });
+        } catch (err) {
+            console.error("Error in getTeacherRedemptions:", err);
             return [];
         }
     }
 });
+
 
