@@ -221,10 +221,18 @@ export const getPendingRedemptions = query({
 
 // Marcar canje como entregado (solo docente)
 export const markRedemptionDelivered = mutation({
-    args: { redemption_id: v.id("redemptions") },
+    args: { redemption_id: v.string() },
     handler: async (ctx, args) => {
         const user = await requireTeacher(ctx);
-        const redemption = await ctx.db.get(args.redemption_id);
+        
+        // Validar si el ID es un ID de canje válido
+        const redemptionId = ctx.db.normalizeId("redemptions", args.redemption_id);
+        
+        if (!redemptionId) {
+            throw new Error("Esta es una notificación antigua. Por favor, gestiona este canje directamente desde el panel de 'Gestión Canjes'.");
+        }
+
+        const redemption = await ctx.db.get(redemptionId);
         if (!redemption) throw new Error("Canje no encontrado");
 
         const reward = await ctx.db.get(redemption.reward_id);
@@ -234,7 +242,7 @@ export const markRedemptionDelivered = mutation({
         if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado");
 
-        await ctx.db.patch(args.redemption_id, { status: "completed" });
+        await ctx.db.patch(redemptionId, { status: "completed" });
 
         // Notificar al alumno que fue entregado
         await ctx.db.insert("notifications", {
@@ -247,6 +255,7 @@ export const markRedemptionDelivered = mutation({
         });
     },
 });
+
 
 // Actualizar una recompensa (solo docente, con validación de ownership)
 export const updateReward = mutation({
