@@ -183,7 +183,7 @@ export default function TeacherDashboard() {
                                 <HelpCircle className="w-5 h-5" />
                             </button>
                             <BetaBanner className="hidden lg:flex" />
-                            <NotificationBell />
+                            <NotificationBell onTabChange={setActiveTab} />
                         </div>
                     </div>
                 </header>

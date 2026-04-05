@@ -114,6 +114,19 @@ export const redeemReward = mutation({
             stock: reward.stock - 1,
         });
 
+        // Registrar canje
+        const rewardName = reward.name.toLowerCase();
+        const isIceCube = rewardName.includes("congelar racha");
+        const isMultiplierX2 = rewardName.includes("x2");
+        const isMultiplierX15 = rewardName.includes("x1.5");
+        
+        const redemptionId = await ctx.db.insert("redemptions", {
+            user_id: user._id,
+            reward_id: reward._id,
+            status: (isIceCube || isMultiplierX2 || isMultiplierX15) ? "completed" : "pending",
+            timestamp: Date.now(),
+        });
+
         // Notificar al docente del ramo
         const course = await ctx.db.get(reward.course_id);
         if (course) {
@@ -123,23 +136,10 @@ export const redeemReward = mutation({
                 message: `${user.name || "Un alumno"} canjeó "${reward.name}" en ${course.name}. Revisa los canjes pendientes.`,
                 type: "reward_redeemed",
                 read: false,
-                related_id: reward.course_id,
+                related_id: redemptionId, // Ahora apunta al ID del canje
                 created_at: Date.now(),
             });
         }
-
-        // Registrar canje
-        const rewardName = reward.name.toLowerCase();
-        const isIceCube = rewardName.includes("congelar racha");
-        const isMultiplierX2 = rewardName.includes("x2");
-        const isMultiplierX15 = rewardName.includes("x1.5");
-        
-        await ctx.db.insert("redemptions", {
-            user_id: user._id,
-            reward_id: reward._id,
-            status: (isIceCube || isMultiplierX2 || isMultiplierX15) ? "completed" : "pending",
-            timestamp: Date.now(),
-        });
 
         // Aplicar efectos inmediatos
         if (isIceCube) {

@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, usePaginatedQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
-import { Bell, CheckCircle, Info, Trophy, AlertTriangle, ChevronDown } from 'lucide-react'
+import { Bell, CheckCircle, Info, Trophy, AlertTriangle, ChevronDown, Gift, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-export default function NotificationBell() {
+export default function NotificationBell({ onTabChange }: { onTabChange?: (tab: string) => void }) {
     // Usar paginación para las notificaciones
     const { results: notifications, status, loadMore } = usePaginatedQuery(
         api.notifications.getNotifications,
@@ -17,9 +17,11 @@ export default function NotificationBell() {
 
     const markAsRead = useMutation(api.notifications.markAsRead)
     const markAllAsRead = useMutation(api.notifications.markAllAsRead)
+    const markAsDelivered = useMutation(api.rewards.markRedemptionDelivered)
 
     const [isOpen, setIsOpen] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
+    const [processingId, setProcessingId] = useState<string | null>(null)
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -48,9 +50,34 @@ export default function NotificationBell() {
         }
     }
 
+    const handleDeliverQuickly = async (e: React.MouseEvent, redemptionId: any, notificationId: any) => {
+        e.stopPropagation()
+        setProcessingId(redemptionId)
+        try {
+            await markAsDelivered({ redemption_id: redemptionId })
+            await markAsRead({ notification_id: notificationId })
+            toast.success("Recompensa entregada correctamente")
+        } catch (err: any) {
+            toast.error(err.message || "Error al entregar")
+        } finally {
+            setProcessingId(null)
+        }
+    }
+
+    const handleNotificationClick = (n: any) => {
+        if (!n.read) handleMarkAsRead(n._id)
+        
+        // Redirigir según el tipo
+        if (n.type === 'reward_redeemed' && onTabChange) {
+            onTabChange('canjes')
+            setIsOpen(false)
+        }
+    }
+
     const getIcon = (type: string) => {
         switch (type) {
             case 'achievement': return <Trophy className="w-4 h-4 text-amber-400" />
+            case 'reward_redeemed': return <Gift className="w-4 h-4 text-primary" />
             case 'transfer_request': return <AlertTriangle className="w-4 h-4 text-amber-500" />
             case 'system': return <Info className="w-4 h-4 text-primary" />
             default: return <Bell className="w-4 h-4 text-slate-400" />
@@ -106,10 +133,10 @@ export default function NotificationBell() {
                                     <div
                                         key={n._id}
                                         className={`p-4 hover:bg-white/5 transition-colors cursor-pointer ${!n.read ? 'bg-accent/5' : ''}`}
-                                        onClick={() => !n.read && handleMarkAsRead(n._id)}
+                                        onClick={() => handleNotificationClick(n)}
                                     >
                                         <div className="flex gap-3">
-                                            <div className={`mt-0.5 p-1.5 rounded-full h-fit ${!n.read ? 'bg-surface border border-white/10' : 'bg-transparent'}`}>
+                                            <div className={`mt-0.5 p-1.5 rounded-full h-fit flex items-center justify-center ${!n.read ? 'bg-surface border border-white/10' : 'bg-transparent'}`}>
                                                 {getIcon(n.type)}
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -120,6 +147,23 @@ export default function NotificationBell() {
                                                     {!n.read && <span className="shrink-0 w-1.5 h-1.5 bg-accent rounded-full mt-1.5 ml-2"></span>}
                                                 </div>
                                                 <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">{n.message}</p>
+                                                
+                                                {/* Acción rápida para canjes */}
+                                                {n.type === 'reward_redeemed' && n.related_id && (
+                                                    <button 
+                                                        onClick={(e) => handleDeliverQuickly(e, n.related_id, n._id)}
+                                                        disabled={processingId === n.related_id}
+                                                        className="mt-3 w-full bg-accent/20 hover:bg-accent/30 text-accent-light text-[9px] font-black py-1.5 rounded-lg border border-accent/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"
+                                                    >
+                                                        {processingId === n.related_id ? (
+                                                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                                        ) : (
+                                                            <CheckCircle className="w-2.5 h-2.5" />
+                                                        )}
+                                                        Entregar Recompensa
+                                                    </button>
+                                                )}
+
                                                 <span className="text-[9px] text-slate-500 mt-2 block font-medium">
                                                     {new Date(n.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                 </span>
