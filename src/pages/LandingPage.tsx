@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Trophy, Users, BookOpen, Shield, ChevronRight, Sparkles, Target, Gift, BarChart3, LogOut, User } from 'lucide-react'
+import { Trophy, Users, Shield, ChevronRight, Sparkles, Target, Gift, BarChart3, LogOut, User } from 'lucide-react'
 import { useConvexAuth, useQuery } from "convex/react"
 import { useClerk } from "@clerk/clerk-react"
 import { api } from "../../convex/_generated/api"
