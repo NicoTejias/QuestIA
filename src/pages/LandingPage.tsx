@@ -110,15 +110,18 @@ export default function LandingPage() {
                     </div>
 
                     <h1 className="text-4xl md:text-7xl font-black text-white leading-tight mb-8">
-                        Tus alumnos se comprometen{' '}
+                        Aumenta la retención y el{' '}
                         <br className="hidden sm:block" />
                         <span className="bg-gradient-to-r from-primary via-primary-light to-white bg-clip-text text-transparent italic">
-                            con tus ramos.
+                            compromiso con tus ramos.
                         </span>
                     </h1>
 
-                    <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-                        Mejoramos la retención de tus alumnos. Automatiza tareas, crea misiones gamificadas y transforma tu clase en una experiencia interactiva irresistible.
+                    <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-6 leading-relaxed font-medium">
+                        Integramos tu modelo educativo y software de gestión educativa para trabajar de manera más fluida, ahorrándote horas de trabajo docente.
+                    </p>
+                    <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed">
+                        Incentivamos a tus alumnos de manera positiva mediante <span className="text-primary-light font-bold">rankings, recompensas y premios</span>.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -180,21 +183,28 @@ export default function LandingPage() {
 
             {/* CTA Section */}
             <section className="py-24 px-6">
-                <div className="max-w-4xl mx-auto bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 rounded-3xl p-12 md:p-16 text-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--color-accent)_0%,_transparent_60%)] opacity-10" />
+                <div className="max-w-5xl mx-auto bg-gradient-to-br from-surface-light to-surface border border-white/10 rounded-3xl p-12 md:p-16 text-center relative overflow-hidden group shadow-2xl">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--color-primary)_0%,_transparent_60%)] opacity-5 group-hover:opacity-15 transition-opacity duration-700" />
                     <div className="relative z-10">
-                        <BookOpen className="w-12 h-12 text-primary-light mx-auto mb-6" />
-                        <h2 className="text-4xl font-bold text-white mb-4">¿Listo para transformar tu clase?</h2>
-                        <p className="text-slate-300 text-lg mb-8 max-w-lg mx-auto">
-                            Únete a la comunidad de docentes que ya están motivando a sus alumnos con gamificación.
+                        <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-primary/20 group-hover:border-primary/40 transition-colors">
+                            <Sparkles className="w-10 h-10 text-primary-light animate-pulse" />
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight">
+                            Cotiza con nosotros para <br className="hidden md:block" />
+                            <span className="bg-gradient-to-r from-primary-light via-white to-primary-light bg-clip-text text-transparent italic">
+                                transformar tu sala de clase
+                            </span>
+                        </h2>
+                        <p className="text-slate-400 text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
+                            Impulsa la retención y lleva el compromiso de tus alumnos al siguiente nivel con una plataforma diseñada para facilitar tu labor docente.
                         </p>
-                        <Link
-                            to="/registro"
-                            className="inline-flex items-center gap-2 bg-white text-surface font-bold px-8 py-4 rounded-2xl text-lg hover:bg-slate-100 transition-all active:scale-95"
+                        <a
+                            href="mailto:nicolas.tejias@gmail.com"
+                            className="inline-flex items-center gap-3 bg-gradient-to-r from-primary to-primary-dark text-white font-bold px-10 py-5 rounded-xl text-lg hover:from-primary-light hover:to-primary hover:shadow-2xl hover:shadow-primary/40 transition-all active:scale-95"
                         >
-                            Crear Cuenta Gratis
-                            <ChevronRight className="w-5 h-5" />
-                        </Link>
+                            Comunícate con nosotros
+                            <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                        </a>
                     </div>
                 </div>
             </section>
