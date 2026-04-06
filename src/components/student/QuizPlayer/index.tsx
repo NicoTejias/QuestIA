@@ -223,8 +223,6 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
         )
     }
 
-    if (showIntro && !loadingAttempt && attemptId) return renderIntro()
-
     if (questions.length === 0) {
         return (
             <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -367,28 +365,6 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
         setWsFirstCell(null)
     }
 
-    const handleWordSearchSelect = (word: string) => {
-        if (foundWords.includes(word)) return
-        const newFound = [...foundWords, word]
-        setFoundWords(newFound)
-        const newSelected = [...selectedOptions]
-        newSelected[currentIdx] = newFound
-        setSelectedOptions(newSelected)
-        updateState(currentIdx, newSelected)
-        if (newFound.length === (currentQ.words || []).length) {
-            setTimeout(() => {
-                if (questions.length === 1) { saveResult(newSelected) }
-                else {
-                    setFoundWords([]); setWsFirstCell(null); setWsFoundCells([])
-                    if (currentIdx < questions.length - 1) {
-                        const nextIdx = currentIdx + 1
-                        setCurrentIdx(nextIdx)
-                        updateState(nextIdx, newSelected)
-                    } else { saveResult(newSelected) }
-                }
-            }, 600)
-        }
-    }
 
     const handleWordSearchSkip = () => {
         if (currentIdx < questions.length - 1) {
@@ -573,6 +549,8 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
             </div>
         )
     }
+
+    if (showIntro && !loadingAttempt && attemptId) return renderIntro()
 
     // ── Render question by type ──────────────────────────────────────────────
 
