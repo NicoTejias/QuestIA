@@ -361,7 +361,7 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                     <div className="bg-surface-light border border-white/5 rounded-2xl p-6">
                         <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
                             <Target className="w-4 h-4 text-accent" />
-                            Actividad de Desafíos
+                            Promedio Diario de Quizzes por Ramo y Sección
                         </h3>
                         <div className="h-[300px] w-full">
                             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
@@ -375,10 +375,68 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                                         cursor={{ fill: '#ffffff05' }}
                                     />
                                     <Legend wrapperStyle={{ fontSize: '10px' }} />
-                                    <Bar dataKey="missions" name="Desafíos Creados" fill="#64748b" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="submissions" name="Entregas" fill="#a78bfa" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="dailyAvgQuizzes" name="Quizzes/Día (Total Sec)" fill="#64748b" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="dailyAvgPerStudent" name="Quizzes/Día (Por Alumno)" fill="#a78bfa" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Metas Semestrales (KPIs) */}
+            {stats && (
+                <div className="bg-surface-light border border-white/5 rounded-2xl p-6">
+                    <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                        <Target className="w-5 h-5 text-primary-light" />
+                        Metas Semestrales (Presentación Julio)
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* KPI 1: Tasa de Registro (Adopción) */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-400 font-bold">1. Adopción Estudiantil</span>
+                                <span className="text-white font-bold">{Math.round(((stats.totalRegisteredUniqueUsers || 0) / (stats.totalUniqueStudents || 1)) * 100)}%</span>
+                            </div>
+                            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full" 
+                                    style={{ width: `${Math.min(100, Math.round(((stats.totalRegisteredUniqueUsers || 0) / (stats.totalUniqueStudents || 1)) * 100))}%` }} 
+                                />
+                            </div>
+                            <p className="text-[10px] text-slate-500 text-right">Meta: 90% (Estudiantes de whitelist con cuenta)</p>
+                        </div>
+
+                        {/* KPI 2: Promedio Quizzes Semestral */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-400 font-bold">2. Quizzes / Alumno</span>
+                                <span className="text-white font-bold">
+                                    {(stats.totalQuizzesCompleted / (stats.totalRegisteredUniqueUsers || 1)).toFixed(1)} <span className="text-slate-500 text-xs">qzs</span>
+                                </span>
+                            </div>
+                            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-gradient-to-r from-accent to-accent-light rounded-full" 
+                                    style={{ width: `${Math.min(100, (stats.totalQuizzesCompleted / (stats.totalRegisteredUniqueUsers || 1)) / 15 * 100)}%` }} 
+                                />
+                            </div>
+                            <p className="text-[10px] text-slate-500 text-right">Meta: 15 quizzes completados por alumno</p>
+                        </div>
+
+                        {/* KPI 3: Participación en Recompensas */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-400 font-bold">3. Recompensas Canjeadas</span>
+                                <span className="text-white font-bold">{stats.totalRedemptions || 0} <span className="text-slate-500 text-xs">canjes</span></span>
+                            </div>
+                            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-gradient-to-r from-orange-500 to-yellow-400 rounded-full" 
+                                    style={{ width: `${Math.min(100, (stats.totalRedemptions || 0) / 50 * 100)}%` }} 
+                                />
+                            </div>
+                            <p className="text-[10px] text-slate-500 text-right">Meta: 50 canjes totales semestrales</p>
                         </div>
                     </div>
                 </div>

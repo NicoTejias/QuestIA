@@ -155,8 +155,9 @@ export const getTeacherStats = query({
                 }
             }
 
-            // Agrupar estadísticas por nombre de ramo (Fusión multicarreara)
-            const statsByName = new Map<string, any>();
+            // Agrupar estadísticas por sección (ID de ramo)
+            const statsById = new Map<string, any>();
+            const now = Date.now();
 
             for (const courseId of courseIds) {
                 const course = courses.find((c: any) => c._id === courseId);
@@ -174,48 +175,30 @@ export const getTeacherStats = query({
                 const courseDocs = documents.filter((d: any) => d.course_id === courseId);
                 const coursePoints = courseEnrollments.reduce((sum: number, e: any) => sum + (e.ranking_points ?? e.total_points ?? 0), 0);
 
-                const existing = statsByName.get(course.name);
-                if (existing) {
-                    // Actualizar sets de unicidad
-                    courseWhitelist.forEach(w => existing.uniqueWhitelistRuts.add(normalizeRut(w.student_identifier)));
-                    courseEnrollments.forEach(en => existing.uniqueRegisteredUserIds.add(en.user_id));
-                    
-                    existing.missions += courseMissions.length + courseQuizzes.length;
-                    existing.submissions += courseSubmissions.length + courseQuizSubmissions.length;
-                    existing.documents += courseDocs.length;
-                    existing.totalPoints += coursePoints;
-                    
-                    if (!existing.code.includes(course.code)) {
-                        existing.code += ` / ${course.code}`;
-                    }
-                    
-                    // Re-calcular contadores finales
-                    existing.students = existing.uniqueWhitelistRuts.size;
-                    existing.registered = existing.uniqueRegisteredUserIds.size;
-                } else {
-                    const uniqueWhitelistRuts = new Set(courseWhitelist.map(w => normalizeRut(w.student_identifier)));
-                    const uniqueRegisteredUserIds = new Set(courseEnrollments.map(en => en.user_id));
+                const uniqueWhitelistRuts = new Set(courseWhitelist.map((w: any) => normalizeRut(w.student_identifier)));
+                const uniqueRegisteredUserIds = new Set(courseEnrollments.map((en: any) => en.user_id));
 
-                    statsByName.set(course.name, {
-                        name: course.name,
-                        code: course.code,
-                        students: uniqueWhitelistRuts.size,
-                        registered: uniqueRegisteredUserIds.size,
-                        missions: courseMissions.length + courseQuizzes.length,
-                        submissions: courseSubmissions.length + courseQuizSubmissions.length,
-                        documents: courseDocs.length,
-                        totalPoints: coursePoints,
-                        // Guardamos los sets para seguir agregando en el próximo loop
-                        uniqueWhitelistRuts,
-                        uniqueRegisteredUserIds
-                    });
-                }
+                const daysActive = Math.max(1, (now - course._creationTime) / (1000 * 60 * 60 * 24));
+                const dailyAvgQuizzes = parseFloat(((courseSubmissions.length + courseQuizSubmissions.length) / daysActive).toFixed(2));
+                const dailyAvgPerStudent = uniqueRegisteredUserIds.size > 0 
+                    ? parseFloat((dailyAvgQuizzes / uniqueRegisteredUserIds.size).toFixed(3)) 
+                    : 0;
+
+                statsById.set(course._id, {
+                    name: `${course.name} (${course.code})`,
+                    code: course.code,
+                    students: uniqueWhitelistRuts.size,
+                    registered: uniqueRegisteredUserIds.size,
+                    missions: courseMissions.length + courseQuizzes.length,
+                    submissions: courseSubmissions.length + courseQuizSubmissions.length,
+                    documents: courseDocs.length,
+                    totalPoints: coursePoints,
+                    dailyAvgQuizzes,
+                    dailyAvgPerStudent
+                });
             }
 
-            const courseStats = Array.from(statsByName.values()).map(s => {
-                const { uniqueWhitelistRuts, uniqueRegisteredUserIds, ...rest } = s;
-                return rest;
-            });
+            const courseStats = Array.from(statsById.values());
 
             return {
                 totalStudents: totalUniqueStudents,
