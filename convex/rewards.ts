@@ -199,15 +199,34 @@ export const getPendingRedemptions = query({
             const allRedemptions = redemptionsNested.flat();
             if (allRedemptions.length === 0) return [];
 
+            // Cargar whitelist del ramo para nombres oficiales
+            const whitelist = await ctx.db
+                .query("whitelists")
+                .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
+                .collect();
+            
+            const whitelistMap = new Map();
+            whitelist.forEach(w => {
+                whitelistMap.set(w.student_identifier.toLowerCase().trim(), w.student_name);
+            });
+
             // Enriquecer con datos del alumno y la recompensa
             return await Promise.all(allRedemptions.map(async (r) => {
                 const student = await ctx.db.get(r.user_id) as any;
                 const reward = rewardMap.get(r.reward_id);
+
+                let officialName = null;
+                if (student) {
+                    const iden = (student.student_id || "").toLowerCase().trim();
+                    const email = (student.email || "").toLowerCase().trim();
+                    officialName = whitelistMap.get(iden) || whitelistMap.get(email);
+                }
+
                 return {
                     _id: r._id,
                     timestamp: r.timestamp,
                     status: r.status,
-                    student_name: student?.name || "Alumno",
+                    student_name: officialName || student?.name || "Alumno",
                     student_email: student?.email || "",
                     reward_name: reward?.name || "Recompensa",
                     reward_cost: reward?.cost || 0,
@@ -357,16 +376,37 @@ export const getTeacherRedemptions = query({
             const students = await Promise.all(uniqueStudentIds.map(id => ctx.db.get(id)));
             const studentMap = new Map(students.filter(s => !!s).map(s => [s!._id, s]));
 
-            // 6. Enriquecer datos
+            // 6. Cargar whitelists de todos estos cursos para obtener nombres oficiales
+            const whitelistsByCourse = await Promise.all(
+                courseIds.map(courseId => 
+                    ctx.db.query("whitelists")
+                        .withIndex("by_course", q => q.eq("course_id", courseId))
+                        .collect()
+                )
+            );
+            const whitelistMap = new Map();
+            whitelistsByCourse.flat().forEach(w => {
+                whitelistMap.set(`${w.course_id}_${w.student_identifier.toLowerCase().trim()}`, w.student_name);
+            });
+
+            // 7. Enriquecer datos
             return sorted.map((r) => {
                 const student = studentMap.get(r.user_id) as any;
                 const reward = rewardMap.get(r.reward_id);
                 const course = reward ? courseMap.get(reward.course_id) : null;
+                
+                let officialName = null;
+                if (student && course) {
+                    const iden = (student.student_id || "").toLowerCase().trim();
+                    const email = (student.email || "").toLowerCase().trim();
+                    officialName = whitelistMap.get(`${course._id}_${iden}`) || whitelistMap.get(`${course._id}_${email}`);
+                }
+
                 return {
                     _id: r._id,
                     timestamp: r.timestamp,
                     status: r.status,
-                    student_name: student?.name || "Alumno",
+                    student_name: officialName || student?.name || "Alumno",
                     student_email: student?.email || "",
                     reward_name: reward?.name || "Recompensa",
                     reward_cost: reward?.cost || 0,

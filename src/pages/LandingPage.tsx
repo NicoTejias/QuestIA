@@ -134,16 +134,6 @@ export default function LandingPage() {
                             Modo Docente
                             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </Link>
-
-                        <Link
-                            to="/registro"
-                            onClick={() => localStorage.setItem('questia_demo_intent', 'student')}
-                            className="w-full sm:w-auto group bg-white/5 hover:bg-white/10 text-white font-semibold px-8 py-4 rounded-2xl text-lg border border-white/10 hover:border-white/20 transition-all flex items-center justify-center gap-3"
-                        >
-                            <span className="p-1 px-2.5 bg-primary/20 text-primary-light rounded-lg text-sm">Demo</span>
-                            Modo Alumno
-                            <User className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
-                        </Link>
                     </div>
                     
                     <div className="mt-8 space-y-2">

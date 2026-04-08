@@ -70,7 +70,16 @@ function App() {
       return
     }
 
-    // Usuario normal (gmail) que quiere entrar en modo demo
+    // PROTECCIÓN CRÍTICA: Si el usuario ya tiene datos reales (student_id, términos
+    // aceptados, o ya estaba inscrito como alumno real), NO sobreescribir su cuenta
+    // con modo demo. Redirigir normalmente a su dashboard.
+    const hasRealData = user.student_id || user.terms_accepted_at
+    if (hasRealData || (user.role === 'student' && !user.is_demo)) {
+      window.location.href = user.role === 'student' ? '/alumno' : '/docente'
+      return
+    }
+
+    // Solo aplica modo demo a usuarios sin cuenta real previa
     const newRole = demoIntent === 'teacher' ? ('demo_teacher' as const) : undefined
     setDemoMode({ role: newRole })
       .then(() => setupDemoData())

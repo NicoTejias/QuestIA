@@ -617,15 +617,44 @@ export const deleteExpiredDemos = internalMutation({
             .collect();
 
         let deletedCount = 0;
+        let skippedCount = 0;
         for (const user of demoUsers) {
-            // Convex automatically adds _creationTime
-            if (user._creationTime && (now - user._creationTime) > FourteenDaysMs) {
-                // To do this cleanly, we may need to use clerk API to delete the user there too, 
-                // but since this is a backend job, we can just delete from convex to block access
-                await ctx.db.delete(user._id);
-                deletedCount++;
+            if (!user._creationTime || (now - user._creationTime) <= FourteenDaysMs) continue;
+
+            // ── PROTECCIONES: nunca eliminar usuarios con datos reales ──────────
+
+            // 1. Solo eliminar cuentas demo_teacher — nunca alumnos reales
+            if (user.role !== 'demo_teacher') {
+                skippedCount++;
+                continue;
             }
+
+            // 2. Si tiene student_id (RUT/matrícula) es un alumno real aunque esté marcado como demo
+            if (user.student_id) {
+                skippedCount++;
+                continue;
+            }
+
+            // 3. Si aceptó los términos es un usuario real que interactuó con la plataforma
+            if (user.terms_accepted_at) {
+                skippedCount++;
+                continue;
+            }
+
+            // 4. Si tiene inscripciones en cursos reales, no eliminar
+            const enrollments = await ctx.db
+                .query("enrollments")
+                .withIndex("by_user", (q: any) => q.eq("user_id", user._id))
+                .first();
+            if (enrollments) {
+                skippedCount++;
+                continue;
+            }
+
+            // Cuenta demo pura sin datos reales — seguro eliminar
+            await ctx.db.delete(user._id);
+            deletedCount++;
         }
-        return { deletedCount };
+        return { deletedCount, skippedCount };
     }
 });

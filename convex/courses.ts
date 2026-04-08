@@ -447,7 +447,7 @@ export const getCourseStudents = query({
                     return {
                         _id: userDoc._id,
                         enrollment_id: enDoc._id,
-                        name: userDoc.name || item.student_name || "Sin nombre",
+                        name: item.student_name || userDoc.name || "Sin nombre",
                         email: userDoc.email,
                         student_id: userDoc.student_id,
                         spendable_points: enDoc.spendable_points || enDoc.total_points || 0,
@@ -688,9 +688,14 @@ export const getGlobalRanking = query({
             }
 
             const sectionMap = new Map();
+            const nameMap = new Map();
             allWhitelists.forEach(w => {
+                const key = `${w.course_id}_${w.student_identifier.toLowerCase().trim()}`;
                 if (w.section) {
-                    sectionMap.set(`${w.course_id}_${w.student_identifier.toLowerCase().trim()}`, w.section);
+                    sectionMap.set(key, w.section);
+                }
+                if (w.student_name) {
+                    nameMap.set(key, w.student_name);
                 }
             });
 
@@ -699,15 +704,24 @@ export const getGlobalRanking = query({
                 const course = courseMap.get(en.course_id);
 
                 let section = en.section;
-                if (!section && user) {
+                let officialName = null;
+                
+                if (user) {
                     const idEN = (user.student_id || "").toLowerCase().trim();
                     const emailEN = (user.email || "").toLowerCase().trim();
-                    section = sectionMap.get(`${en.course_id}_${idEN}`) || sectionMap.get(`${en.course_id}_${emailEN}`);
+                    
+                    const idKey = `${en.course_id}_${idEN}`;
+                    const emailKey = `${en.course_id}_${emailEN}`;
+
+                    if (!section) {
+                        section = sectionMap.get(idKey) || sectionMap.get(emailKey);
+                    }
+                    officialName = nameMap.get(idKey) || nameMap.get(emailKey);
                 }
 
                 return {
                     _id: en._id,
-                    name: user?.name || "Sin nombre",
+                    name: officialName || user?.name || "Sin nombre",
                     student_id: user?.student_id,
                     ranking_points: en.ranking_points || en.total_points || 0,
                     section: section || "S/S",
