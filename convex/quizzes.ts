@@ -565,8 +565,6 @@ export const getQuizzesByCourse = query({
 
             const lastQuizzesUpdate = enrollment?.last_quizzes_update ?? 0;
 
-            const lastQuizzesUpdate = enrollment?.last_quizzes_update ?? 0;
-
             return await Promise.all(quizzes.map(async (quiz) => {
                 const userSubmissions = await ctx.db
                     .query("quiz_submissions")
