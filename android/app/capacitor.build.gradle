@@ -2,12 +2,15 @@
 
 android {
   compileOptions {
-      sourceCompatibility JavaVersion.VERSION_21
-      targetCompatibility JavaVersion.VERSION_21
+      sourceCompatibility JavaVersion.VERSION_17
+      targetCompatibility JavaVersion.VERSION_17
   }
 }
 
-apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
+def cordovaVars = file("../capacitor-cordova-android-plugins/cordova.variables.gradle")
+if (cordovaVars.exists()) {
+  apply from: cordovaVars
+}
 dependencies {
     implementation project(':capacitor-community-file-opener')
     implementation project(':capacitor-device')
