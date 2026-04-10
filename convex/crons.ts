@@ -58,6 +58,30 @@ export const sendMonthlyReports = internalMutation({
     },
 });
 
+// ─── Job: Recordatorio diario a docentes para subir documentos (08:30 AM CL) ─
+
+export const sendDocumentUploadReminder = internalMutation({
+    args: {},
+    handler: async (ctx) => {
+        const teachers = await ctx.db
+            .query("users")
+            .filter((q) => q.eq(q.field("role"), "teacher"))
+            .collect();
+
+        for (const teacher of teachers) {
+            await pushNotification(
+                ctx,
+                teacher._id,
+                "📄 Recordatorio: Sube tus documentos",
+                "Recuerda subir los documentos de la semana a tus ramos. ¡Mantén todo al día!",
+                "document_reminder"
+            );
+        }
+
+        return { success: true, teachersNotified: teachers.length };
+    },
+});
+
 // ─── Definición de crons ─────────────────────────────────────────────────────
 
 const crons = cronJobs();
@@ -81,6 +105,13 @@ crons.daily(
     "daily-evaluation-reminders",
     { hourUTC: 13, minuteUTC: 0 },
     internal.evaluaciones.sendEvaluationReminders
+);
+
+// Diariamente 08:30 AM CL: recordatorio a docentes para subir documentos
+crons.daily(
+    "daily-document-upload-reminder",
+    { hourUTC: 12, minuteUTC: 30 },
+    internal.crons.sendDocumentUploadReminder
 );
 
 // Diariamente limpieza de demos

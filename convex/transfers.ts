@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { pushNotification } from "./notifications";
 
 // Solicitar transferencia de puntos entre ramos
 export const requestTransfer = mutation({
@@ -47,27 +48,25 @@ export const requestTransfer = mutation({
         const user = await ctx.db.get(userId);
 
         if (sourceCourse) {
-            await ctx.db.insert("notifications", {
-                user_id: sourceCourse.teacher_id,
-                title: "Solicitud de Transferencia (Origen)",
-                message: `El alumno ${user?.name} desea transferir ${args.amount} puntos desde ${sourceCourse.name}.`,
-                type: "transfer_request",
-                read: false,
-                related_id: requestId,
-                created_at: Date.now(),
-            });
+            await pushNotification(
+                ctx,
+                sourceCourse.teacher_id,
+                "Solicitud de Transferencia (Origen)",
+                `El alumno ${user?.name} desea transferir ${args.amount} puntos desde ${sourceCourse.name}.`,
+                "transfer_request",
+                requestId
+            );
         }
 
         if (targetCourse && targetCourse.teacher_id !== sourceCourse?.teacher_id) {
-            await ctx.db.insert("notifications", {
-                user_id: targetCourse.teacher_id,
-                title: "Solicitud de Transferencia (Destino)",
-                message: `El alumno ${user?.name} desea recibir ${args.amount} puntos en ${targetCourse.name}.`,
-                type: "transfer_request",
-                read: false,
-                related_id: requestId,
-                created_at: Date.now(),
-            });
+            await pushNotification(
+                ctx,
+                targetCourse.teacher_id,
+                "Solicitud de Transferencia (Destino)",
+                `El alumno ${user?.name} desea recibir ${args.amount} puntos en ${targetCourse.name}.`,
+                "transfer_request",
+                requestId
+            );
         }
 
         return requestId;
@@ -180,15 +179,14 @@ export const approveTransfer = mutation({
                 approval_target: true
             });
 
-            // Notificar al alumno
-            await ctx.db.insert("notifications", {
-                user_id: req.user_id,
-                title: "Transferencia Aprobada",
-                message: `Se han transferido ${req.amount} puntos de ${fromCourse?.name} a ${toCourse?.name}.`,
-                type: "transfer_approved",
-                read: false,
-                created_at: Date.now(),
-            });
+            // Notificar al alumno (DB + push FCM)
+            await pushNotification(
+                ctx,
+                req.user_id,
+                "Transferencia Aprobada",
+                `Se han transferido ${req.amount} puntos de ${fromCourse?.name} a ${toCourse?.name}.`,
+                "transfer_approved"
+            );
 
         } else {
             await ctx.db.patch(req._id, {
@@ -216,13 +214,12 @@ export const rejectTransfer = mutation({
 
         await ctx.db.patch(req._id, { status: "rejected" });
 
-        await ctx.db.insert("notifications", {
-            user_id: req.user_id,
-            title: "Transferencia Rechazada",
-            message: `Tu solicitud de transferencia de ${req.amount} puntos fue rechazada por un docente.`,
-            type: "transfer_rejected",
-            read: false,
-            created_at: Date.now(),
-        });
+        await pushNotification(
+            ctx,
+            req.user_id,
+            "Transferencia Rechazada",
+            `Tu solicitud de transferencia de ${req.amount} puntos fue rechazada por un docente.`,
+            "transfer_rejected"
+        );
     }
 });

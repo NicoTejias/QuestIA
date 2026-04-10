@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { requireAuth } from "./withUser";
+import { api } from "./_generated/api";
 
 export const getNotifications = query({
     args: { paginationOpts: paginationOptsValidator },
@@ -67,7 +68,7 @@ export const markAllAsRead = mutation({
     },
 });
 
-// Helper interno usado por mutations para crear notificaciones
+// Helper interno usado por mutations para crear notificaciones + push FCM
 export const pushNotification = async (
     ctx: any,
     userId: any,
@@ -85,4 +86,18 @@ export const pushNotification = async (
         related_id: relatedId,
         created_at: Date.now(),
     });
+
+    // Enviar push FCM si el usuario tiene token registrado
+    try {
+        const user = await ctx.db.get(userId);
+        if (user?.push_token) {
+            await ctx.scheduler.runAfter(0, api.fcm.sendPushNotification, {
+                token: user.push_token,
+                title,
+                body: message,
+            });
+        }
+    } catch (e) {
+        console.error("Error enviando push FCM:", e);
+    }
 };

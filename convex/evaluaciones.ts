@@ -2,6 +2,7 @@ import { internalMutation, mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireTeacher } from "./withUser";
 import { api, internal } from "./_generated/api";
+import { pushNotification } from "./notifications";
 
 export const createEvaluacion = mutation({
     args: {
@@ -150,18 +151,17 @@ export const internalCreateNotifications = internalMutation({
         const studentUserIds = [];
         for (const enrollment of enrollments) {
             try {
-                await ctx.db.insert("notifications", {
-                    user_id: enrollment.user_id,
-                    title: `📚 Nueva evaluación: ${args.titulo}`,
-                    message: `${typeText} en ${args.courseName}${args.section ? ` (Sección ${args.section})` : ''}. Fecha: ${fechaFormateada}`,
-                    type: "evaluacion_nueva",
-                    related_id: args.evaluacionId.toString(),
-                    read: false,
-                    created_at: now,
-                });
+                await pushNotification(
+                    ctx,
+                    enrollment.user_id,
+                    `📚 Nueva evaluación: ${args.titulo}`,
+                    `${typeText} en ${args.courseName}${args.section ? ` (Sección ${args.section})` : ''}. Fecha: ${fechaFormateada}`,
+                    "evaluacion_nueva",
+                    args.evaluacionId.toString()
+                );
                 studentUserIds.push(enrollment.user_id);
             } catch (e) {
-                console.error(`Error insertando notificación DB para ${enrollment.user_id}:`, e);
+                console.error(`Error insertando notificación para ${enrollment.user_id}:`, e);
             }
         }
         return studentUserIds;
@@ -326,25 +326,14 @@ export const sendEvaluationReminders = internalMutation({
                 const alreadyNotified = existingNotifs.some(n => n.message.includes(daysText));
                 
                 if (!alreadyNotified) {
-                    await ctx.db.insert("notifications", {
-                        user_id: enrollment.user_id,
-                        title: `📚 Recordatorio: ${typeText} en ${daysText}`,
-                        message: `${evaluacion.titulo} - ${course.name} (${course.code}) ${evaluacion.hora ? `a las ${evaluacion.hora}` : ''}`,
-                        type: "evaluation_reminder",
-                        related_id: evaluacion._id.toString(),
-                        read: false,
-                        created_at: now,
-                    });
-
-                    // Enviar push FCM si el alumno tiene token registrado
-                    const student = await ctx.db.get(enrollment.user_id);
-                    if (student?.push_token) {
-                        await ctx.scheduler.runAfter(0, api.fcm.sendPushNotification, {
-                            token: student.push_token,
-                            title: `📚 Recordatorio: ${typeText} en ${daysText}`,
-                            body: `${evaluacion.titulo} - ${course.name}${evaluacion.hora ? ` a las ${evaluacion.hora}` : ''}`,
-                        });
-                    }
+                    await pushNotification(
+                        ctx,
+                        enrollment.user_id,
+                        `📚 Recordatorio: ${typeText} en ${daysText}`,
+                        `${evaluacion.titulo} - ${course.name} (${course.code}) ${evaluacion.hora ? `a las ${evaluacion.hora}` : ''}`,
+                        "evaluation_reminder",
+                        evaluacion._id.toString()
+                    );
                 }
             }
         }

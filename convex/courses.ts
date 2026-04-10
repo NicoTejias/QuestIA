@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { normalizeRut } from "./rutUtils";
 import { requireAuth, requireTeacher } from "./withUser";
 import { paginationOptsValidator } from "convex/server";
+import { pushNotification } from "./notifications";
 
 // Crear un nuevo ramo
 export const createCourse = mutation({
@@ -632,16 +633,15 @@ export const giveParticipationPoints = mutation({
             ranking_points: (enrollment.ranking_points ?? 0) + args.points,
         });
 
-        // Notificar al alumno
+        // Notificar al alumno (DB + push FCM)
         const reason = args.reason || "Participación en clase";
-        await ctx.db.insert("notifications", {
-            user_id: enrollment.user_id,
-            title: `⭐ +${args.points} puntos de participación`,
-            message: `${teacher.name || "Tu docente"} te dio ${args.points} pts por: ${reason} en ${course.name}.`,
-            type: "participation_points",
-            read: false,
-            created_at: Date.now(),
-        });
+        await pushNotification(
+            ctx,
+            enrollment.user_id,
+            `⭐ +${args.points} puntos de participación`,
+            `${teacher.name || "Tu docente"} te dio ${args.points} pts por: ${reason} en ${course.name}.`,
+            "participation_points"
+        );
 
         return { success: true };
     },

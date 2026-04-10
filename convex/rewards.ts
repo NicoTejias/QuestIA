@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth, requireTeacher } from "./withUser";
 import { api } from "./_generated/api";
+import { pushNotification } from "./notifications";
 
 
 import { paginationOptsValidator } from "convex/server";
@@ -127,18 +128,17 @@ export const redeemReward = mutation({
             timestamp: Date.now(),
         });
 
-        // Notificar al docente del ramo
+        // Notificar al docente del ramo (DB + push FCM)
         const course = await ctx.db.get(reward.course_id);
         if (course) {
-            await ctx.db.insert("notifications", {
-                user_id: course.teacher_id,
-                title: "🎁 Canje pendiente",
-                message: `${user.name || "Un alumno"} canjeó "${reward.name}" en ${course.name}. Revisa los canjes pendientes.`,
-                type: "reward_redeemed",
-                read: false,
-                related_id: redemptionId, // Ahora apunta al ID del canje
-                created_at: Date.now(),
-            });
+            await pushNotification(
+                ctx,
+                course.teacher_id,
+                "🎁 Canje pendiente",
+                `${user.name || "Un alumno"} canjeó "${reward.name}" en ${course.name}. Revisa los canjes pendientes.`,
+                "reward_redeemed",
+                redemptionId
+            );
         }
 
         // Aplicar efectos inmediatos
@@ -263,15 +263,14 @@ export const markRedemptionDelivered = mutation({
 
         await ctx.db.patch(redemptionId, { status: "completed" });
 
-        // Notificar al alumno que fue entregado
-        await ctx.db.insert("notifications", {
-            user_id: redemption.user_id,
-            title: "🎁 ¡Recompensa entregada!",
-            message: `Tu canje de "${reward.name}" ha sido marcado como entregado por el docente.`,
-            type: "reward_delivered",
-            read: false,
-            created_at: Date.now(),
-        });
+        // Notificar al alumno que fue entregado (DB + push FCM)
+        await pushNotification(
+            ctx,
+            redemption.user_id,
+            "🎁 ¡Recompensa entregada!",
+            `Tu canje de "${reward.name}" ha sido marcado como entregado por el docente.`,
+            "reward_delivered"
+        );
     },
 });
 
