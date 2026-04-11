@@ -229,11 +229,18 @@ export const getTeacherStats = query({
     },
 });
 
+// Convierte un timestamp a fecha string YYYY-MM-DD en hora Chile (UTC-4)
+function toChileDateStr(ts: number): string {
+    const CHILE_OFFSET_MS = -4 * 60 * 60 * 1000; // UTC-4 (Chile continental)
+    const chileTime = new Date(ts + CHILE_OFFSET_MS);
+    return chileTime.toISOString().split('T')[0];
+}
+
 function calculateDailyActivity(mSubs: any[], qSubs: any[], qAttempts: any[]) {
     const days = 7;
     const activity = [];
-    const now = new Date();
-    
+    const now = Date.now();
+
     // Unificar todos los eventos de actividad con su usuario y timestamp
     const events = [
         ...mSubs.map(s => ({ userId: s.user_id, ts: s.completed_at || s._creationTime })),
@@ -242,17 +249,16 @@ function calculateDailyActivity(mSubs: any[], qSubs: any[], qAttempts: any[]) {
     ];
 
     for (let i = days - 1; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        const dayStr = date.toISOString().split('T')[0];
-        
-        // Alumnos únicos que tuvieron actividad este día
+        const dayTs = now - i * 24 * 60 * 60 * 1000;
+        const dayStr = toChileDateStr(dayTs);
+
+        // Alumnos únicos que tuvieron actividad este día (hora Chile)
         const uniqueUsersOnDay = new Set(
             events
-                .filter(e => new Date(e.ts).toISOString().split('T')[0] === dayStr)
+                .filter(e => toChileDateStr(e.ts) === dayStr)
                 .map(e => e.userId)
         );
-        
+
         activity.push({ day: dayStr, count: uniqueUsersOnDay.size });
     }
     return activity;

@@ -31,26 +31,7 @@ function getFirstName(fullName?: string): string {
     return fullName.split(' ')[0]
 }
 
-const EFEMERIDES = [
-    { date: "16-09", text: "En 1810 se inició la independencia de Chile con la Primera Junta Nacional de Gobierno." },
-    { date: "21-05", text: "En 1818 se firmó el Decreto de Ablución, que abolió la esclavitud en Chile." },
-    { date: "05-04", text: "En 1818, Bernardo O'Higgins proclamó la independencia de Chile en Concepción." },
-    { date: "02-04", text: "En 1982 se promulgó la Ley Orgánica Constitucional de Enseñanza en Chile." },
-    { date: "11-03", text: "En 1818, Arturo Prat nació en Santiago, convirtiéndose en héroe de la Patria." },
-    { date: "21-11", text: "En 1830 se fundó la Universidad de Chile, la primera institución de educación superior del país." },
-    { date: "07-06", text: "En 1945, la UNESCO fue fundada para promover la paz y la educación a nivel mundial." },
-    { date: "15-05", text: "En 1807 se fundó el Instituto Nacional, el primer establecimiento de educación pública de Chile." },
-    { date: "27-02", text: "Cada 27 de febrero se recuerda el terremoto más fuerte registrado: 9.5° Richter en 1960." },
-    { date: "10-08", text: "En 1811 se instaló la primera Junta de Gobierno en Chile, dando paso al período patrio." },
-    { date: "18-10", text: "En 1816, Bernardo O'Higgins firmaba los Pactos de familia con Argentina para apoyo militar." },
-    { date: "25-01", text: "En 1818, el combate de Chacabuco selló la independencia de Chile del dominio español." },
-]
-
-function getTodayEphemeris(): string {
-    const monthDay = new Date().toLocaleDateString('es-CL', { timeZone: 'America/Santiago', month: '2-digit', day: '2-digit' }).replace('/', '-')
-    const found = EFEMERIDES.find(e => e.date === monthDay)
-    return found ? found.text : EFEMERIDES[Math.floor(Math.random() * EFEMERIDES.length)].text
-}
+import { getTodayEphemeris } from '../data/efemerides'
 
 export default function TeacherDashboard() {
     const { signOut } = useClerk()

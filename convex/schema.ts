@@ -89,6 +89,9 @@ export default defineSchema({
         teacher_id: v.id("users"),
         career_id: v.optional(v.id("careers")),
         description: v.string(),
+        linked_sheets_id: v.optional(v.string()),   // Google Sheets ID para sync automático
+        linked_sheets_name: v.optional(v.string()),  // Nombre del archivo para mostrar en UI
+        last_sheets_sync: v.optional(v.number()),    // Timestamp del último sync
     })
         .index("by_teacher", ["teacher_id"])
         .index("by_code", ["code"])

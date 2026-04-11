@@ -107,6 +107,13 @@ crons.daily(
     internal.evaluaciones.sendEvaluationReminders
 );
 
+// Diariamente 07:00 AM CL: sincronizar whitelists desde Google Sheets vinculados
+crons.daily(
+    "daily-sheets-whitelist-sync",
+    { hourUTC: 11, minuteUTC: 0 },
+    internal.sheets_sync.syncAllLinkedCourses
+);
+
 // Diariamente 08:30 AM CL: recordatorio a docentes para subir documentos
 crons.daily(
     "daily-document-upload-reminder",

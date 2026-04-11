@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { normalizeRut } from "./rutUtils";
 import { requireAuth, requireTeacher } from "./withUser";
@@ -26,6 +26,7 @@ export const batchUploadWhitelist = mutation({
     args: {
         course_id: v.id("courses"),
         clear_existing: v.optional(v.boolean()),
+        sync_mode: v.optional(v.boolean()),  // Modo sincronizar: agrega nuevos, elimina los que no están
         students: v.array(v.object({
             identifier: v.string(),
             name: v.optional(v.string()),
@@ -35,12 +36,11 @@ export const batchUploadWhitelist = mutation({
     handler: async (ctx, args) => {
         const user = await requireTeacher(ctx);
 
-        // Verificar que el curso pertenezca al docente
         const course = await ctx.db.get(args.course_id);
         if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
             throw new Error("No autorizado para este ramo");
 
-        // 1. Limpieza opcional previa
+        // 1. Limpieza total (modo legacy)
         if (args.clear_existing) {
             const existingEntries = await ctx.db
                 .query("whitelists")
@@ -53,13 +53,27 @@ export const batchUploadWhitelist = mutation({
 
         let added = 0;
         let updated = 0;
-        const seen = new Set(); 
+        let removed = 0;
+        const seen = new Set<string>();
 
-        // Obtener todos los existentes para match inteligente
         const currentWhitelist = await ctx.db
             .query("whitelists")
             .withIndex("by_course", (q) => q.eq("course_id", args.course_id))
             .collect();
+
+        // Helper: buscar match por cuerpo numérico del RUT
+        const findMatch = (numbersOnly: string) => {
+            return currentWhitelist.find(w => {
+                const dbNumbers = w.student_identifier.replace(/[^\d]/g, '');
+                if (!dbNumbers || !numbersOnly) return false;
+                return dbNumbers === numbersOnly ||
+                    (dbNumbers.length >= 7 && numbersOnly.length >= 7 &&
+                        (dbNumbers.includes(numbersOnly) || numbersOnly.includes(dbNumbers)));
+            });
+        };
+
+        // Set de IDs procesados para detectar eliminados en modo sync
+        const processedDbIds = new Set<string>();
 
         for (const student of args.students) {
             const rawId = student.identifier.trim();
@@ -69,27 +83,17 @@ export const batchUploadWhitelist = mutation({
             const numbersOnly = normalized.replace(/[^\d]/g, '');
             if (!normalized || seen.has(normalized)) continue;
 
-            // 2. Match inteligente: buscar si ya existe alguien con este cuerpo numérico
-            const existing = currentWhitelist.find(w => {
-                const dbNumbers = w.student_identifier.replace(/[^\d]/g, '');
-                if (!dbNumbers || !numbersOnly) return false;
-                
-                // Match exacto de números o uno contenido en otro (para prefijos '2' o DVs extra)
-                return dbNumbers === numbersOnly || 
-                       (dbNumbers.length >= 7 && numbersOnly.length >= 7 && 
-                        (dbNumbers.includes(numbersOnly) || numbersOnly.includes(dbNumbers)));
-            });
+            const existing = findMatch(numbersOnly);
 
             if (existing) {
-                // Si existe, actualizamos a la nueva versión "limpia" de Blackboard
                 await ctx.db.patch(existing._id, {
                     student_identifier: normalized,
                     section: student.section?.trim() || existing.section,
                     student_name: student.name?.trim() || existing.student_name
                 });
                 updated++;
+                processedDbIds.add(existing._id);
             } else {
-                // Si no existe, lo insertamos
                 await ctx.db.insert("whitelists", {
                     course_id: args.course_id,
                     student_identifier: normalized,
@@ -101,7 +105,76 @@ export const batchUploadWhitelist = mutation({
 
             seen.add(normalized);
         }
-        return { added, updated };
+
+        // 2. Modo sync: eliminar alumnos que ya no están en la lista nueva
+        if (args.sync_mode && !args.clear_existing) {
+            for (const existing of currentWhitelist) {
+                if (!processedDbIds.has(existing._id)) {
+                    await ctx.db.delete(existing._id);
+                    removed++;
+                }
+            }
+        }
+
+        return { added, updated, removed };
+    },
+});
+
+// Vincular un Google Sheets a un ramo para sync automático
+export const linkGoogleSheets = mutation({
+    args: {
+        course_id: v.id("courses"),
+        sheets_id: v.string(),
+        sheets_name: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const user = await requireTeacher(ctx);
+        const course = await ctx.db.get(args.course_id);
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
+            throw new Error("No autorizado");
+
+        await ctx.db.patch(args.course_id, {
+            linked_sheets_id: args.sheets_id,
+            linked_sheets_name: args.sheets_name,
+        });
+    },
+});
+
+// Desvincular Google Sheets de un ramo
+export const unlinkGoogleSheets = mutation({
+    args: { course_id: v.id("courses") },
+    handler: async (ctx, args) => {
+        const user = await requireTeacher(ctx);
+        const course = await ctx.db.get(args.course_id);
+        if (!course || (course.teacher_id !== user._id && user.role !== "admin"))
+            throw new Error("No autorizado");
+
+        await ctx.db.patch(args.course_id, {
+            linked_sheets_id: undefined,
+            linked_sheets_name: undefined,
+            last_sheets_sync: undefined,
+        });
+    },
+});
+
+// Actualizar timestamp de último sync de Sheets
+export const updateLastSheetsSync = mutation({
+    args: { course_id: v.id("courses") },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.course_id, {
+            last_sheets_sync: Date.now(),
+        });
+    },
+});
+
+// Query interna: obtener ramos con Sheets vinculado (para cron de sync)
+export const getCoursesWithLinkedSheets = internalQuery({
+    args: {},
+    handler: async (ctx) => {
+        const allCourses = await ctx.db.query("courses").collect();
+        return allCourses
+            .filter(c => c.linked_sheets_id)
+            .map(c => ({ _id: c._id, name: c.name, code: c.code, linked_sheets_id: c.linked_sheets_id }));
     },
 });
 

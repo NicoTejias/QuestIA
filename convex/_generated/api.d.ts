@@ -41,6 +41,7 @@ import type * as rateLimit from "../rateLimit.js";
 import type * as reports from "../reports.js";
 import type * as rewards from "../rewards.js";
 import type * as rutUtils from "../rutUtils.js";
+import type * as sheets_sync from "../sheets_sync.js";
 import type * as streak_reminders from "../streak_reminders.js";
 import type * as transfers from "../transfers.js";
 import type * as users from "../users.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   reports: typeof reports;
   rewards: typeof rewards;
   rutUtils: typeof rutUtils;
+  sheets_sync: typeof sheets_sync;
   streak_reminders: typeof streak_reminders;
   transfers: typeof transfers;
   users: typeof users;
