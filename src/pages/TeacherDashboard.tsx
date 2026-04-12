@@ -320,9 +320,9 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                             <User className="w-4 h-4 text-primary" />
                             Registro por Ramo
                         </h3>
-                        <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
-                                <BarChart data={(stats as any).courseStats}>
+                        <div className="h-[300px] w-full min-h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={(stats as any).courseStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                     <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value: any) => String(value).substring(0, 15) + (String(value).length > 15 ? '...' : '')} />
                                     <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
@@ -331,7 +331,7 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                                         itemStyle={{ color: '#e2e8f0' }}
                                         cursor={{ fill: '#ffffff05' }}
                                     />
-                                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                                     <Bar dataKey="students" name="En Whitelist" fill="#94a3b8" radius={[4, 4, 0, 0]} />
                                     <Bar dataKey="registered" name="Registrados" fill="#4ade80" radius={[4, 4, 0, 0]} />
                                 </BarChart>
@@ -344,9 +344,9 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                             <Target className="w-4 h-4 text-accent" />
                             Promedio Diario de Quizzes por Ramo y Sección
                         </h3>
-                        <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
-                                <BarChart data={(stats as any).courseStats}>
+                        <div className="h-[300px] w-full min-h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={(stats as any).courseStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                     <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value: any) => String(value).substring(0, 15) + (String(value).length > 15 ? '...' : '')} />
                                     <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
@@ -355,7 +355,7 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                                         itemStyle={{ color: '#e2e8f0' }}
                                         cursor={{ fill: '#ffffff05' }}
                                     />
-                                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                                    <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                                     <Bar dataKey="dailyAvgQuizzes" name="Quizzes/Día (Total Sec)" fill="#64748b" radius={[4, 4, 0, 0]} />
                                     <Bar dataKey="dailyAvgPerStudent" name="Quizzes/Día (Por Alumno)" fill="#a78bfa" radius={[4, 4, 0, 0]} />
                                 </BarChart>
@@ -429,9 +429,9 @@ function InicioDocente({ firstName, coursesCount, courses, onSelectCourse }: { f
                         <Sparkles className="w-4 h-4 text-accent" />
                         Conexiones (Últimos 7 días)
                     </h3>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={300}>
-                            <LineChart data={(stats as any).dailyActivity}>
+                    <div className="h-[300px] w-full min-h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={(stats as any).dailyActivity} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                 <XAxis dataKey="day" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => {
                                     const d = new Date(val + "T00:00:00");
