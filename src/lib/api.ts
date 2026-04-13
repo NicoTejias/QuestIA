@@ -1603,33 +1603,37 @@ export const QuizzesAPI = {
     if (!profile) throw new Error("Perfil no encontrado")
 
     const { data: existing } = await supabase
-        .from('quiz_attempts')
-        .select('*')
-        .eq('quiz_id', args.quiz_id)
-        .eq('user_id', profile.id)
-        .is('completed_at', null)
-        .limit(1)
-        .single()
+      .from('quiz_attempts')
+      .select('*')
+      .eq('quiz_id', args.quiz_id)
+      .eq('user_id', profile.id)
+      .limit(10)
     
-    if (existing) return existing
+    // Filter for in-progress attempts in code instead of SQL to avoid 406 errors
+    const inProgress = existing?.find((a: any) => !a.completed_at)
+    if (inProgress) return inProgress
 
     const { data: quiz } = await supabase.from('quizzes').select('*').eq('id', args.quiz_id).single()
     if (!quiz) throw new Error("Quiz no encontrado")
 
     const { data: newAttempt, error } = await supabase
-        .from('quiz_attempts')
-        .insert({
-            quiz_id: args.quiz_id,
-            user_id: profile.id,
-            current_question_index: 0,
-            selected_options: [],
-            started_at: Date.now()
-        })
-        .select()
-        .single()
+      .from('quiz_attempts')
+      .insert({
+        quiz_id: args.quiz_id,
+        user_id: profile.id,
+        current_question_index: 0,
+        selected_options: [],
+        status: 'in_progress',
+        started_at: Date.now(),
+        last_updated: Date.now()
+      })
+      .select()
     
-    if (error) throw error
-    return newAttempt
+    if (error) {
+      console.error('Error creating attempt:', error)
+      throw new Error(error.message)
+    }
+    return newAttempt?.[0]
   },
 
   async updateAttemptProgress(args: { attempt_id: string; current_question_index: number; selected_options: any[] }) {
