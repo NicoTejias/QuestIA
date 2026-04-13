@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useMutation } from "convex/react"
-import { api } from "../../convex/_generated/api"
+import { useUser } from '@clerk/clerk-react'
+import { AdminAPI } from '../lib/api'
 import { MessageSquare, X, Send, Loader2, AlertCircle, Lightbulb, Heart, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function FeedbackButton() {
+    const { user: clerkUser } = useUser()
     const [isOpen, setIsOpen] = useState(false)
     const [type, setType] = useState<'bug' | 'suggestion' | 'opinion'>('opinion')
     const [content, setContent] = useState('')
@@ -29,35 +30,19 @@ export default function FeedbackButton() {
         setSelectedFiles(prev => prev.filter((_, i) => i !== index))
         setPreviews(prev => prev.filter((_, i) => i !== index))
     }
-    const sendFeedback = useMutation(api.feedback.sendFeedback)
-    const generateUploadUrl = useMutation(api.feedback.generateUploadUrl)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!content.trim() || sending) return
+        if (!content.trim() || sending || !clerkUser) return
 
         setSending(true)
         try {
-            const imageUrls: string[] = []
-            
-            // Subir imágenes secuencialmente
-            for (const file of selectedFiles) {
-                const uploadUrl = await generateUploadUrl()
-                const result = await fetch(uploadUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": file.type },
-                    body: file,
-                })
-                const { storageId } = (await result.json()) as { storageId: string }
-                imageUrls.push(storageId)
-            }
-
-            await sendFeedback({
+            await AdminAPI.sendFeedback({
                 content: content.trim(),
                 type,
                 page_url: window.location.href,
-                image_urls: imageUrls.length > 0 ? imageUrls : undefined
-            })
+                image_urls: []
+            }, clerkUser.id)
 
             toast.success('¡Gracias por tu feedback! Lo revisaremos pronto.')
             setContent('')
@@ -73,7 +58,6 @@ export default function FeedbackButton() {
 
     return (
         <>
-            {/* Floating Button */}
             <button
                 onClick={() => setIsOpen(true)}
                 className="fixed bottom-6 right-6 z-[60] bg-primary hover:bg-primary-light text-white p-4 rounded-full shadow-2xl shadow-primary/40 hover:scale-110 active:scale-95 transition-all group border border-white/20"
@@ -82,7 +66,6 @@ export default function FeedbackButton() {
                 <MessageSquare className="w-6 h-6 group-hover:rotate-12 transition-transform" />
             </button>
 
-            {/* Modal */}
             {isOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOpen(false)} />

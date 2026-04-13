@@ -745,6 +745,21 @@ export const AdminAPI = {
     }))
   },
 
+  async sendFeedback(data: { content: string; type: string; page_url?: string; image_urls?: string[] }, clerkId: string) {
+    const { data: profile } = await supabase.from('profiles').select('id').eq('clerk_id', clerkId).single()
+    if (!profile) throw new Error("Perfil no encontrado")
+    
+    const { error } = await supabase.from('feedback').insert({
+      user_id: profile.id,
+      content: data.content,
+      type: data.type,
+      page_url: data.page_url,
+      image_urls: data.image_urls,
+      created_at: Date.now()
+    })
+    if (error) throw error
+  },
+
   async listStudents() {
     const { data, error } = await supabase.from('profiles').select('*').eq('role', 'student')
     if (error) throw error
@@ -800,6 +815,15 @@ export const AppConfigAPI = {
       .from('app_config')
       .upsert({ key: 'allowed_domains', value: domains }, { onConflict: 'key' })
     if (error) throw error
+  },
+
+  async getLatestConfig() {
+    return {
+      latestVersion: "1.0.12",
+      downloadUrl: "https://github.com/NicoTejias/QuestIA/releases/download/v.1.0.12/QuestIA.1.0.12.apk",
+      isMandatory: true,
+      message: "Versión 1.0.12: Optimizaciones de sistema y correcciones menores."
+    }
   }
 }
 

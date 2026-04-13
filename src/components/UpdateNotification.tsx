@@ -1,6 +1,5 @@
 import { useState, useEffect, Component, type ReactNode } from 'react';
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { AppConfigAPI } from "../lib/api";
 import { NATIVE_VERSION } from "../version";
 import { Download, AlertCircle, Loader2 } from "lucide-react";
 import { Capacitor } from '@capacitor/core';
@@ -8,7 +7,6 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { FileOpener } from '@capacitor-community/file-opener';
 import { toast } from 'sonner';
 
-// Error Boundary para capturar errores de Convex queries sin romper toda la app
 class UpdateErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
     constructor(props: { children: ReactNode }) {
         super(props);
@@ -25,18 +23,24 @@ class UpdateErrorBoundary extends Component<{ children: ReactNode }, { hasError:
 
     render() {
         if (this.state.hasError) {
-            return null; // Si falla, simplemente no mostramos nada
+            return null;
         }
         return this.props.children;
     }
 }
 
 function UpdateNotificationInner() {
-    const config = useQuery(api.app_config.getLatestConfig);
+    const [config, setConfig] = useState<any>(null)
     const [showModal, setShowModal] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        AppConfigAPI.getLatestConfig()
+            .then(setConfig)
+            .catch(console.error)
+    }, [])
 
     useEffect(() => {
         if (!Capacitor.isNativePlatform()) return;
@@ -53,7 +57,6 @@ function UpdateNotificationInner() {
     const handleUpdate = async () => {
         if (!config?.downloadUrl) return;
 
-        // Si no es Android, abrir link normal
         if (Capacitor.getPlatform() !== 'android') {
             window.open(config.downloadUrl, '_blank');
             return;
@@ -62,15 +65,14 @@ function UpdateNotificationInner() {
         try {
             setDownloading(true);
             setError(null);
-            setProgress(5); // Inicio visual
+            setProgress(5);
 
             const fileName = `QuestIA_v${config.latestVersion}.apk`;
 
-            // 1. Descargar el archivo
             const downloadResult = await Filesystem.downloadFile({
                 url: config.downloadUrl,
                 path: fileName,
-                directory: Directory.External, // Usamos External para que el instalador tenga acceso
+                directory: Directory.External,
             });
 
             if (!downloadResult.path) throw new Error("No se pudo obtener la ruta del archivo");
@@ -78,7 +80,6 @@ function UpdateNotificationInner() {
             setProgress(100);
             toast.success("Descarga completada. Iniciando instalación...");
 
-            // 2. Abrir para instalar
             await FileOpener.open({
                 filePath: downloadResult.path,
                 contentType: 'application/vnd.android.package-archive'
@@ -98,7 +99,6 @@ function UpdateNotificationInner() {
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
             <div className="bg-surface-light border border-primary/30 rounded-3xl p-8 max-w-md w-full shadow-2xl overflow-hidden relative group">
-                {/* Decoración de fondo */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/20 transition-all duration-700" />
                 
                 <div className="relative z-10 text-center">
@@ -183,7 +183,6 @@ function UpdateNotificationInner() {
     );
 }
 
-// Exportamos envuelto en el Error Boundary
 export default function UpdateNotification() {
     return (
         <UpdateErrorBoundary>
