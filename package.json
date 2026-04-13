@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "migrate:dry": "tsx migrate.ts --dry-run",
+    "migrate:wipe": "tsx migrate.ts --confirm-wipe",
+    "migrate:verify": "tsx migrate.ts --verify"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
@@ -63,6 +66,8 @@
     "jsdom": "^29.0.0",
     "pg": "^8.20.0",
     "tailwindcss": "^4.2.1",
+    "tsx": "^4.19.2",
+    "@types/pg": "^8.11.10",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1",

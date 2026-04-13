@@ -99,3 +99,108 @@ export const getAllCourseGroups = query({
     return await ctx.db.query("course_groups").collect()
   },
 })
+
+export const getAllQuizAttempts = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("quiz_attempts").collect()
+  },
+})
+
+export const getAllMissionSubmissions = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("mission_submissions").collect()
+  },
+})
+
+export const getAllCourseDocuments = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("course_documents").collect()
+  },
+})
+
+export const getAllUserBadges = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("user_badges").collect()
+  },
+})
+
+export const getAllPointTransferRequests = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("point_transfer_requests").collect()
+  },
+})
+
+export const getAllAttendanceSessions = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("attendance_sessions").collect()
+  },
+})
+
+export const getAllAttendanceLogs = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("attendance_logs").collect()
+  },
+})
+
+export const getAllFeedback = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("feedback").collect()
+  },
+})
+
+export const getAllGradingRubrics = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("grading_rubrics").collect()
+  },
+})
+
+export const getAllGradingResults = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("grading_results").collect()
+  },
+})
+
+export const getAllEvaluaciones = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("evaluaciones").collect()
+  },
+})
+
+export const getAllAdmins = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("admins").collect()
+  },
+})
+
+export const getAllRateLimits = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("rate_limits").collect()
+  },
+})
+
+export const getAllInstitutionConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("institution_config").collect()
+  },
+})
+
+export const getAllCareers = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("careers").collect()
+  },
+})
