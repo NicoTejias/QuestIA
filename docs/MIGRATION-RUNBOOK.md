@@ -79,9 +79,19 @@ npm run migrate:verify
 
 ### Problemas Conocidos
 
-1. **Blobs no migrados:** Los 39 archivos en `course_documents` no tienen blobs en Convex Storage — requieren restauración manual si existen backups.
+1. **Blobs no migrateados:** Los 39 archivos en `course_documents` no tienen blobs en Convex Storage — requieren restauración manual si existen backups.
 2. **FK orphans:** Algunos registros referencian teachers/courses que ya no existen — fueron eliminados del sistema origen.
 3. **1 perfil duplicado:** Email `ni.tejias@profesor.duoc.cl` existe dos veces en Convex, solo uno migró.
+4. **Columnas faltantes en quiz_attempts:** Ejecute el SQL abajo para corregir
+
+---
+
+## 9. SQL de Corrección Post-Migración
+
+```sql
+-- Agregar columna started_at a quiz_attempts (requerida por código)
+ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS started_at BIGINT;
+```
 
 ---
 
