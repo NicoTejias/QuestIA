@@ -1455,7 +1455,7 @@ export const AnalyticsAPI = {
 // ============================================================
 export const FaqAPI = {
   async getFaqs() {
-    const { data, error } = await supabase.from('faqs').select('*').order('order', { ascending: true })
+    const { data, error } = await supabase.from('faqs').select('*').order('sort_order', { ascending: true })
     if (error) throw error
     return data || []
   },
