@@ -805,24 +805,32 @@ export const AdminAPI = {
 // ============================================================
 export const AppConfigAPI = {
   async getAllowedDomainsList() {
-    const { data, error } = await supabase.from('app_config').select('value').eq('key', 'allowed_domains').maybeSingle()
+    const { data, error } = await supabase.from('institution_config').select('value').eq('key', 'allowed_email_domains').maybeSingle()
     if (error) throw error
-    return data?.value || []
+    return data?.value ? data.value.split(',') : []
   },
 
   async updateAllowedDomains(domains: string[]) {
     const { error } = await supabase
-      .from('app_config')
-      .upsert({ key: 'allowed_domains', value: domains }, { onConflict: 'key' })
+      .from('institution_config')
+      .upsert({ key: 'allowed_email_domains', value: domains.join(','), updated_at: Date.now() }, { onConflict: 'key' })
     if (error) throw error
   },
 
   async getLatestConfig() {
+    const { data, error } = await supabase.from('app_config').select('key, value')
+    if (error) throw error
+    
+    const config: any = {}
+    data?.forEach(row => {
+      config[row.key] = row.value
+    })
+    
     return {
-      latestVersion: "1.0.12",
-      downloadUrl: "https://github.com/NicoTejias/QuestIA/releases/download/v.1.0.12/QuestIA.1.0.12.apk",
-      isMandatory: true,
-      message: "Versión 1.0.12: Optimizaciones de sistema y correcciones menores."
+      latestVersion: config.latest_version || "1.0.12",
+      downloadUrl: config.download_url || "https://github.com/NicoTejias/QuestIA/releases/download/v.1.0.12/QuestIA.1.0.12.apk",
+      isMandatory: config.is_mandatory === 'true',
+      message: config.update_message || "Versión 1.0.12: Optimizaciones de sistema y correcciones menores."
     }
   }
 }

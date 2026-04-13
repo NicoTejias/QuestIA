@@ -67,10 +67,10 @@ ALTER TABLE rewards ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow read rewards" ON rewards;
 CREATE POLICY "Allow read rewards" ON rewards FOR SELECT USING (true);
 
--- DOCUMENTS
-ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow read documents" ON documents;
-CREATE POLICY "Allow read documents" ON documents FOR SELECT USING (true);
+-- COURSE DOCUMENTS (not "documents")
+ALTER TABLE course_documents ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read course_documents" ON course_documents;
+CREATE POLICY "Allow read course_documents" ON course_documents FOR SELECT USING (true);
 
 -- WHITELISTS
 ALTER TABLE whitelists ENABLE ROW LEVEL SECURITY;
@@ -101,3 +101,89 @@ DROP POLICY IF EXISTS "Allow insert course_groups" ON course_groups;
 CREATE POLICY "Allow insert course_groups" ON course_groups FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Allow update course_groups" ON course_groups;
 CREATE POLICY "Allow update course_groups" ON course_groups FOR UPDATE USING (true);
+
+-- MISSIONS
+ALTER TABLE missions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read missions" ON missions;
+CREATE POLICY "Allow read missions" ON missions FOR SELECT USING (true);
+
+-- MISSION SUBMISSIONS
+ALTER TABLE mission_submissions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read mission_submissions" ON mission_submissions;
+CREATE POLICY "Allow read mission_submissions" ON mission_submissions FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow insert mission_submissions" ON mission_submissions;
+CREATE POLICY "Allow insert mission_submissions" ON mission_submissions FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow update mission_submissions" ON mission_submissions;
+CREATE POLICY "Allow update mission_submissions" ON mission_submissions FOR UPDATE USING (true);
+
+-- BADGES
+ALTER TABLE badges ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read badges" ON badges;
+CREATE POLICY "Allow read badges" ON badges FOR SELECT USING (true);
+
+-- USER BADGES
+ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read user_badges" ON user_badges;
+CREATE POLICY "Allow read user_badges" ON user_badges FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow insert user_badges" ON user_badges;
+CREATE POLICY "Allow insert user_badges" ON user_badges FOR INSERT WITH CHECK (true);
+
+-- CAREERS
+ALTER TABLE careers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read careers" ON careers;
+CREATE POLICY "Allow read careers" ON careers FOR SELECT USING (true);
+
+-- INSTITUTION CONFIG
+ALTER TABLE institution_config ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read institution_config" ON institution_config;
+CREATE POLICY "Allow read institution_config" ON institution_config FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow update institution_config" ON institution_config;
+CREATE POLICY "Allow update institution_config" ON institution_config FOR UPDATE USING (true);
+
+-- ADMINS
+ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read admins" ON admins;
+CREATE POLICY "Allow read admins" ON admins FOR SELECT USING (true);
+
+-- POINT TRANSFER REQUESTS
+ALTER TABLE point_transfer_requests ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read point_transfer_requests" ON point_transfer_requests;
+CREATE POLICY "Allow read point_transfer_requests" ON point_transfer_requests FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow insert point_transfer_requests" ON point_transfer_requests;
+CREATE POLICY "Allow insert point_transfer_requests" ON point_transfer_requests FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow update point_transfer_requests" ON point_transfer_requests;
+CREATE POLICY "Allow update point_transfer_requests" ON point_transfer_requests FOR UPDATE USING (true);
+
+-- ATTENDANCE SESSIONS
+ALTER TABLE attendance_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read attendance_sessions" ON attendance_sessions;
+CREATE POLICY "Allow read attendance_sessions" ON attendance_sessions FOR SELECT USING (true);
+
+-- ATTENDANCE LOGS
+ALTER TABLE attendance_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read attendance_logs" ON attendance_logs;
+CREATE POLICY "Allow read attendance_logs" ON attendance_logs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow insert attendance_logs" ON attendance_logs;
+CREATE POLICY "Allow insert attendance_logs" ON attendance_logs FOR INSERT WITH CHECK (true);
+
+-- GRADING RUBRICS
+ALTER TABLE grading_rubrics ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read grading_rubrics" ON grading_rubrics;
+CREATE POLICY "Allow read grading_rubrics" ON grading_rubrics FOR SELECT USING (true);
+
+-- GRADING RESULTS
+ALTER TABLE grading_results ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read grading_results" ON grading_results;
+CREATE POLICY "Allow read grading_results" ON grading_results FOR SELECT USING (true);
+
+-- EVALUACIONES
+ALTER TABLE evaluaciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read evaluaciones" ON evaluaciones;
+CREATE POLICY "Allow read evaluaciones" ON evaluaciones FOR SELECT USING (true);
+
+-- RATE LIMITS
+ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read rate_limits" ON rate_limits;
+CREATE POLICY "Allow read rate_limits" ON rate_limits FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow insert rate_limits" ON rate_limits;
+CREATE POLICY "Allow insert rate_limits" ON rate_limits FOR INSERT WITH CHECK (true);
