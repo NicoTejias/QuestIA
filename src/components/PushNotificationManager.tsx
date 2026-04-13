@@ -1,20 +1,18 @@
 import { useEffect } from 'react';
-import { useMutation, useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { useProfile } from '../hooks/useProfile';
+import { ProfilesAPI } from '../lib/api';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { requestNotificationPermission } from '../lib/firebase';
 import { toast } from 'sonner';
 
 export default function PushNotificationManager() {
-    const saveToken = useMutation(api.users.savePushToken);
-    const user = useQuery(api.users.getProfile);
+    const { user } = useProfile();
 
     useEffect(() => {
-        if (!user) return;
+        if (!user?.clerk_id) return;
 
         const setupNotifications = async () => {
-            // 1. Caso Nativo (Android/iOS con Capacitor)
             if (Capacitor.isNativePlatform()) {
                 let permStatus = await PushNotifications.checkPermissions();
 
@@ -28,46 +26,37 @@ export default function PushNotificationManager() {
 
                 await PushNotifications.register();
 
-                // Listener para el token registrado por el sistema nativo
                 PushNotifications.addListener('registration', (token) => {
-                    saveToken({ token: token.value });
+                    ProfilesAPI.savePushToken(user.clerk_id, token.value).catch(() => {});
                 });
 
-                PushNotifications.addListener('registrationError', (_error) => {
-                    // Error silenciado — no exponer tokens ni detalles internos en consola
+                PushNotifications.addListener('registrationError', () => {
+                    /* Silently ignore registration errors */
                 });
 
-                // Notificación recibida con la app abierta (foreground)
                 PushNotifications.addListener('pushNotificationReceived', (notification) => {
                     toast(notification.title, {
                         description: notification.body,
                     });
                 });
-            } 
-            // 2. Caso Web / PWA
-            else if ('Notification' in window) {
+            } else if ('Notification' in window) {
                 try {
                     const token = await requestNotificationPermission();
                     if (token) {
-                        saveToken({ token }).catch(() => {
-                            // Silenciamos error de servidor en consola para evitar ruido
-                        });
+                        ProfilesAPI.savePushToken(user.clerk_id, token).catch(() => {});
                     }
-                } catch {
-                    // Error silenciado — fallo al configurar web push no debe interrumpir la app
-                }
+                } catch { /* Silently ignore notification permission errors */ }
             }
         };
 
         setupNotifications();
 
-        // Cleanup
         return () => {
             if (Capacitor.isNativePlatform()) {
                 PushNotifications.removeAllListeners();
             }
         };
-    }, [user, saveToken]);
+    }, [user?.clerk_id]);
 
     return null;
 }

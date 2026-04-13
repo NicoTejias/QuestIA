@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { useConvexAuth, useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useUser } from '@clerk/clerk-react'
+import { useProfile } from '../../hooks/useProfile'
 import { Loader2 } from 'lucide-react'
 
 function LoadingScreen() {
@@ -16,26 +16,26 @@ function LoadingScreen() {
 }
 
 export default function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-    const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth()
-    const user = useQuery(api.users.getProfile, isAuthenticated ? undefined : 'skip')
+    const { isLoaded, isSignedIn } = useUser()
+    const { user, isLoading } = useProfile()
     const [waitCount, setWaitCount] = useState(0)
 
     useEffect(() => {
-        if (isAuthLoading) {
+        if (!isLoaded) {
             const timer = setTimeout(() => setWaitCount((c) => c + 1), 1500)
             return () => clearTimeout(timer)
         }
-    }, [isAuthLoading])
+    }, [isLoaded])
 
-    if (isAuthLoading && waitCount < 2) return <LoadingScreen />
+    if (!isLoaded || isLoading && waitCount < 2) return <LoadingScreen />
 
-    if (isAuthenticated && user) {
-        const userRole = (user as any)?.role || 'student'
+    if (isSignedIn && user) {
+        const userRole = user.role || 'student'
         const target = userRole === 'teacher' || userRole === 'admin' ? '/docente' : '/alumno'
         return <Navigate to={target} replace />
     }
 
-    if (!isAuthenticated && waitCount >= 2) return <>{children}</>
+    if (!isSignedIn && waitCount >= 2) return <>{children}</>
 
     return <>{children}</>
 }

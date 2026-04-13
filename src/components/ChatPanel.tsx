@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useQuery, useMutation } from "convex/react"
-import { api } from "../../convex/_generated/api"
+import { MessagesAPI } from '../lib/api'
 import { Send, Loader2, MessageSquare } from 'lucide-react'
 
 interface ChatPanelProps {
@@ -9,11 +8,18 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({ courseId, currentUserId }: ChatPanelProps) {
-    const messages = useQuery(api.messages.getByCourse, { course_id: courseId })
-    const sendMessage = useMutation(api.messages.send)
+    const [messages, setMessages] = useState<any[]>([])
+    const [isLoading, setIsLoading] = useState(true)
     const [newMessage, setNewMessage] = useState("")
     const [sending, setSending] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        MessagesAPI.getByCourse(courseId)
+            .then(setMessages)
+            .catch(console.error)
+            .finally(() => setIsLoading(false))
+    }, [courseId])
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -23,11 +29,17 @@ export default function ChatPanel({ courseId, currentUserId }: ChatPanelProps) {
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!newMessage.trim() || sending) return
+        if (!newMessage.trim() || sending || !currentUserId) return
 
         setSending(true)
         try {
-            await sendMessage({ course_id: courseId, content: newMessage.trim() })
+            const msg = await MessagesAPI.send(courseId, currentUserId, newMessage.trim())
+            setMessages(prev => [...prev, {
+                ...msg,
+                userName: 'Tú',
+                userRole: 'student',
+                belbinRole: 'Sin determinar'
+            }])
             setNewMessage("")
         } catch (err) {
             console.error(err)
@@ -52,7 +64,7 @@ export default function ChatPanel({ courseId, currentUserId }: ChatPanelProps) {
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth custom-scrollbar"
             >
-                {!messages ? (
+                {isLoading ? (
                     <div className="flex items-center justify-center h-full">
                         <Loader2 className="w-6 h-6 animate-spin text-primary" />
                     </div>
@@ -67,7 +79,7 @@ export default function ChatPanel({ courseId, currentUserId }: ChatPanelProps) {
                         const isMe = msg.user_id === currentUserId
                         return (
                             <div 
-                                key={msg._id} 
+                                key={msg.id} 
                                 className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%] ${isMe ? 'ml-auto' : 'mr-auto'}`}
                             >
                                 <div className={`flex items-center gap-2 mb-1 px-1 ${isMe ? 'flex-row-reverse' : ''}`}>

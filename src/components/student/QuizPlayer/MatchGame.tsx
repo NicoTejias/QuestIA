@@ -7,11 +7,21 @@ interface Props {
     onSelect: (idx: number, isRightSide: boolean) => void
 }
 
+function deterministcShuffle<T>(array: T[], seed: number): T[] {
+    const shuffled = [...array]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const randomIndex = Math.floor((seed * 9301 + 49297) % (i + 1))
+        const nextSeed = (seed * 9301 + 49297) % 233280
+        ;[shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]]
+        seed = nextSeed
+    }
+    return shuffled
+}
+
 export default function MatchGame({ questions, selectedA, matchedPairs, onSelect }: Props) {
     const shuffledDefinitions = useMemo(() => {
-        return [...questions]
-            .map((q, originalIndex) => ({ ...q, originalIndex }))
-            .sort(() => Math.random() - 0.5);
+        const items = [...questions].map((q, originalIndex) => ({ ...q, originalIndex }))
+        return deterministcShuffle(items, questions.length + 12345)
     }, [questions]);
 
     return (

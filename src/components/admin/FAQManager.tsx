@@ -1,15 +1,11 @@
-import { useState } from 'react'
-import { useQuery, useMutation } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { useState, useEffect } from 'react'
+import { FaqAPI } from '../../lib/api'
 import { Plus, Trash2, Edit2, Save, X, Loader2, HelpCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function FAQManager() {
-    const faqs = useQuery((api as any).faq.getFaqs)
-    const createFaq = useMutation((api as any).faq.createFaq)
-    const updateFaq = useMutation((api as any).faq.updateFaq)
-    const deleteFaq = useMutation((api as any).faq.deleteFaq)
-
+    const [faqs, setFaqs] = useState<any[]>([])
+    const [isLoading, setIsLoading] = useState(true)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [isAdding, setIsAdding] = useState(false)
     
@@ -20,8 +16,15 @@ export default function FAQManager() {
         order: 0
     })
 
+    useEffect(() => {
+        FaqAPI.getFaqs()
+            .then(setFaqs)
+            .catch(console.error)
+            .finally(() => setIsLoading(false))
+    }, [])
+
     const resetForm = () => {
-        setFormData({ question: '', answer: '', category: 'general', order: (faqs?.length || 0) })
+        setFormData({ question: '', answer: '', category: 'general', order: faqs.length })
         setEditingId(null)
         setIsAdding(false)
     }
@@ -34,13 +37,12 @@ export default function FAQManager() {
 
         try {
             if (editingId) {
-                await updateFaq({ 
-                    id: editingId as any, 
-                    ...formData 
-                })
+                await FaqAPI.updateFaq(editingId, formData)
+                setFaqs(prev => prev.map(f => f.id === editingId ? { ...f, ...formData } : f))
                 toast.success("FAQ actualizada")
             } else {
-                await createFaq(formData)
+                await FaqAPI.createFaq(formData)
+                FaqAPI.getFaqs().then(setFaqs).catch(console.error)
                 toast.success("FAQ creada")
             }
             resetForm()
@@ -56,21 +58,22 @@ export default function FAQManager() {
             category: faq.category || 'general',
             order: faq.order
         })
-        setEditingId(faq._id)
+        setEditingId(faq.id)
         setIsAdding(false)
     }
 
-    const handleDelete = async (id: any) => {
+    const handleDelete = async (id: string) => {
         if (!confirm("¿Estás seguro de eliminar esta pregunta?")) return
         try {
-            await deleteFaq({ id })
+            await FaqAPI.deleteFaq(id)
+            setFaqs(prev => prev.filter(f => f.id !== id))
             toast.success("FAQ eliminada")
         } catch (err: any) {
             toast.error("Error: " + err.message)
         }
     }
 
-    if (faqs === undefined) return <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+    if (isLoading) return <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
 
     return (
         <div className="space-y-6">
@@ -147,8 +150,8 @@ export default function FAQManager() {
             )}
 
             <div className="bg-surface-light border border-white/5 rounded-3xl overflow-hidden divide-y divide-white/5">
-                {(faqs as any[]).map((faq: any) => (
-                    <div key={faq._id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-all group">
+                {faqs.map((faq: any) => (
+                    <div key={faq.id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-all group">
                         <div className="flex-1 min-w-0 pr-4">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${
@@ -170,7 +173,7 @@ export default function FAQManager() {
                                 <Edit2 className="w-4 h-4" />
                             </button>
                             <button 
-                                onClick={() => handleDelete(faq._id)}
+                                onClick={() => handleDelete(faq.id)}
                                 className="p-2 text-slate-400 hover:text-red-400 transition-colors"
                             >
                                 <Trash2 className="w-4 h-4" />

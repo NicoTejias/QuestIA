@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import { useMutation } from 'convex/react'
-import { api } from '../../convex/_generated/api'
+import { useUser } from '@clerk/clerk-react'
+import { ProfilesAPI } from '../lib/api'
 import { Shield, FileText, Check, ChevronRight, ArrowLeft, Sparkles, Eye, Database, Lock, UserCheck, Trash2, Ban, AlertTriangle, Scale } from 'lucide-react'
 
 type DocView = null | 'terms' | 'privacy'
-
-// ── Contenido Política de Privacidad ────────────────────────────────────────
 
 function PrivacyContent() {
     return (
@@ -57,7 +55,7 @@ function PrivacyContent() {
                     content: (
                         <ul className="list-disc pl-4 space-y-1.5 text-slate-400">
                             <li>Autenticación con soporte para doble factor (Clerk).</li>
-                            <li>Base de datos cifrada en tránsito y en reposo (Convex).</li>
+                            <li>Base de datos cifrada en tránsito y en reposo (Supabase).</li>
                             <li>Control de acceso por roles: solo accedes a tus propios datos.</li>
                             <li>Sin contraseñas almacenadas: usamos proveedores externos (Google, etc.).</li>
                         </ul>
@@ -100,8 +98,6 @@ function PrivacyContent() {
         </div>
     )
 }
-
-// ── Contenido Términos y Condiciones ────────────────────────────────────────
 
 function TermsContent() {
     return (
@@ -195,19 +191,20 @@ function TermsContent() {
     )
 }
 
-// ── Modal principal ──────────────────────────────────────────────────────────
-
 export default function ConsentModal() {
+    const { user: clerkUser } = useUser()
     const [checked, setChecked] = useState(false)
     const [loading, setLoading] = useState(false)
     const [viewing, setViewing] = useState<DocView>(null)
-    const acceptTerms = useMutation(api.users.acceptTerms)
 
     const handleAccept = async () => {
-        if (!checked || loading) return
+        if (!checked || loading || !clerkUser) return
         setLoading(true)
         try {
-            await acceptTerms()
+            await ProfilesAPI.acceptTerms(clerkUser.id)
+            window.location.reload()
+        } catch (e) {
+            console.error(e)
         } finally {
             setLoading(false)
         }
@@ -219,10 +216,8 @@ export default function ConsentModal() {
 
             <div className="relative w-full max-w-lg bg-surface-light border border-white/10 rounded-3xl shadow-2xl shadow-black/50 flex flex-col max-h-[90vh]">
 
-                {/* ── Vista documento ── */}
                 {viewing ? (
                     <>
-                        {/* Header documento */}
                         <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5 shrink-0">
                             <button
                                 onClick={() => setViewing(null)}
@@ -235,12 +230,10 @@ export default function ConsentModal() {
                             </span>
                         </div>
 
-                        {/* Contenido scrollable */}
                         <div className="overflow-y-auto flex-1 px-6 py-5">
                             {viewing === 'terms' ? <TermsContent /> : <PrivacyContent />}
                         </div>
 
-                        {/* Footer documento */}
                         <div className="px-6 py-4 border-t border-white/5 shrink-0">
                             <button
                                 onClick={() => setViewing(null)}
@@ -251,9 +244,7 @@ export default function ConsentModal() {
                         </div>
                     </>
                 ) : (
-                    /* ── Vista principal ── */
                     <>
-                        {/* Header */}
                         <div className="bg-gradient-to-br from-primary/20 to-transparent border-b border-white/5 px-8 pt-8 pb-6 shrink-0 rounded-t-3xl">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-11 h-11 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/20">
@@ -269,9 +260,7 @@ export default function ConsentModal() {
                             </p>
                         </div>
 
-                        {/* Body */}
                         <div className="px-8 py-6 space-y-4 overflow-y-auto flex-1">
-                            {/* Resumen */}
                             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
                                 <div className="flex items-start gap-3">
                                     <Shield className="w-5 h-5 text-primary-light shrink-0 mt-0.5" />
@@ -294,7 +283,6 @@ export default function ConsentModal() {
                                 </div>
                             </div>
 
-                            {/* Botones leer documentos */}
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={() => setViewing('terms')}
@@ -318,7 +306,6 @@ export default function ConsentModal() {
                                 </button>
                             </div>
 
-                            {/* Checkbox */}
                             <button
                                 onClick={() => setChecked(c => !c)}
                                 className="w-full flex items-start gap-3 p-4 rounded-xl border transition-all text-left hover:bg-white/5 active:scale-[0.99] border-white/10 hover:border-primary/30"
@@ -338,7 +325,6 @@ export default function ConsentModal() {
                             </button>
                         </div>
 
-                        {/* Footer */}
                         <div className="px-8 pb-8 shrink-0">
                             <button
                                 onClick={handleAccept}

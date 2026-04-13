@@ -91,7 +91,7 @@ export const ProfilesAPI = {
     const profile = await ProfilesAPI.getProfile(clerkId)
     if (!profile) return { enrolled: 0 }
     const cleanId = studentId ? studentId.replace(/[^\dkK]/g, '').toUpperCase() : null
-    let matches: any[] = []
+    const matches: any[] = []
     if (cleanId) {
       const { data } = await supabase.from('whitelists').select('*').eq('student_identifier', cleanId)
       if (data) matches.push(...data)
@@ -176,6 +176,36 @@ export const ProfilesAPI = {
   async setupDemoData(clerkId: string) {
     console.log('Setting up demo data for', clerkId)
     return { success: true }
+  },
+
+  async acceptTerms(clerkId: string) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ terms_accepted_at: Date.now() })
+      .eq('clerk_id', clerkId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  async savePushToken(clerkId: string, token: string) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ push_token: token })
+      .eq('clerk_id', clerkId)
+    if (error) throw error
+  },
+
+  async verifyAccount(clerkId: string) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ is_verified: true })
+      .eq('clerk_id', clerkId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
   }
 }
 
@@ -1246,6 +1276,20 @@ export const NotificationsAPI = {
     return data || []
   },
 
+  async getUnreadCount(clerkId: string) {
+    const { data: profile } = await supabase.from('profiles').select('id').eq('clerk_id', clerkId).single()
+    if (!profile) return 0
+    
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', profile.id)
+      .eq('read', false)
+    
+    if (error) return 0
+    return count || 0
+  },
+
   async markAsRead(notificationId: string) {
     const { error } = await supabase.from('notifications').update({ read: true }).eq('id', notificationId)
     if (error) throw error
@@ -1382,7 +1426,70 @@ export const AnalyticsAPI = {
 // ADMIN FIXES
 // ============================================================
 
+// ============================================================
+// FAQ
+// ============================================================
+export const FaqAPI = {
+  async getFaqs() {
+    const { data, error } = await supabase.from('faqs').select('*').order('order', { ascending: true })
+    if (error) throw error
+    return data || []
+  },
 
+  async createFaq(data: { question: string; answer: string; order: number; category?: string }) {
+    const { error } = await supabase.from('faqs').insert({ ...data, category: data.category || 'general', created_at: Date.now() })
+    if (error) throw error
+  },
+
+  async updateFaq(id: string, data: { question: string; answer: string; order: number; category?: string }) {
+    const { error } = await supabase.from('faqs').update(data).eq('id', id)
+    if (error) throw error
+  },
+
+  async deleteFaq(id: string) {
+    const { error } = await supabase.from('faqs').delete().eq('id', id)
+    if (error) throw error
+  }
+}
+
+// ============================================================
+// MESSAGES
+// ============================================================
+export const MessagesAPI = {
+  async getByCourse(courseId: string) {
+    const { data: messages, error } = await supabase
+      .from('messages')
+      .select('*, profiles(name, role, belbin_profile)')
+      .eq('course_id', courseId)
+      .order('created_at', { ascending: true })
+      .limit(50)
+    
+    if (error) throw error
+    return (messages || []).map((m: any) => ({
+      ...m,
+      user_id: m.user_id,
+      userName: m.profiles?.name || 'Usuario',
+      userRole: m.profiles?.role || 'student',
+      belbinRole: m.profiles?.belbin_profile?.role_dominant || 'Sin determinar',
+    }))
+  },
+
+  async send(courseId: string, userId: string, content: string) {
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        course_id: courseId,
+        user_id: userId,
+        content,
+        type: 'text',
+        created_at: Date.now()
+      })
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  }
+}
 
 // ============================================================
 // QUIZZES

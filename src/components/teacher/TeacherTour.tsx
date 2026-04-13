@@ -165,7 +165,7 @@ export default function TeacherTour({ activeTab, isDemo, termsAccepted }: Teache
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
-    }, [activeTab, isDemo]);
+    }, [activeTab, isDemo, termsAccepted]);
 
     const handleCallback = useCallback((data: any) => {
         const { status } = data;

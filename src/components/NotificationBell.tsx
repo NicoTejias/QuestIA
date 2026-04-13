@@ -1,27 +1,45 @@
-import { useState, useRef, useEffect } from 'react'
-import { useQuery, useMutation, usePaginatedQuery } from 'convex/react'
-import { api } from '../../convex/_generated/api'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useProfile } from '../hooks/useProfile'
+import { NotificationsAPI, RewardsAPI } from '../lib/api'
 import { Bell, CheckCircle, Info, Trophy, AlertTriangle, ChevronDown, Gift, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function NotificationBell({ onTabChange }: { onTabChange?: (tab: string) => void }) {
-    // Usar paginación para las notificaciones
-    const { results: notifications, status, loadMore } = usePaginatedQuery(
-        api.notifications.getNotifications,
-        {},
-        { initialNumItems: 10 }
-    )
-
-    // Nueva query dedicada para el contador real de no leídas
-    const unreadCount = useQuery(api.notifications.getUnreadCount) || 0
-
-    const markAsRead = useMutation(api.notifications.markAsRead)
-    const markAllAsRead = useMutation(api.notifications.markAllAsRead)
-    const markAsDelivered = useMutation(api.rewards.markRedemptionDelivered)
-
+    const { user } = useProfile()
+    const [notifications, setNotifications] = useState<any[]>([])
+    const [unreadCount, setUnreadCount] = useState(0)
+    const [isLoading, setIsLoading] = useState(true)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
     const [isOpen, setIsOpen] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const [processingId, setProcessingId] = useState<string | null>(null)
+
+    const fetchNotifications = useCallback(async (offset = 0) => {
+        if (!user?.clerk_id) return
+        try {
+            const data = await NotificationsAPI.getNotifications(user.clerk_id)
+            if (offset === 0) {
+                setNotifications(data.slice(0, 10))
+                setHasMore(data.length > 10)
+            } else {
+                setNotifications(prev => [...prev, ...data.slice(offset, offset + 10)])
+                setHasMore(data.length > offset + 10)
+            }
+            const unread = await NotificationsAPI.getUnreadCount(user.clerk_id)
+            setUnreadCount(unread)
+        } catch (e) {
+            console.error(e)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [user?.clerk_id])
+
+    useEffect(() => {
+        if (user?.clerk_id && isOpen) {
+            fetchNotifications()
+        }
+    }, [user?.clerk_id, isOpen, fetchNotifications])
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -33,29 +51,36 @@ export default function NotificationBell({ onTabChange }: { onTabChange?: (tab: 
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    const handleMarkAsRead = async (id: any) => {
+    const handleMarkAsRead = async (id: string) => {
         try {
-            await markAsRead({ notification_id: id })
+            await NotificationsAPI.markAsRead(id)
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+            setUnreadCount(prev => Math.max(0, prev - 1))
         } catch (e) {
             console.error(e)
         }
     }
 
     const handleMarkAllAsRead = async () => {
+        if (!user?.clerk_id) return
         try {
-            await markAllAsRead()
+            await NotificationsAPI.markAllAsRead(user.clerk_id)
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+            setUnreadCount(0)
             toast.success('Todas las notificaciones marcadas como leídas')
         } catch (e) {
             console.error(e)
         }
     }
 
-    const handleDeliverQuickly = async (e: React.MouseEvent, redemptionId: any, notificationId: any) => {
+    const handleDeliverQuickly = async (e: React.MouseEvent, redemptionId: string, notificationId: string) => {
         e.stopPropagation()
         setProcessingId(redemptionId)
         try {
-            await markAsDelivered({ redemption_id: redemptionId })
-            await markAsRead({ notification_id: notificationId })
+            await RewardsAPI.markRedemptionDelivered(redemptionId)
+            await NotificationsAPI.markAsRead(notificationId)
+            setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n))
+            setUnreadCount(prev => Math.max(0, prev - 1))
             toast.success("Recompensa entregada correctamente")
         } catch (err: any) {
             toast.error(err.message || "Error al entregar")
@@ -65,13 +90,18 @@ export default function NotificationBell({ onTabChange }: { onTabChange?: (tab: 
     }
 
     const handleNotificationClick = (n: any) => {
-        if (!n.read) handleMarkAsRead(n._id)
+        if (!n.read) handleMarkAsRead(n.id)
         
-        // Redirigir según el tipo
         if (n.type === 'reward_redeemed' && onTabChange) {
             onTabChange('canjes')
             setIsOpen(false)
         }
+    }
+
+    const handleLoadMore = async () => {
+        setIsLoadingMore(true)
+        await fetchNotifications(notifications.length)
+        setIsLoadingMore(false)
     }
 
     const getIcon = (type: string) => {
@@ -120,7 +150,7 @@ export default function NotificationBell({ onTabChange }: { onTabChange?: (tab: 
                     </div>
 
                     <div className="max-h-96 overflow-y-auto">
-                        {status === "LoadingFirstPage" ? (
+                        {isLoading ? (
                             <div className="p-8 text-center text-slate-500 text-sm">Cargando...</div>
                         ) : notifications.length === 0 ? (
                             <div className="p-8 text-center text-slate-500 text-sm flex flex-col items-center gap-2">
@@ -131,7 +161,7 @@ export default function NotificationBell({ onTabChange }: { onTabChange?: (tab: 
                             <div className="divide-y divide-white/5">
                                 {notifications.map(n => (
                                     <div
-                                        key={n._id}
+                                        key={n.id}
                                         className={`p-4 hover:bg-white/5 transition-colors cursor-pointer ${!n.read ? 'bg-accent/10' : 'bg-[#0f172a]'}`}
                                         onClick={() => handleNotificationClick(n)}
                                     >
@@ -148,10 +178,9 @@ export default function NotificationBell({ onTabChange }: { onTabChange?: (tab: 
                                                 </div>
                                                 <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">{n.message}</p>
                                                 
-                                                {/* Acción rápida para canjes */}
                                                 {n.type === 'reward_redeemed' && n.related_id && (
                                                     <button 
-                                                        onClick={(e) => handleDeliverQuickly(e, n.related_id, n._id)}
+                                                        onClick={(e) => handleDeliverQuickly(e, n.related_id, n.id)}
                                                         disabled={processingId === n.related_id}
                                                         className="mt-3 w-full bg-accent/20 hover:bg-accent/30 text-accent-light text-[9px] font-black py-1.5 rounded-lg border border-accent/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest"
                                                     >
@@ -172,19 +201,21 @@ export default function NotificationBell({ onTabChange }: { onTabChange?: (tab: 
                                     </div>
                                 ))}
 
-                                {status === "CanLoadMore" && (
+                                {hasMore && (
                                     <button
-                                        onClick={() => loadMore(10)}
+                                        onClick={handleLoadMore}
+                                        disabled={isLoadingMore}
                                         className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-2"
                                     >
-                                        <ChevronDown className="w-3 h-3" />
-                                        Cargar más
+                                        {isLoadingMore ? (
+                                            <span className="animate-pulse">Cargando...</span>
+                                        ) : (
+                                            <>
+                                                <ChevronDown className="w-3 h-3" />
+                                                Cargar más
+                                            </>
+                                        )}
                                     </button>
-                                )}
-                                {status === "LoadingMore" && (
-                                    <div className="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center animate-pulse">
-                                        Cargando más...
-                                    </div>
                                 )}
                             </div>
                         )}
