@@ -1664,10 +1664,28 @@ export const QuizzesAPI = {
         if (q.type === 'multiple_choice' || q.type === 'trivia' || q.type === 'quiz_sprint') {
             if (ans === q.correct_option) correctCount++
         } else if (q.type === 'true_false') {
-            if (ans === (q.correct_answer ? 1 : 0)) correctCount++
+            // preguntas de true_false tienen campo 'correct' (boolean)
+            const correctAnswer = q.correct === true ? 1 : 0
+            if (ans === correctAnswer) correctCount++
+        } else if (q.type === 'match') {
+            // Match: ans es array de pares [idx1, idx2, ...]
+            if (Array.isArray(ans) && q.pairs) {
+                const correctPairs = q.pairs.map((p: any) => [p.left, p.right])
+                const isCorrect = ans.every((pair: number[], idx: number) => 
+                    pair[0] === correctPairs[idx][0] && pair[1] === correctPairs[idx][1]
+                )
+                if (isCorrect) correctCount++
+            }
+        } else if (q.type === 'fill_blank') {
+            // Fill blank: ans puede ser string o array de strings
+            if (q.correct_answers) {
+                const correct = Array.isArray(q.correct_answers) 
+                    ? q.correct_answers.some((ca: string) => ca.toLowerCase() === String(ans).toLowerCase())
+                    : q.correct_answers.toLowerCase() === String(ans).toLowerCase()
+                if (correct) correctCount++
+            }
         } else {
             // Placeholder for other types
-            correctCount++ 
         }
     })
 
