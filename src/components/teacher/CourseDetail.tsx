@@ -394,7 +394,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                                 Agregar Evaluación
                             </button>
                         </div>
-                        <EvaluacionesPorCurso courseId={course._id} />
+                        <EvaluacionesPorCurso courseId={course.id} />
                     </div>
                 )}
 
@@ -406,7 +406,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
             {/* Cierre del grid principal de 2 columnas */}
             </div>
 
-            <BadgesPanel courseId={course._id} students={students ?? []} />
+            <BadgesPanel courseId={course.id} students={students ?? []} />
 
             {/* Separador inferior: Lista de Alumnos Completa */}
             <div className="bg-surface-light border border-white/5 rounded-2xl p-6">
@@ -447,10 +447,10 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                         }} disabled={processing} className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl border border-white/5 transition-all flex items-center gap-1.5 font-bold uppercase tracking-widest text-[9px]">
                             {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Sincronizar
                         </button>
-                        <button onClick={() => setConfirmDelete({ type: 'cleanup', id: course._id })} className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl border border-white/5 transition-all uppercase tracking-widest text-[9px]">
+                        <button onClick={() => setConfirmDelete({ type: 'cleanup', id: course.id })} className="p-2 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl border border-white/5 transition-all uppercase tracking-widest text-[9px]">
                             <Sparkles className="w-3 h-3" /> Limpiar
                         </button>
-                        <button onClick={() => setConfirmDelete({ type: 'reset_points', id: course._id })} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition-all uppercase tracking-widest text-[9px]">
+                        <button onClick={() => setConfirmDelete({ type: 'reset_points', id: course.id })} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition-all uppercase tracking-widest text-[9px]">
                             <Trash2 className="w-3 h-3" /> Reset
                         </button>
 
@@ -618,7 +618,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
 
             {showAgregarEvaluacion && (
                 <AgregarEvaluacionModal
-                    courseId={course._id}
+                    courseId={course.id}
                     courseName={course.name}
                     sections={Array.from(new Set(students?.map((s: any) => s.section).filter(Boolean))) as string[]}
                     onClose={() => setShowAgregarEvaluacion(false)}
