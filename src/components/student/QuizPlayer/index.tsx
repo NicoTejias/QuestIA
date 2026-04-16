@@ -159,7 +159,7 @@ export default function QuizPlayer({ quiz, onClose }: QuizPlayerProps) {
             }, 1000)
             return () => { if (gameTimerRef.current) clearInterval(gameTimerRef.current) }
         }
-    }, [quizType, honorAccepted]) // eslint-disable-line
+    }, [quizType, honorAccepted])
 
     useEffect(() => {
         if (quizType === 'memory' && honorAccepted) {

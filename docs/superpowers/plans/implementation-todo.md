@@ -13,9 +13,9 @@
 - [x] **Tarea 4: Frontend - Integración en Dashboard**
     - [x] Añadir pestaña "Canjes" en `src/pages/TeacherDashboard.tsx`
     - [x] Vincular renderizado del panel
-- [ ] **Tarea 5: Frontend - Notificaciones Interactivas**
-    - [ ] Actualizar `src/components/NotificationBell.tsx` con botones de acción
-    - [ ] Manejar clics para redirección interactiva
-- [ ] **Tarea 6: Verificación Final**
-    - [ ] Probar generación de quizzes
-    - [ ] Probar flujo de canjes
+- [x] **Tarea 5: Frontend - Notificaciones Interactivas**
+    - [x] Actualizar `src/components/NotificationBell.tsx` con botones de acción
+    - [x] Manejar clics para redirección interactiva
+- [x] **Tarea 6: Verificación Final**
+    - [x] Probar generación de quizzes
+    - [x] Probar flujo de canjes
