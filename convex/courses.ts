@@ -345,6 +345,7 @@ export const getMyCourses = query({
                 return teaching.map(c => ({ 
                     ...c, 
                     total_points: 9999, // Puntos infinitos para simulación
+                    spendable_points: 9999, // Puntos canjeables para simulación
                     ranking_points: 9999,
                     rank: 1,
                     is_simulation: true 

@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { Trophy, ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { CoursesAPI } from '../../lib/api'
-import { useUser } from '@clerk/clerk-react'
+import { useProfile } from '../../hooks/useProfile'
 
 export default function RankingDocentePanel() {
-    const { user } = useUser()
-    const { data: courses } = useSupabaseQuery(() => CoursesAPI.getMyCourses(user?.id || '', user?.publicMetadata?.role as string || 'student'), [user])
+    const { user } = useProfile()
+    const { data: courses } = useSupabaseQuery(
+        () => user ? CoursesAPI.getMyCourses(user.clerk_id, user.role) : Promise.resolve([]),
+        [user]
+    )
     const [collapsedCourses, setCollapsedCourses] = useState<Set<string>>(new Set())
     const [selectedCourseView, setSelectedCourseView] = useState<Record<string, { isGlobal: boolean }>>({})
 
