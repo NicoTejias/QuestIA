@@ -1,9 +1,8 @@
 /**
  * Hook central para el perfil del usuario autenticado con Clerk + Supabase.
- * Reemplaza useConvexAuth + useQuery(api.users.getProfile)
  */
 import { useUser } from '@clerk/clerk-react'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export type UserProfile = {
@@ -29,68 +28,58 @@ type UseProfileResult = {
   user: UserProfile | null
   isLoading: boolean
   isAuthenticated: boolean
-  refetch: () => Promise<void>
+  refetch: () => void
 }
 
 export function useProfile(): UseProfileResult {
   const { isLoaded, isSignedIn, user: clerkUser } = useUser()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-
-  const fetchProfile = useCallback(async () => {
-    if (!clerkUser) {
-      setUser(null)
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      // Set JWT for Supabase (if using Supabase auth integration)
-      // Since we use service role key on client via anon for reads,
-      // we identify the user by their Clerk ID
-      const clerkId = clerkUser.id
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('clerk_id', clerkId)
-        .single()
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile:', error)
-        setUser(null)
-        return
-      }
-
-      if (!data) {
-        // Profile doesn't exist yet - UserSync will create it
-        setUser(null)
-        return
-      }
-
-      setUser(data as UserProfile)
-    } catch (err) {
-      console.error('useProfile error:', err)
-      setUser(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [clerkUser])
+  const fetchAttempted = useRef(false)
 
   useEffect(() => {
-    if (!isLoaded) return
-    if (!isSignedIn) {
+    if (!isLoaded || !isSignedIn || !clerkUser) {
       setUser(null)
       setIsLoading(false)
       return
     }
+
+    // Already fetched profile this session
+    if (fetchAttempted.current) return
+
+    const fetchProfile = async () => {
+      fetchAttempted.current = true
+      setIsLoading(true)
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('clerk_id', clerkUser.id)
+          .single()
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching profile:', error)
+          setUser(null)
+          return
+        }
+
+        setUser(data as UserProfile)
+      } catch (err) {
+        console.error('useProfile error:', err)
+        setUser(null)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
     fetchProfile()
-  }, [isLoaded, isSignedIn, fetchProfile])
+  }, [isLoaded, isSignedIn, clerkUser])
 
   return {
     user,
     isLoading: !isLoaded || isLoading,
     isAuthenticated: isLoaded && !!isSignedIn,
-    refetch: fetchProfile,
+    refetch: () => { fetchAttempted.current = false },
   }
 }

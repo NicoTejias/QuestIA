@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
 import { Loader2 } from 'lucide-react'
@@ -22,29 +22,38 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
     const { isLoaded, isSignedIn } = useUser()
-    const { user, isLoading } = useProfile()
+    const { user, isLoading, refetch } = useProfile()
     const location = useLocation()
-    const [stuckCount, setStuckCount] = useState(0)
+    const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
+    // Poll for profile while it doesn't exist but Clerk is signed in
     useEffect(() => {
-        if (isLoading || !isSignedIn || user !== null) return
-        if (stuckCount > 6) return
-        const timer = setTimeout(() => setStuckCount(c => c + 1), 1000)
-        return () => clearTimeout(timer)
-    }, [user, stuckCount, isLoading, isSignedIn])
+        if (user !== null || !isSignedIn) {
+            if (pollingRef.current) clearInterval(pollingRef.current)
+            return
+        }
+        
+        // Poll every 3 seconds until profile is created by UserSync
+        pollingRef.current = setInterval(() => {
+            refetch()
+        }, 3000)
 
-    // Still loading Clerk
-    if (!isLoaded || isLoading) return <LoadingScreen />
+        return () => {
+            if (pollingRef.current) clearInterval(pollingRef.current)
+        }
+    }, [user, isSignedIn, refetch])
+
+    // Still loading Clerk or waiting for profile
+    if (!isLoaded || isLoading || (isSignedIn && user === null)) return <LoadingScreen />
 
     // Not signed in → login
     if (!isSignedIn) {
         return <Navigate to="/login" state={{ from: location }} replace />
     }
 
-    // Profile not yet created (UserSync is running) — wait a bit then redirect
+    // Profile === null means UserSync failed to create it OR user doesn't exist
     if (user === null) {
-        if (stuckCount > 6) return <Navigate to="/login" replace />
-        return <LoadingScreen />
+        return <Navigate to="/login" state={{ from: location }} replace />
     }
 
     const userRole = user.role || 'student'

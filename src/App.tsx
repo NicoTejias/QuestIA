@@ -15,6 +15,7 @@ import PublicOnlyRoute from './components/auth/PublicOnlyRoute'
 import DashboardRedirect from './components/auth/DashboardRedirect'
 import ErrorBoundary from './components/ErrorBoundary'
 import ConsentModal from './components/ConsentModal'
+import { UserSync } from './components/auth/UserSync'
 import { useProfile } from './hooks/useProfile'
 import { ProfilesAPI } from './lib/api'
 
@@ -99,6 +100,7 @@ function App() {
 
   return (
     <>
+      {isAuthenticated && <UserSync />}
       {needsConsent && <ConsentModal />}
       <PushNotificationManager />
       <UpdateNotification />
