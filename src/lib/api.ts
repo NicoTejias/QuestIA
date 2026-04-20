@@ -436,24 +436,21 @@ export const RewardsAPI = {
     const { data: myCourses } = await supabase.from('courses').select('id, name').eq('teacher_id', teacherId)
     if (!myCourses?.length) return []
     const courseIds = myCourses.map(c => c.id)
-    const { data: myRewards } = await supabase.from('rewards').select('id, name, cost, course_id').in('course_id', courseIds)
-    if (!myRewards?.length) return []
-    const rewardIds = myRewards.map(r => r.id)
-    let query = supabase.from('redemptions').select('*, profiles(*), rewards(name, course_id)').in('reward_id', rewardIds).order('timestamp', { ascending: false })
+    // Query redemptions by course_id directly (not filtered by current rewards, which may have been deleted)
+    let query = supabase.from('redemptions').select('*, profiles(*), rewards(name, course_id)').in('course_id', courseIds).order('timestamp', { ascending: false })
     if (status) query = query.eq('status', status)
     const { data: redemptions } = await query
     if (!redemptions?.length) return []
     const courseMap = Object.fromEntries(myCourses.map(c => [c.id, c.name]))
     const studentIds = [...new Set(redemptions.map((r: any) => r.user_id))]
     const { data: enrollments } = await supabase.from('enrollments').select('user_id, course_id, section').in('user_id', studentIds).in('course_id', courseIds)
-    // Map by exact course match first; fallback map by user to any section they have in this teacher's courses
     const exactMap = Object.fromEntries((enrollments || []).map((e: any) => [`${e.user_id}_${e.course_id}`, e.section]))
     const fallbackMap: Record<string, string> = {}
     for (const e of (enrollments || [])) {
       if (e.section && !fallbackMap[e.user_id]) fallbackMap[e.user_id] = e.section
     }
     return redemptions.map((r: any) => {
-      const rewardCourseId = r.rewards?.course_id
+      const rewardCourseId = r.rewards?.course_id ?? r.course_id
       const exactSection = rewardCourseId ? exactMap[`${r.user_id}_${rewardCourseId}`] : null
       return {
         ...r,
