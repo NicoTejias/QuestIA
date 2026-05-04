@@ -23,6 +23,11 @@ export default function CompleteProfileModal({ user, onComplete }: CompleteProfi
         { enabled: rut.length >= 7 }
     )
 
+    const handleRutChange = (value: string) => {
+        setRut(value)
+        if (error) setError('')
+    }
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
@@ -35,11 +40,11 @@ export default function CompleteProfileModal({ user, onComplete }: CompleteProfi
         }
 
         if (whitelistLoading) {
-             // Wait for check
-             setLoading(false)
-             return
-        } 
-        
+            setError('Espera un momento mientras verificamos tu RUT...')
+            setLoading(false)
+            return
+        }
+
         if (!whitelistData?.allowed) {
             setError('RUT No Autorizado: No apareces en la lista de alumnos autorizados. Asegúrate de ingresar tu RUT correctamente (con o sin puntos/guion) o consulta con tu docente.')
             setLoading(false)
@@ -87,7 +92,7 @@ export default function CompleteProfileModal({ user, onComplete }: CompleteProfi
                                 <input
                                     type="text"
                                     value={rut}
-                                    onChange={(e) => setRut(e.target.value)}
+                                    onChange={(e) => handleRutChange(e.target.value)}
                                     placeholder="Ej: 12.345.678-9"
                                     className={`w-full bg-white/5 border rounded-2xl px-6 py-4 text-white font-bold text-lg placeholder:text-slate-700 transition-all outline-none ${whitelistData?.allowed ? 'border-emerald-500/50 focus:border-emerald-500' : 'border-white/10 focus:border-primary'}`}
                                     required
@@ -109,7 +114,7 @@ export default function CompleteProfileModal({ user, onComplete }: CompleteProfi
 
                         <button
                             type="submit"
-                            disabled={loading || rut.length < 8}
+                            disabled={loading || rut.length < 7}
                             className="w-full bg-primary hover:bg-primary-light text-white font-black py-5 rounded-2xl shadow-xl shadow-primary/30 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
                         >
                             {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Activar mi Cuenta'}

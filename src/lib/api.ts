@@ -77,13 +77,15 @@ export const ProfilesAPI = {
 
   async checkWhitelist(studentId: string, email?: string) {
     const clean = studentId.replace(/[^\dkK]/g, '').toUpperCase()
+    if (!clean) return { allowed: false }
     let query = supabase.from('whitelists').select('id, course_id, section, student_name')
     if (email) {
       query = query.or(`student_identifier.eq.${clean},student_identifier.ilike.${email}`)
     } else {
       query = query.eq('student_identifier', clean)
     }
-    const { data } = await query.limit(1).single()
+    const { data, error } = await query.limit(1).maybeSingle()
+    if (error) throw error
     return data ? { allowed: true } : { allowed: false }
   },
 
@@ -102,7 +104,7 @@ export const ProfilesAPI = {
     }
     let enrolled = 0
     for (const w of matches) {
-      const { data: existing } = await supabase.from('enrollments').select('id').eq('user_id', profile.id).eq('course_id', w.course_id).single()
+      const { data: existing } = await supabase.from('enrollments').select('id').eq('user_id', profile.id).eq('course_id', w.course_id).maybeSingle()
       if (!existing) {
         await supabase.from('enrollments').insert({
           user_id: profile.id,
