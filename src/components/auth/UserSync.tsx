@@ -6,8 +6,8 @@ import { useEffect, useRef } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { supabase } from '../../lib/supabase'
 
-// Allowed institutional domains
-const defaultDomains = ['@questia.cl', '@duocuc.cl', '@profesor.duoc.cl', '@duoc.cl', '@gmail.com', '@outlook.com']
+// Allowed institutional domains — correos no institucionales quedan en modo demo
+const defaultDomains = ['@questia.cl', '@duocuc.cl', '@profesor.duoc.cl', '@duoc.cl']
 
 function detectRole(email: string): string {
   const e = email.toLowerCase()

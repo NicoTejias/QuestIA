@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { Toaster } from 'sonner'
+import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -171,6 +172,7 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/sso-callback" element={<AuthenticateWithRedirectCallback />} />
           <Route path="/dashboard" element={<DashboardRedirect />} />
           <Route path="/auth-error" element={<AuthErrorPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
