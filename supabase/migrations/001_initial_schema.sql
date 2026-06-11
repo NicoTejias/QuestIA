@@ -171,12 +171,14 @@ CREATE TABLE IF NOT EXISTS redemptions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   reward_id UUID NOT NULL REFERENCES rewards(id) ON DELETE CASCADE,
+  course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
   status TEXT DEFAULT 'pending',
   timestamp BIGINT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_redemptions_user_id ON redemptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_redemptions_reward_id ON redemptions(reward_id);
+CREATE INDEX IF NOT EXISTS idx_redemptions_course_id ON redemptions(course_id);
 
 -- ============================================================
 -- COURSE DOCUMENTS

@@ -412,37 +412,109 @@ export const RewardsAPI = {
     
     if (!enrollment || enrollment.spendable_points < reward.cost) throw new Error("Puntos insuficientes")
 
-    const { error: updateEnrollment } = await supabase
-        .from('enrollments')
-        .update({ spendable_points: enrollment.spendable_points - reward.cost })
-        .eq('id', enrollment.id)
-    if (updateEnrollment) throw updateEnrollment
-
-    const { error: updateReward } = await supabase
-        .from('rewards')
-        .update({ stock: reward.stock - 1 })
-        .eq('id', rewardId)
-    if (updateReward) throw updateReward
-
-    const { error: insertRedemption } = await supabase.from('redemptions').insert({
+    // Intentar insertar la redención primero
+    let insertError = null
+    let redemptionData = null
+    
+    const { data: inserted, error: err1 } = await supabase.from('redemptions').insert({
         reward_id: rewardId,
         user_id: profile.id,
         course_id: reward.course_id,
         timestamp: Date.now(),
         status: 'pending'
-    })
-    if (insertRedemption) throw insertRedemption
+    }).select().maybeSingle()
+
+    insertError = err1
+    redemptionData = inserted
+
+    // Si falló por columna inexistente (código 42703 o mensaje que mencione course_id)
+    if (insertError && (insertError.code === '42703' || insertError.message?.includes('course_id'))) {
+      const { data: insertedRetry, error: err2 } = await supabase.from('redemptions').insert({
+          reward_id: rewardId,
+          user_id: profile.id,
+          timestamp: Date.now(),
+          status: 'pending'
+      }).select().maybeSingle()
+      
+      insertError = err2
+      redemptionData = insertedRetry
+    }
+
+    if (insertError) throw insertError
+
+    // Si la inserción fue exitosa, procedemos a descontar los puntos y el stock
+    try {
+      const { error: updateEnrollment } = await supabase
+          .from('enrollments')
+          .update({ spendable_points: enrollment.spendable_points - reward.cost })
+          .eq('id', enrollment.id)
+      if (updateEnrollment) throw updateEnrollment
+
+      const { error: updateReward } = await supabase
+          .from('rewards')
+          .update({ stock: reward.stock - 1 })
+          .eq('id', rewardId)
+      if (updateReward) throw updateReward
+    } catch (dbErr) {
+      // Rollback del canje insertado si falla la actualización de puntos o stock
+      if (redemptionData?.id) {
+        await supabase.from('redemptions').delete().eq('id', redemptionData.id)
+      }
+      throw dbErr
+    }
   },
 
   async getTeacherRedemptions(teacherId: string, status?: 'pending' | 'completed') {
     const { data: myCourses } = await supabase.from('courses').select('id, name').eq('teacher_id', teacherId)
     if (!myCourses?.length) return []
     const courseIds = myCourses.map(c => c.id)
-    // Query redemptions by course_id directly (not filtered by current rewards, which may have been deleted)
-    let query = supabase.from('redemptions').select('*, profiles(*), rewards(name, course_id)').in('course_id', courseIds).order('timestamp', { ascending: false })
-    if (status) query = query.eq('status', status)
-    const { data: redemptions } = await query
+
+    // Obtener recompensas de estos cursos para poder filtrar por reward_id si es necesario
+    const { data: myRewards } = await supabase.from('rewards').select('id').in('course_id', courseIds)
+    const rewardIds = myRewards?.map(r => r.id) || []
+
+    let redemptions: any[] = []
+    let errorOccurred = false
+
+    // Intentamos buscar usando el course_id de redemptions si es posible
+    try {
+      let query = supabase.from('redemptions').select('*, profiles(*), rewards(name, course_id)')
+      
+      if (rewardIds.length > 0) {
+        query = query.or(`course_id.in.(${courseIds.map(id => `"${id}"`).join(',')}),reward_id.in.(${rewardIds.map(id => `"${id}"`).join(',')})`)
+      } else {
+        query = query.in('course_id', courseIds)
+      }
+      
+      if (status) query = query.eq('status', status)
+      const { data, error } = await query.order('timestamp', { ascending: false })
+      if (error) throw error
+      redemptions = data || []
+    } catch (err) {
+      errorOccurred = true
+      console.warn("Falling back in getTeacherRedemptions due to query error:", err)
+    }
+
+    // Fallback: si falló el query principal, usamos la relación por reward_id con rewards!inner
+    if ((errorOccurred || redemptions.length === 0) && rewardIds.length > 0) {
+      try {
+        let query = supabase
+          .from('redemptions')
+          .select('*, profiles(*), rewards!inner(name, course_id)')
+          .in('reward_id', rewardIds)
+        
+        if (status) query = query.eq('status', status)
+        const { data, error } = await query.order('timestamp', { ascending: false })
+        if (error) throw error
+        redemptions = data || []
+      } catch (err) {
+        console.error("Fallback query in getTeacherRedemptions failed:", err)
+        return []
+      }
+    }
+
     if (!redemptions?.length) return []
+
     const courseMap = Object.fromEntries(myCourses.map(c => [c.id, c.name]))
     const studentIds = [...new Set(redemptions.map((r: any) => r.user_id))]
     const { data: enrollments } = await supabase.from('enrollments').select('user_id, course_id, section').in('user_id', studentIds).in('course_id', courseIds)
@@ -451,6 +523,7 @@ export const RewardsAPI = {
     for (const e of (enrollments || [])) {
       if (e.section && !fallbackMap[e.user_id]) fallbackMap[e.user_id] = e.section
     }
+
     return redemptions.map((r: any) => {
       const rewardCourseId = r.rewards?.course_id ?? r.course_id
       const exactSection = rewardCourseId ? exactMap[`${r.user_id}_${rewardCourseId}`] : null
