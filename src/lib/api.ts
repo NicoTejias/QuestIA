@@ -4,6 +4,7 @@
  * Called from frontend components using custom hooks
  */
 import { supabase } from './supabase'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export { supabase }
 
@@ -1973,3 +1974,289 @@ export const EvaluacionesAPI = {
     }))
   }
 }
+
+// ============================================================
+// CALENDARIO DE CLASES
+// ============================================================
+export const CalendarAPI = {
+  async getClasesByCourse(courseId: string) {
+    const { data, error } = await supabase
+      .from('clases_calendarizadas')
+      .select('*')
+      .eq('course_id', courseId)
+      .order('fecha', { ascending: true })
+    if (error) throw error
+    return data || []
+  },
+
+  async updateClase(claseId: string, updates: any) {
+    const { error } = await supabase
+      .from('clases_calendarizadas')
+      .update(updates)
+      .eq('id', claseId)
+    if (error) throw error
+  },
+
+  async saveScheduleConfig(courseId: string, config: any) {
+    const { error } = await supabase
+      .from('courses')
+      .update({ schedule_config: config })
+      .eq('id', courseId)
+    if (error) throw error
+  },
+
+  async limpiarCalendario(courseId: string) {
+    const { error } = await supabase
+      .from('clases_calendarizadas')
+      .delete()
+      .eq('course_id', courseId)
+    if (error) throw error
+  },
+
+  async bulkInsertClases(courseId: string, clases: any[], teacherId: string) {
+    for (const c of clases) {
+      let evaluacion_id = null
+
+      if (c.tiene_evaluacion && c.tipo_evaluacion && c.tipo_evaluacion !== 'ninguna' && c.titulo_evaluacion) {
+        const { data: evalData, error: evalError } = await supabase
+          .from('evaluaciones')
+          .insert({
+            course_id: courseId,
+            teacher_id: teacherId,
+            titulo: c.titulo_evaluacion,
+            tipo: c.tipo_evaluacion,
+            descripcion: `Evaluación oficial planificada para la clase: ${c.titulo}`,
+            fecha: c.fecha,
+            activo: true,
+            created_at: Date.now()
+          })
+          .select('id')
+          .single()
+        
+        if (evalError) throw evalError
+        evaluacion_id = evalData.id
+      }
+
+      const { error: insertError } = await supabase
+        .from('clases_calendarizadas')
+        .insert({
+          course_id: courseId,
+          semana: c.semana,
+          sesion: c.sesion,
+          fecha: c.fecha,
+          titulo: c.titulo,
+          contenido: c.contenido,
+          actividades: c.actividades,
+          materiales_requeridos: c.materiales_requeridos,
+          materiales_pedidos: false,
+          tiene_evaluacion: c.tiene_evaluacion,
+          evaluacion_id: evaluacion_id,
+          es_feriado: c.es_feriado || false,
+          detalle_feriado: c.detalle_feriado || null,
+          estado: c.estado || 'programada',
+          created_at: new Date().toISOString()
+        })
+      
+      if (insertError) throw insertError
+    }
+  },
+
+  async generateCalendarFromPDA(data: {
+    course_id: string;
+    document_id: string;
+    semestre: '2026-1' | '2026-2';
+    seccion: string;
+    regimen: 'diurno' | 'vespertino';
+    semanas_semestre: number;
+    dias_semana: number[];
+    bloques_horario: string[];
+    fecha_inicio: number;
+    teacher_id: string;
+  }) {
+    // 1. Obtener el documento del PDA
+    const { data: doc, error: docError } = await supabase
+      .from('course_documents')
+      .select('content_text')
+      .eq('id', data.document_id)
+      .single()
+    if (docError) throw docError
+    if (!doc || !doc.content_text) throw new Error("Documento sin texto legible.")
+
+    // 2. Guardar configuración en courses
+    const config = {
+      semestre: data.semestre,
+      seccion: data.seccion,
+      regimen: data.regimen,
+      semanas_semestre: data.semanas_semestre,
+      dias_semana: data.dias_semana,
+      bloques_horario: data.bloques_horario,
+      fecha_inicio: data.fecha_inicio
+    }
+    await this.saveScheduleConfig(data.course_id, config)
+
+    // 3. Limpiar clases previas
+    await this.limpiarCalendario(data.course_id)
+
+    // 4. Llamar a Gemini (SDK del lado del cliente)
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY
+    if (!apiKey) throw new Error("API Key de Google no configurada (VITE_GOOGLE_API_KEY).")
+    
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
+
+    const content = doc.content_text.substring(0, 15000)
+    const prompt = `Eres un asistente de planificación curricular para profesores de Duoc UC.
+Analiza el Plan de Aula (PDA) oficial y extrae de forma secuencial y detallada la lista de sesiones de clases del ramo.
+La asignatura dura aproximadamente ${data.semanas_semestre} semanas.
+
+REGLAS DE EXTRACCIÓN:
+- Extrae todas las clases secuenciales.
+- Para cada clase extrae: semana, sesión correlativa, título del tema, contenido a dictar, actividades que harán y materiales requeridos (laboratorio, software, instrumentos o guías de ejercicio).
+- Si la sesión corresponde a una evaluación (Prueba Escrita, Examen, Encargo o Presentación de Trabajo), indícalo en tiene_evaluacion: true, con el tipo_evaluacion respectivo.
+
+CONTENIDO DEL PDA:
+${content}
+
+RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utilizando estrictamente este formato:
+{
+  "sesiones": [
+    {
+      "semana": 1,
+      "sesion": 1,
+      "titulo": "Título de la clase",
+      "contenido": "Detalle del contenido que se enseñará en esta clase",
+      "actividades": "Actividad práctica o teórica de aula",
+      "materiales_sugeridos": "Materiales, software, herramientas o equipos requeridos",
+      "tiene_evaluacion": false,
+      "tipo_evaluacion": "ninguna",
+      "titulo_evaluacion": ""
+    }
+  ]
+}`
+
+    const result = await model.generateContent(prompt)
+    const responseText = result.response.text()
+
+    // Parsear JSON
+    let sesiones: any[] = []
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error("La IA no retornó un formato JSON válido.")
+    const parsedData = JSON.parse(jsonMatch[0])
+    sesiones = parsedData.sesiones || []
+
+    if (sesiones.length === 0) throw new Error("No se detectaron sesiones válidas en el PDA.")
+
+    // 5. Constante de Feriados 2026
+    const FERIADOS_DUOC_2026 = [
+      { fecha: "2026-04-02", nombre: "Víspera de Semana Santa (Media Jornada - Suspensión desde 13:00 Hrs)", media_jornada: true, hora_limite: "13:00" },
+      { fecha: "2026-04-03", nombre: "Semana Santa (Viernes Santo)", media_jornada: false },
+      { fecha: "2026-04-04", nombre: "Semana Santa (Sábado Santo)", media_jornada: false },
+      { fecha: "2026-05-01", nombre: "Día del Trabajo", media_jornada: false },
+      { fecha: "2026-05-21", nombre: "Día de las Glorias Navales", media_jornada: false },
+      { fecha: "2026-06-21", nombre: "Día Nacional de los Pueblos Indígenas", media_jornada: false },
+      { fecha: "2026-06-29", nombre: "San Pedro y San Pablo", media_jornada: false },
+      { fecha: "2026-07-16", nombre: "Día de la Virgen del Carmen", media_jornada: false },
+      { fecha: "2026-08-15", nombre: "Asunción de la Virgen", media_jornada: false },
+      { fecha: "2026-09-17", nombre: "Víspera de Fiestas Patrias (Media Jornada - Suspensión desde 13:00 Hrs)", media_jornada: true, hora_limite: "13:00" },
+      { fecha: "2026-09-18", nombre: "Fiestas Patrias", media_jornada: false },
+      { fecha: "2026-09-19", nombre: "Glorias del Ejército", media_jornada: false },
+      { fecha: "2026-10-12", nombre: "Encuentro de Dos Mundos", media_jornada: false },
+      { fecha: "2026-10-31", nombre: "Día de las Iglesias Evangélicas y Protestantes", media_jornada: false },
+      { fecha: "2026-11-01", nombre: "Día de Todos los Santos", media_jornada: false },
+      { fecha: "2026-11-11", nombre: "Aniversario Duoc UC (Suspensión desde las 15:15 Hrs)", media_jornada: true, hora_limite: "15:15" },
+      { fecha: "2026-12-08", nombre: "Inmaculada Concepción", media_jornada: false },
+      { fecha: "2026-12-24", nombre: "Víspera de Navidad (Media Jornada - Suspensión desde 13:00 Hrs)", media_jornada: true, hora_limite: "13:00" },
+      { fecha: "2026-12-25", nombre: "Día de Navidad", media_jornada: false }
+    ]
+
+    const stringifyDate = (d: Date): string => {
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, "0")
+      const day = String(d.getDate()).padStart(2, "0")
+      return `${y}-${m}-${day}`
+    }
+
+    // 6. Algoritmo de Fechas
+    const clasesFinales: any[] = []
+    let currentTimestamp = data.fecha_inicio
+
+    const getNextClassDate = (timestamp: number): number => {
+      let temp = new Date(timestamp)
+      let loops = 0
+      while (loops < 14) {
+        temp.setDate(temp.getDate() + 1)
+        const dayOfWeek = temp.getDay()
+        if (data.dias_semana.includes(dayOfWeek)) {
+          return temp.getTime()
+        }
+        loops++
+      }
+      return timestamp + 24 * 60 * 60 * 1000
+    }
+
+    let sesionIndex = 0
+    let correlativoSesion = 1
+
+    while (sesionIndex < sesiones.length) {
+      const sesionIA = sesiones[sesionIndex]
+      const dateObj = new Date(currentTimestamp)
+      const dateStr = stringifyDate(dateObj)
+
+      const feriado = FERIADOS_DUOC_2026.find(f => f.fecha === dateStr)
+
+      if (feriado) {
+        let suspenderClase = true
+
+        if (feriado.media_jornada && feriado.hora_limite) {
+          if (data.regimen === "vespertino") {
+            suspenderClase = true
+          } else {
+            suspenderClase = false 
+          }
+        }
+
+        if (suspenderClase) {
+          clasesFinales.push({
+            semana: Math.ceil(correlativoSesion / data.dias_semana.length) || 1,
+            sesion: correlativoSesion,
+            fecha: currentTimestamp,
+            titulo: `Feriado: ${feriado.nombre}`,
+            contenido: "Clase suspendida por feriado oficial en el calendario institucional.",
+            tiene_evaluacion: false,
+            es_feriado: true,
+            detalle_feriado: feriado.nombre,
+            estado: "suspendida"
+          })
+
+          correlativoSesion++
+          currentTimestamp = getNextClassDate(currentTimestamp)
+          continue
+        }
+      }
+
+      clasesFinales.push({
+        semana: sesionIA.semana || Math.ceil(correlativoSesion / data.dias_semana.length) || 1,
+        sesion: correlativoSesion,
+        fecha: currentTimestamp,
+        titulo: sesionIA.titulo,
+        contenido: sesionIA.contenido,
+        actividades: sesionIA.actividades,
+        materiales_requeridos: sesionIA.materiales_sugeridos,
+        tiene_evaluacion: sesionIA.tiene_evaluacion,
+        tipo_evaluacion: sesionIA.tipo_evaluacion !== "ninguna" ? sesionIA.tipo_evaluacion : undefined,
+        titulo_evaluacion: sesionIA.titulo_evaluacion || undefined,
+        estado: "programada"
+      })
+
+      correlativoSesion++
+      currentTimestamp = getNextClassDate(currentTimestamp)
+      sesionIndex++
+    }
+
+    // 7. Insertar en bloque en Supabase
+    await this.bulkInsertClases(data.course_id, clasesFinales, data.teacher_id)
+    return { success: true, count: clasesFinales.length }
+  }
+}
+
+

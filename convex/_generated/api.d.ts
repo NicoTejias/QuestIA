@@ -18,6 +18,8 @@ import type * as attendance from "../attendance.js";
 import type * as auth from "../auth.js";
 import type * as backup_system from "../backup_system.js";
 import type * as badges from "../badges.js";
+import type * as calendar from "../calendar.js";
+import type * as calendarActions from "../calendarActions.js";
 import type * as careers from "../careers.js";
 import type * as courses from "../courses.js";
 import type * as crons from "../crons.js";
@@ -65,6 +67,8 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   backup_system: typeof backup_system;
   badges: typeof badges;
+  calendar: typeof calendar;
+  calendarActions: typeof calendarActions;
   careers: typeof careers;
   courses: typeof courses;
   crons: typeof crons;

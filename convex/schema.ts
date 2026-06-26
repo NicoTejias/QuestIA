@@ -92,6 +92,15 @@ export default defineSchema({
         linked_sheets_id: v.optional(v.string()),   // Google Sheets ID para sync automático
         linked_sheets_name: v.optional(v.string()),  // Nombre del archivo para mostrar en UI
         last_sheets_sync: v.optional(v.number()),    // Timestamp del último sync
+        schedule_config: v.optional(v.object({
+            semestre: v.union(v.literal("2026-1"), v.literal("2026-2")),
+            seccion: v.string(),
+            regimen: v.union(v.literal("diurno"), v.literal("vespertino")),
+            semanas_semestre: v.number(),
+            dias_semana: v.array(v.number()),
+            bloques_horario: v.array(v.string()),
+            fecha_inicio: v.number(),
+        })),
     })
         .index("by_teacher", ["teacher_id"])
         .index("by_code", ["code"])
@@ -393,4 +402,30 @@ faqs: defineTable({
         created_at: v.number(),
     })
         .index("by_name", ["name"]),
+
+    clases_calendarizadas: defineTable({
+        course_id: v.id("courses"),
+        semana: v.number(),
+        sesion: v.number(),
+        fecha: v.number(),
+        titulo: v.string(),
+        contenido: v.string(),
+        actividades: v.optional(v.string()),
+        materiales_requeridos: v.optional(v.string()),
+        materiales_pedidos: v.optional(v.boolean()),
+        tiene_evaluacion: v.boolean(),
+        evaluacion_id: v.optional(v.id("evaluaciones")),
+        quiz_id: v.optional(v.id("quizzes")),
+        mision_id: v.optional(v.id("missions")),
+        es_feriado: v.optional(v.boolean()),
+        detalle_feriado: v.optional(v.string()),
+        observaciones: v.optional(v.string()),
+        estado: v.union(
+            v.literal("programada"), 
+            v.literal("dictada"), 
+            v.literal("suspendida")
+        ),
+    })
+    .index("by_course", ["course_id"])
+    .index("by_fecha", ["fecha"]),
 });

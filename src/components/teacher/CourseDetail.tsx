@@ -15,12 +15,16 @@ import EvaluadorIAPanel from './EvaluadorIAPanel'
 import AgregarEvaluacionModal from './AgregarEvaluacionModal'
 import EvaluacionesPorCurso from './EvaluacionesPorCurso'
 import BadgesPanel from './BadgesPanel'
+import CalendarOnboarding from './CalendarOnboarding'
+import CalendarDashboard from './CalendarDashboard'
 import { useProfile } from '../../hooks/useProfile'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { MissionsAPI, RewardsAPI, QuizzesAPI, CoursesAPI, DocumentsAPI, supabase } from '../../lib/api'
 
 export default function CourseDetail({ course, onBack }: { course: any, onBack: () => void }) {
     const { user } = useProfile()
+    const [viewMode, setViewMode] = useState<'overview' | 'calendar'>('overview')
+    const [scheduleConfig, setScheduleConfig] = useState<any>(course.schedule_config)
     const [courseSubTab, setCourseSubTab] = useState<'evaluaciones' | 'evaluacion'>('evaluaciones')
     const [desafiosTab, setDesafiosTab] = useState<'todos' | 'manuales' | 'ia'>('todos')
     
@@ -183,7 +187,35 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                 </div>
             </div>
 
-            {/* <AttendancePanel courseId={course._id} /> */}
+            {/* Selector de Vistas de Detalle del Ramo */}
+            <div className="flex border-b border-white/5 gap-6">
+                <button
+                    onClick={() => setViewMode('overview')}
+                    className={`pb-4 text-sm font-bold transition-all relative cursor-pointer ${
+                        viewMode === 'overview' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                >
+                    Vista General
+                    {viewMode === 'overview' && (
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent"></div>
+                    )}
+                </button>
+                <button
+                    onClick={() => setViewMode('calendar')}
+                    className={`pb-4 text-sm font-bold transition-all relative cursor-pointer ${
+                        viewMode === 'calendar' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                >
+                    Calendario y Agenda
+                    {viewMode === 'calendar' && (
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent"></div>
+                    )}
+                </button>
+            </div>
+
+            {viewMode === 'overview' ? (
+                <>
+                    {/* <AttendancePanel courseId={course._id} /> */}
 
             {documents && (() => {
                 const hasPDA = documents.some((d: any) => d.master_doc_type === 'PDA')
@@ -630,6 +662,25 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                     course={course}
                     onClose={() => setShowImportarAlumnos(false)}
                 />
+            )}
+
+            {viewMode === 'calendar' && (
+                <div className="mt-6">
+                    {scheduleConfig ? (
+                        <CalendarDashboard 
+                            course={{ ...course, schedule_config: scheduleConfig }} 
+                            onResetConfig={() => setScheduleConfig(null)}
+                        />
+                    ) : (
+                        <CalendarOnboarding 
+                            course={course} 
+                            onSuccess={async () => {
+                                const { data } = await supabase.from('courses').select('schedule_config').eq('id', course.id).single()
+                                setScheduleConfig(data?.schedule_config || null)
+                            }}
+                        />
+                    )}
+                </div>
             )}
         </div>
     )
