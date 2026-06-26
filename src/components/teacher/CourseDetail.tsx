@@ -664,6 +664,8 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                 />
             )}
 
+            </>) : null}
+
             {viewMode === 'calendar' && (
                 <div className="mt-6">
                     {scheduleConfig ? (

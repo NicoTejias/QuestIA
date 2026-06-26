@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { Calendar, Upload, Loader2, Info, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { CalendarAPI, DocumentsAPI } from '../../lib/api'
+import { CalendarAPI, DocumentsAPI, supabase } from '../../lib/api'
 
 // Bloques horarios típicos de Duoc UC
 const BLOQUES_DUOC = [
@@ -300,9 +300,6 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
                     <td className="p-3 font-medium bg-slate-900/10 text-slate-400 whitespace-nowrap">{b.label}</td>
                     {DIAS_SEMANA.map(d => {
                       const isSelected = selectedBlocks.includes(`${d.id}-${b.id}`)
-                      const blockRegimenColor = b.regimen === 'diurno' 
-                        ? 'border-amber-500/30 hover:bg-amber-500/10 text-amber-300' 
-                        : 'border-indigo-500/30 hover:bg-indigo-500/10 text-indigo-300'
                       
                       const selectedColor = regimen === 'diurno'
                         ? 'bg-amber-500/20 border-amber-500 text-amber-300'

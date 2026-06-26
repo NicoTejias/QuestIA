@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, List, CheckSquare, Edit, AlertTriangle, ChevronLeft, ChevronRight, X, Save, ShieldAlert } from 'lucide-react'
+import { Calendar, List, CheckSquare, Edit, AlertTriangle, ChevronLeft, ChevronRight, X, Save, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CalendarAPI } from '../../lib/api'
 
