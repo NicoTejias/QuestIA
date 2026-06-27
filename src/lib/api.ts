@@ -2134,15 +2134,24 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
   ]
 }`
 
-    const result = await model.generateContent(prompt)
-    const responseText = result.response.text()
-
-    // Parsear JSON
     let sesiones: any[] = []
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error("La IA no retornó un formato JSON válido.")
-    const parsedData = JSON.parse(jsonMatch[0])
-    sesiones = parsedData.sesiones || []
+    try {
+      const result = await model.generateContent(prompt)
+      const responseText = result.response.text()
+
+      // Parsear JSON
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) throw new Error("La IA no retornó un formato JSON válido.")
+      const parsedData = JSON.parse(jsonMatch[0])
+      sesiones = parsedData.sesiones || []
+    } catch (err: any) {
+      console.error("Gemini Error:", err)
+      const errMsg = err.message || ""
+      if (errMsg.includes("API_KEY_SERVICE_BLOCKED") || errMsg.includes("blocked") || errMsg.includes("403")) {
+        throw new Error("API Key bloqueada (API_KEY_SERVICE_BLOCKED). Debes ir a la consola de Google Cloud (https://console.cloud.google.com), editar la API Key de este proyecto en 'APIs y Servicios > Credenciales' y habilitar la API 'Generative Language API'.")
+      }
+      throw err
+    }
 
     if (sesiones.length === 0) throw new Error("No se detectaron sesiones válidas en el PDA.")
 
