@@ -2054,6 +2054,7 @@ export const CalendarAPI = {
           es_feriado: c.es_feriado || false,
           detalle_feriado: c.detalle_feriado || null,
           estado: c.estado || 'programada',
+          tipo_bloque: c.tipo_bloque || 'catedra',
           created_at: new Date().toISOString()
         })
       
@@ -2070,6 +2071,7 @@ export const CalendarAPI = {
     semanas_semestre: number;
     dias_semana: number[];
     bloques_horario: string[];
+    dias_tipo?: Record<number, 'catedra' | 'laboratorio'>;
     fecha_inicio: number;
     teacher_id: string;
   }) {
@@ -2090,6 +2092,7 @@ export const CalendarAPI = {
       semanas_semestre: data.semanas_semestre,
       dias_semana: data.dias_semana,
       bloques_horario: data.bloques_horario,
+      dias_tipo: data.dias_tipo,
       fecha_inicio: data.fecha_inicio
     }
     await this.saveScheduleConfig(data.course_id, config)
@@ -2102,17 +2105,37 @@ export const CalendarAPI = {
     if (!apiKey) throw new Error("API Key de Google no configurada (VITE_GOOGLE_API_KEY).")
     
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
-
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
     const content = doc.content_text.substring(0, 15000)
+    const formatDayName = (dayNum: number): string => {
+      const names = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+      return names[dayNum] || String(dayNum)
+    }
+
+    let scheduleDescription = ""
+    if (data.dias_tipo) {
+      scheduleDescription = "ESTRUCTURA DEL HORARIO SEMANAL:\n"
+      Object.entries(data.dias_tipo).forEach(([dayStr, type]) => {
+        const dayNum = parseInt(dayStr)
+        const typeLabel = type === 'laboratorio' ? '🟢 Laboratorio (Clase Práctica / Taller)' : '🔵 Cátedra (Clase Teórica / Cátedra)'
+        scheduleDescription += `- ${formatDayName(dayNum)}: ${typeLabel}\n`
+      })
+    }
+
     const prompt = `Eres un asistente de planificación curricular para profesores de Duoc UC.
 Analiza el Plan de Aula (PDA) oficial y extrae de forma secuencial y detallada la lista de sesiones de clases del ramo.
 La asignatura dura aproximadamente ${data.semanas_semestre} semanas.
 
-REGLAS DE EXTRACCIÓN:
+${scheduleDescription}
+
+REGLAS DE EXTRACCIÓN Y PLANIFICACIÓN:
 - Extrae todas las clases secuenciales.
 - Para cada clase extrae: semana, sesión correlativa, título del tema, contenido a dictar, actividades que harán y materiales requeridos (laboratorio, software, instrumentos o guías de ejercicio).
-- Si la sesión corresponde a una evaluación (Prueba Escrita, Examen, Encargo o Presentación de Trabajo), indícalo en tiene_evaluacion: true, con el tipo_evaluacion respectivo.
+- Si cuentas con la "ESTRUCTURA DEL HORARIO SEMANAL", planifica las sesiones de forma alternada:
+  - En los días de 🔵 Cátedra (Teoría), enfócate en contenidos teóricos y conceptuales.
+  - En los días de 🟢 Laboratorio (Práctica), enfócate en actividades de taller experimentales, mediciones físicas o simulaciones por computadora. En 'actividades' asocia guías prácticas (ej: "Guía de Laboratorio N°X") y en 'materiales_sugeridos' asocia el equipamiento físico requerido (ej: protoboard, osciloscopio, multímetro) o software de simulación.
+  - El JSON resultante debe incluir el "tipo_bloque": "catedra" | "laboratorio" correspondiente para cada sesión en base al tipo de clase de ese día (la secuencia de clases se dicta alternando los días de clase de la semana de forma correlativa).
+- Si la sesión corresponde a una evaluación (Prueba Escrita, Examen, Encargo o Presentación de Trabajo), indícalo en tiene_evaluacion: true, con el tipo_evaluacion respectivo y tipo_bloque: "evaluacion".
 
 CONTENIDO DEL PDA:
 ${content}
@@ -2129,7 +2152,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
       "materiales_sugeridos": "Materiales, software, herramientas o equipos requeridos",
       "tiene_evaluacion": false,
       "tipo_evaluacion": "ninguna",
-      "titulo_evaluacion": ""
+      "titulo_evaluacion": "",
+      "tipo_bloque": "catedra"
     }
   ]
 }`
@@ -2243,6 +2267,12 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
         }
       }
 
+      const currentDayOfWeek = dateObj.getDay()
+      let tipoBloque = sesionIA.tipo_bloque
+      if (!tipoBloque || !['catedra', 'laboratorio', 'evaluacion'].includes(tipoBloque)) {
+        tipoBloque = data.dias_tipo?.[currentDayOfWeek] || 'catedra'
+      }
+
       clasesFinales.push({
         semana: sesionIA.semana || Math.ceil(correlativoSesion / data.dias_semana.length) || 1,
         sesion: correlativoSesion,
@@ -2254,7 +2284,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
         tiene_evaluacion: sesionIA.tiene_evaluacion,
         tipo_evaluacion: sesionIA.tipo_evaluacion !== "ninguna" ? sesionIA.tipo_evaluacion : undefined,
         titulo_evaluacion: sesionIA.titulo_evaluacion || undefined,
-        estado: "programada"
+        estado: "programada",
+        tipo_bloque: tipoBloque
       })
 
       correlativoSesion++

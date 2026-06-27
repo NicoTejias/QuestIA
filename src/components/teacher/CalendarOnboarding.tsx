@@ -46,7 +46,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
   const [regimen, setRegimen] = useState<'diurno' | 'vespertino'>('diurno')
   const [semanas, setSemanas] = useState(18)
   const [fechaInicio, setFechaInicio] = useState('')
-  const [selectedBlocks, setSelectedBlocks] = useState<string[]>([]) // formato: "dia-bloque", ej: "1-1-2" (Lunes Bloque 1-2)
+  const [selectedBlocks, setSelectedBlocks] = useState<Record<string, 'catedra' | 'laboratorio'>>({}) // llave: "dia-bloque", valor: "catedra" | "laboratorio"
   const [pdaFile, setPdaFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [fileName, setFileName] = useState('')
@@ -65,9 +65,17 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
 
   const toggleBlock = (diaId: number, bloqueId: string) => {
     const key = `${diaId}-${bloqueId}`
-    setSelectedBlocks(prev => 
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    )
+    setSelectedBlocks(prev => {
+      const copy = { ...prev }
+      if (!copy[key]) {
+        copy[key] = 'catedra'
+      } else if (copy[key] === 'catedra') {
+        copy[key] = 'laboratorio'
+      } else {
+        delete copy[key]
+      }
+      return copy
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,7 +89,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
       toast.error('Por favor selecciona la fecha de inicio del semestre.')
       return
     }
-    if (selectedBlocks.length === 0) {
+    if (Object.keys(selectedBlocks).length === 0) {
       toast.error('Por favor selecciona al menos un bloque de clases en el horario.')
       return
     }
@@ -101,13 +109,8 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
       const uploadedPath = await DocumentsAPI.uploadFile(pdaFile, storagePath)
 
       // 2. Extraer texto básico del PDF (simulamos o delegamos al extractor del proyecto si existe)
-      // Como el extractor en producción de Duocencia lee el PDF en el backend, nosotros pasamos un contenido de texto del documento.
-      // En este contexto, enviamos una extracción del texto
       let contentText = "PDA de la asignatura. Clases y sesiones planificadas."
       try {
-        // Si hay una biblioteca de lectura en el cliente, la usamos, o simplemente procesamos con metadatos.
-        // Para paridad, usaremos mammoth o un lector si es necesario, o simplemente el parser existente.
-        // Simulamos o usamos el nombre del archivo
         contentText = `PLAN DE ASIGNATURA Y AULA (PDA) PARA EL CURSO.
         Semana 1: Introducción a la asignatura. Conceptos de circuitos eléctricos y magnitudes físicas.
         Semana 2: Ley de Ohm y circuitos resistivos serie.
@@ -149,9 +152,20 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
 
       if (!docId.data?.id) throw new Error("Error al registrar el documento del PDA.")
 
-      // 3. Extraer días únicos de la selección de bloques
-      const diasUnicos = Array.from(new Set(selectedBlocks.map(b => parseInt(b.split('-')[0]))))
-      const bloquesUnicos = Array.from(new Set(selectedBlocks.map(b => b.split('-')[1])))
+      // 3. Extraer días únicos y calcular tipos
+      const keys = Object.keys(selectedBlocks)
+      const diasUnicos = Array.from(new Set(keys.map(k => parseInt(k.split('-')[0]))))
+      const bloquesUnicos = Array.from(new Set(keys.map(k => k.split('-')[1])))
+
+      const diasTipo: Record<number, 'catedra' | 'laboratorio'> = {}
+      Object.entries(selectedBlocks).forEach(([key, type]) => {
+        const diaId = parseInt(key.split('-')[0])
+        if (type === 'laboratorio') {
+          diasTipo[diaId] = 'laboratorio'
+        } else if (!diasTipo[diaId]) {
+          diasTipo[diaId] = 'catedra'
+        }
+      })
 
       // 4. Invocar la generación de clases del calendario
       const result = await CalendarAPI.generateCalendarFromPDA({
@@ -163,6 +177,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         semanas_semestre: semanas,
         dias_semana: diasUnicos,
         bloques_horario: bloquesUnicos,
+        dias_tipo: diasTipo,
         fecha_inicio: new Date(fechaInicio).getTime(),
         teacher_id: course.teacher_id
       })
@@ -292,7 +307,22 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
 
         {/* Grilla Horaria Semanal */}
         <div className="space-y-3">
-          <label className="block text-slate-300 text-sm font-medium">Selección de Horario Semanal</label>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+            <label className="block text-slate-300 text-sm font-medium">Selección de Horario Semanal</label>
+            
+            {/* Leyenda de Colores */}
+            <div className="flex gap-4 text-xs font-semibold">
+              <div className="flex items-center gap-1.5 text-indigo-400">
+                <div className="w-3 h-3 rounded bg-indigo-500/20 border border-indigo-500/50" />
+                <span>Cátedra (Teoría)</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-emerald-400">
+                <div className="w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500/50" />
+                <span>Laboratorio (Práctica)</span>
+              </div>
+            </div>
+          </div>
+
           <div className="overflow-x-auto border border-slate-800 rounded-lg bg-slate-950">
             <table className="w-full border-collapse">
               <thead>
@@ -308,22 +338,27 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
                   <tr key={b.id} className="border-b border-slate-900 hover:bg-slate-900/20">
                     <td className="p-3 font-medium bg-slate-900/10 text-slate-400 whitespace-nowrap">{b.label}</td>
                     {DIAS_SEMANA.map(d => {
-                      const isSelected = selectedBlocks.includes(`${d.id}-${b.id}`)
+                      const blockType = selectedBlocks[`${d.id}-${b.id}`]
                       
-                      const selectedColor = regimen === 'diurno'
-                        ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                        : 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
+                      let btnClass = 'bg-transparent border-slate-800 text-slate-500 hover:border-slate-700'
+                      let label = '-'
+                      
+                      if (blockType === 'catedra') {
+                        btnClass = 'bg-indigo-500/20 border-indigo-500/60 text-indigo-300 font-bold shadow-[0_0_10px_rgba(99,102,241,0.1)]'
+                        label = 'Cátedra'
+                      } else if (blockType === 'laboratorio') {
+                        btnClass = 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+                        label = 'Lab / Práct.'
+                      }
 
                       return (
                         <td key={d.id} className="p-2">
                           <button
                             type="button"
                             onClick={() => toggleBlock(d.id, b.id)}
-                            className={`w-full py-2 px-1 text-center rounded border transition-all ${
-                              isSelected ? selectedColor : 'bg-transparent border-slate-800 text-slate-500 hover:border-slate-700'
-                            }`}
+                            className={`w-full py-2 px-1 text-center rounded border transition-all text-[11px] ${btnClass}`}
                           >
-                            {isSelected ? 'Clase' : '-'}
+                            {label}
                           </button>
                         </td>
                       )
@@ -335,7 +370,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           </div>
           <div className="flex items-center gap-2 text-slate-500 text-xs">
             <Info className="w-4 h-4" />
-            <span>Haz clic sobre los bloques para registrar tu horario de clases de este ramo.</span>
+            <span>Haz clic consecutivamente sobre los bloques para alternar entre: Cátedra (Teoría) ➡ Laboratorio (Práctica) ➡ Deseleccionar.</span>
           </div>
         </div>
 

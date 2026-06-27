@@ -169,22 +169,42 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
                 ) : (
                   clasesSemana.map((c) => {
                     const isFeriado = !!c.es_feriado
-                    const regimenColor = course.schedule_config?.regimen === 'diurno'
-                      ? 'border-l-amber-500'
-                      : 'border-l-indigo-500'
+                    
+                    let borderLeftColor = 'border-l-indigo-500'
+                    let bgClass = 'bg-slate-900'
+                    let badgeLabel = 'Cátedra'
+                    let badgeClass = 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+
+                    if (isFeriado) {
+                      borderLeftColor = 'border-l-red-500'
+                      bgClass = 'bg-red-950/10'
+                      badgeLabel = 'Feriado'
+                      badgeClass = 'bg-red-500/10 text-red-400 border-red-500/20'
+                    } else if (c.tiene_evaluacion) {
+                      borderLeftColor = 'border-l-rose-500'
+                      badgeLabel = 'Evaluación'
+                      badgeClass = 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    } else if (c.tipo_bloque === 'laboratorio') {
+                      borderLeftColor = 'border-l-emerald-500'
+                      badgeLabel = 'Laboratorio'
+                      badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    }
 
                     return (
                       <div
                         key={c.id}
-                        className={`bg-slate-900 border border-slate-800 border-l-4 rounded-xl p-5 shadow-lg relative flex flex-col justify-between ${
-                          isFeriado ? 'border-l-red-500 bg-red-950/10' : regimenColor
-                        }`}
+                        className={`border border-slate-800 border-l-4 rounded-xl p-5 shadow-lg relative flex flex-col justify-between ${bgClass} ${borderLeftColor}`}
                       >
                         <div className="space-y-3">
-                          <div className="flex justify-between items-start">
-                            <span className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
-                              Sesión {c.sesion}
-                            </span>
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                                Sesión {c.sesion}
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badgeClass}`}>
+                                {badgeLabel}
+                              </span>
+                            </div>
                             <span className="text-xs text-slate-500 font-medium">
                               {formatFecha(c.fecha)}
                             </span>
@@ -309,11 +329,15 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
                       <div className="space-y-1">
                         {clasesDia.map(c => {
                           const isFeriado = !!c.es_feriado
-                          const color = isFeriado
-                            ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                            : course.schedule_config?.regimen === 'diurno'
-                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                            : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
+                          
+                          let color = 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
+                          if (isFeriado) {
+                            color = 'bg-red-500/10 border-red-500/30 text-red-400'
+                          } else if (c.tiene_evaluacion) {
+                            color = 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                          } else if (c.tipo_bloque === 'laboratorio') {
+                            color = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          }
 
                           return (
                             <button

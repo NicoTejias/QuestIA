@@ -19,10 +19,13 @@ CREATE TABLE IF NOT EXISTS clases_calendarizadas (
   mision_id UUID,
   es_feriado BOOLEAN DEFAULT FALSE,
   detalle_feriado TEXT,
-  observaciones TEXT,
   estado TEXT DEFAULT 'programada' CHECK (estado IN ('programada', 'dictada', 'suspendida')),
+  tipo_bloque TEXT DEFAULT 'catedra' CHECK (tipo_bloque IN ('catedra', 'laboratorio', 'evaluacion')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Asegurar que la columna existe por si la tabla ya había sido creada previamente
+ALTER TABLE clases_calendarizadas ADD COLUMN IF NOT EXISTS tipo_bloque TEXT DEFAULT 'catedra' CHECK (tipo_bloque IN ('catedra', 'laboratorio', 'evaluacion'));
 
 -- Índices para mejorar rendimiento de consultas
 CREATE INDEX IF NOT EXISTS idx_clases_calendarizadas_course_id ON clases_calendarizadas(course_id);
