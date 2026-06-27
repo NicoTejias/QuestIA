@@ -3,7 +3,7 @@ import {
     ChevronRight, BookOpen, FileText, Gift,
     Trash2, Target, Flame, Sparkles, Loader2, RefreshCw,
     Users, Trophy, Edit3, X, Search, Star,
-    FileSpreadsheet, ClipboardCheck, AlertTriangle, Plus, Gamepad2, Download, Zap, Check
+    FileSpreadsheet, ClipboardCheck, AlertTriangle, Plus, Gamepad2, Download, Zap, Check, Calendar
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { exportToExcel } from '../../utils/ExportData'
@@ -188,28 +188,28 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
             </div>
 
             {/* Selector de Vistas de Detalle del Ramo */}
-            <div className="flex border-b border-white/5 gap-6">
+            <div className="flex border-b border-white/10 gap-2 mb-6">
                 <button
                     onClick={() => setViewMode('overview')}
-                    className={`pb-4 text-sm font-bold transition-all relative cursor-pointer ${
-                        viewMode === 'overview' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                    className={`pb-3 px-4 text-sm font-black transition-all flex items-center gap-2 cursor-pointer rounded-t-xl border-b-2 ${
+                        viewMode === 'overview' 
+                            ? 'text-white border-accent bg-accent/5' 
+                            : 'text-slate-500 hover:text-slate-300 border-transparent'
                     }`}
                 >
+                    <BookOpen className="w-4 h-4 text-accent-light" />
                     Vista General
-                    {viewMode === 'overview' && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent"></div>
-                    )}
                 </button>
                 <button
                     onClick={() => setViewMode('calendar')}
-                    className={`pb-4 text-sm font-bold transition-all relative cursor-pointer ${
-                        viewMode === 'calendar' ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                    className={`pb-3 px-4 text-sm font-black transition-all flex items-center gap-2 cursor-pointer rounded-t-xl border-b-2 ${
+                        viewMode === 'calendar' 
+                            ? 'text-white border-accent bg-accent/5' 
+                            : 'text-slate-500 hover:text-slate-300 border-transparent'
                     }`}
                 >
-                    Calendario y Agenda
-                    {viewMode === 'calendar' && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent"></div>
-                    )}
+                    <Calendar className="w-4 h-4 text-indigo-400" />
+                    Calendario y Planificación
                 </button>
             </div>
 

@@ -3,17 +3,26 @@ import { Calendar, Upload, Loader2, Info, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CalendarAPI, DocumentsAPI, supabase } from '../../lib/api'
 
-// Bloques horarios típicos de Duoc UC
+// Módulos horarios individuales de Duoc UC (40 minutos c/u, 10 min de recreo cada 2 módulos)
 const BLOQUES_DUOC = [
-  { id: '1-2', label: 'Bloque 1-2 (08:30 - 09:50)', regimen: 'diurno' },
-  { id: '3-4', label: 'Bloque 3-4 (10:00 - 11:20)', regimen: 'diurno' },
-  { id: '5-6', label: 'Bloque 5-6 (11:30 - 12:50)', regimen: 'diurno' },
-  { id: '7-8', label: 'Bloque 7-8 (13:00 - 14:20)', regimen: 'diurno' },
-  { id: '9-10', label: 'Bloque 9-10 (14:30 - 15:50)', regimen: 'diurno' },
-  { id: '11-12', label: 'Bloque 11-12 (16:00 - 17:20)', regimen: 'diurno' },
-  { id: '13-14', label: 'Bloque 13-14 (17:30 - 18:50)', regimen: 'diurno' },
-  { id: '15-16', label: 'Bloque 15-16 (19:00 - 20:20)', regimen: 'vespertino' },
-  { id: '17-18', label: 'Bloque 17-18 (20:30 - 21:50)', regimen: 'vespertino' }
+  { id: '1', label: 'Módulo 1 (08:30 - 09:10)', regimen: 'diurno' },
+  { id: '2', label: 'Módulo 2 (09:11 - 09:50)', regimen: 'diurno' },
+  { id: '3', label: 'Módulo 3 (10:00 - 10:40)', regimen: 'diurno' },
+  { id: '4', label: 'Módulo 4 (10:41 - 11:20)', regimen: 'diurno' },
+  { id: '5', label: 'Módulo 5 (11:30 - 12:10)', regimen: 'diurno' },
+  { id: '6', label: 'Módulo 6 (12:11 - 12:50)', regimen: 'diurno' },
+  { id: '7', label: 'Módulo 7 (13:00 - 13:40)', regimen: 'diurno' },
+  { id: '8', label: 'Módulo 8 (13:41 - 14:20)', regimen: 'diurno' },
+  { id: '9', label: 'Módulo 9 (14:30 - 15:10)', regimen: 'diurno' },
+  { id: '10', label: 'Módulo 10 (15:11 - 15:50)', regimen: 'diurno' },
+  { id: '11', label: 'Módulo 11 (16:00 - 16:40)', regimen: 'diurno' },
+  { id: '12', label: 'Módulo 12 (16:41 - 17:20)', regimen: 'diurno' },
+  { id: '13', label: 'Módulo 13 (17:30 - 18:10)', regimen: 'diurno' },
+  { id: '14', label: 'Módulo 14 (18:11 - 18:50)', regimen: 'diurno' },
+  { id: '15', label: 'Módulo 15 (19:00 - 19:40)', regimen: 'vespertino' },
+  { id: '16', label: 'Módulo 16 (19:41 - 20:20)', regimen: 'vespertino' },
+  { id: '17', label: 'Módulo 17 (20:30 - 21:10)', regimen: 'vespertino' },
+  { id: '18', label: 'Módulo 18 (21:11 - 21:50)', regimen: 'vespertino' }
 ]
 
 const DIAS_SEMANA = [

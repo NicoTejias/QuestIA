@@ -1238,7 +1238,7 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 // ============================================================
 export const EvaluationsAPI = {
   async getEvaluationsByCourse(courseId: string) {
-    const { data, error } = await supabase.from('evaluations').select('*').eq('course_id', courseId).order('fecha', { ascending: true })
+    const { data, error } = await supabase.from('evaluaciones').select('*').eq('course_id', courseId).order('fecha', { ascending: true })
     if (error) throw error
     return data || []
   },
@@ -1254,7 +1254,7 @@ export const EvaluationsAPI = {
     section?: string;
   }) {
     const { data: res, error } = await supabase
-      .from('evaluations')
+      .from('evaluaciones')
       .insert(data)
       .select()
       .single()

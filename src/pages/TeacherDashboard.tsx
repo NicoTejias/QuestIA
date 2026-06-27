@@ -482,7 +482,7 @@ function InicioDocente({ user, firstName, coursesCount, onTabChange }: {
                             Registro por Ramo
                         </h3>
                         <div className="h-[300px] w-full min-h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={300} minWidth={0}>
                                 <BarChart data={(stats as any).courseStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                     <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value: any) => String(value).substring(0, 15) + (String(value).length > 15 ? '...' : '')} />
@@ -506,7 +506,7 @@ function InicioDocente({ user, firstName, coursesCount, onTabChange }: {
                             Promedio Diario de Quizzes por Ramo y Sección
                         </h3>
                         <div className="h-[300px] w-full min-h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={300} minWidth={0}>
                                 <BarChart data={(stats as any).courseStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                     <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value: any) => String(value).substring(0, 15) + (String(value).length > 15 ? '...' : '')} />
@@ -534,7 +534,7 @@ function InicioDocente({ user, firstName, coursesCount, onTabChange }: {
                         Conexiones (Detalle)
                     </h3>
                     <div className="h-[300px] w-full min-h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height={300} minWidth={0}>
                             <LineChart data={(stats as any).dailyActivity} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                 <XAxis dataKey="day" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => {

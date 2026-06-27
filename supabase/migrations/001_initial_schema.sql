@@ -484,16 +484,41 @@ ALTER TABLE course_documents ENABLE ROW LEVEL SECURITY;
 -- RLS POLICIES: service_role bypasses all RLS
 -- (Our backend API will use service_role key)
 -- ============================================================
+DROP POLICY IF EXISTS "Service role full access" ON profiles;
 CREATE POLICY "Service role full access" ON profiles FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON courses;
 CREATE POLICY "Service role full access" ON courses FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON whitelists;
 CREATE POLICY "Service role full access" ON whitelists FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON enrollments;
 CREATE POLICY "Service role full access" ON enrollments FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON rewards;
 CREATE POLICY "Service role full access" ON rewards FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON redemptions;
 CREATE POLICY "Service role full access" ON redemptions FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON missions;
 CREATE POLICY "Service role full access" ON missions FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON mission_submissions;
 CREATE POLICY "Service role full access" ON mission_submissions FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON quizzes;
 CREATE POLICY "Service role full access" ON quizzes FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON quiz_submissions;
 CREATE POLICY "Service role full access" ON quiz_submissions FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON quiz_attempts;
 CREATE POLICY "Service role full access" ON quiz_attempts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON notifications;
 CREATE POLICY "Service role full access" ON notifications FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Service role full access" ON course_documents;
 CREATE POLICY "Service role full access" ON course_documents FOR ALL USING (true);

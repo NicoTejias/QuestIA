@@ -35,6 +35,12 @@ CREATE POLICY "Allow insert notifications" ON notifications FOR INSERT WITH CHEC
 ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow read courses" ON courses;
 CREATE POLICY "Allow read courses" ON courses FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow insert courses" ON courses;
+CREATE POLICY "Allow insert courses" ON courses FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow update courses" ON courses;
+CREATE POLICY "Allow update courses" ON courses FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Allow delete courses" ON courses;
+CREATE POLICY "Allow delete courses" ON courses FOR DELETE USING (true);
 
 -- ENROLLMENTS
 ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
@@ -180,6 +186,12 @@ CREATE POLICY "Allow read grading_results" ON grading_results FOR SELECT USING (
 ALTER TABLE evaluaciones ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow read evaluaciones" ON evaluaciones;
 CREATE POLICY "Allow read evaluaciones" ON evaluaciones FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow insert evaluaciones" ON evaluaciones;
+CREATE POLICY "Allow insert evaluaciones" ON evaluaciones FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow update evaluaciones" ON evaluaciones;
+CREATE POLICY "Allow update evaluaciones" ON evaluaciones FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Allow delete evaluaciones" ON evaluaciones;
+CREATE POLICY "Allow delete evaluaciones" ON evaluaciones FOR DELETE USING (true);
 
 -- RATE LIMITS
 ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;
@@ -187,3 +199,43 @@ DROP POLICY IF EXISTS "Allow read rate_limits" ON rate_limits;
 CREATE POLICY "Allow read rate_limits" ON rate_limits FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow insert rate_limits" ON rate_limits;
 CREATE POLICY "Allow insert rate_limits" ON rate_limits FOR INSERT WITH CHECK (true);
+
+-- CLASES CALENDARIZADAS
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'clases_calendarizadas') THEN
+    ALTER TABLE clases_calendarizadas ENABLE ROW LEVEL SECURITY;
+    
+    DROP POLICY IF EXISTS "Allow read clases_calendarizadas" ON clases_calendarizadas;
+    EXECUTE 'CREATE POLICY "Allow read clases_calendarizadas" ON clases_calendarizadas FOR SELECT USING (true)';
+    
+    DROP POLICY IF EXISTS "Allow insert clases_calendarizadas" ON clases_calendarizadas;
+    EXECUTE 'CREATE POLICY "Allow insert clases_calendarizadas" ON clases_calendarizadas FOR INSERT WITH CHECK (true)';
+    
+    DROP POLICY IF EXISTS "Allow update clases_calendarizadas" ON clases_calendarizadas;
+    EXECUTE 'CREATE POLICY "Allow update clases_calendarizadas" ON clases_calendarizadas FOR UPDATE USING (true)';
+    
+    DROP POLICY IF EXISTS "Allow delete clases_calendarizadas" ON clases_calendarizadas;
+    EXECUTE 'CREATE POLICY "Allow delete clases_calendarizadas" ON clases_calendarizadas FOR DELETE USING (true)';
+  END IF;
+END
+$$;
+
+-- STORAGE BUCKETS AND OBJECTS POLICIES
+-- Asegurar que el bucket existe
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('course_documents', 'course_documents', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Políticas para el bucket course_documents
+DROP POLICY IF EXISTS "Allow public read objects" ON storage.objects;
+CREATE POLICY "Allow public read objects" ON storage.objects FOR SELECT USING (bucket_id = 'course_documents');
+
+DROP POLICY IF EXISTS "Allow public insert objects" ON storage.objects;
+CREATE POLICY "Allow public insert objects" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'course_documents');
+
+DROP POLICY IF EXISTS "Allow public update objects" ON storage.objects;
+CREATE POLICY "Allow public update objects" ON storage.objects FOR UPDATE USING (bucket_id = 'course_documents');
+
+DROP POLICY IF EXISTS "Allow public delete objects" ON storage.objects;
+CREATE POLICY "Allow public delete objects" ON storage.objects FOR DELETE USING (bucket_id = 'course_documents');

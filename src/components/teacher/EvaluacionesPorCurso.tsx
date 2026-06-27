@@ -20,7 +20,7 @@ export default function EvaluacionesPorCurso({ courseId }: EvaluacionesPorCursoP
     const handleDelete = async () => {
         if (!deleteTarget) return
         try {
-            const { error } = await supabase.from('evaluations').delete().eq('id', deleteTarget.id)
+            const { error } = await supabase.from('evaluaciones').delete().eq('id', deleteTarget.id)
             if (error) throw error
             toast.success("Evaluación eliminada")
             setDeleteTarget(null)
