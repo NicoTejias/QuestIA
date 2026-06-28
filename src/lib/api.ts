@@ -2105,7 +2105,7 @@ export const CalendarAPI = {
     if (!apiKey) throw new Error("API Key de Google no configurada (VITE_GOOGLE_API_KEY).")
     
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
     const content = doc.content_text.substring(0, 15000)
     const formatDayName = (dayNum: number): string => {
       const names = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
