@@ -2211,7 +2211,20 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 
     // 6. Algoritmo de Fechas
     const clasesFinales: any[] = []
-    let currentTimestamp = data.fecha_inicio
+    
+    // Obtener el lunes de la semana de inicio como punto de referencia
+    const getMondayOfDate = (d: Date): Date => {
+      const day = d.getDay()
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+      const monday = new Date(d)
+      monday.setDate(diff)
+      monday.setHours(12, 0, 0, 0)
+      return monday
+    }
+
+    const startTemp = new Date(data.fecha_inicio)
+    startTemp.setHours(12, 0, 0, 0)
+    const startOfSemesterMonday = getMondayOfDate(startTemp)
 
     const getNextClassDate = (timestamp: number): number => {
       let temp = new Date(timestamp)
@@ -2227,15 +2240,48 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
       return timestamp + 24 * 60 * 60 * 1000
     }
 
-    let sesionIndex = 0
+    const getFirstClassDate = (timestamp: number): number => {
+      let temp = new Date(timestamp)
+      const dayOfWeek = temp.getDay()
+      if (data.dias_semana.includes(dayOfWeek)) {
+        return temp.getTime()
+      }
+      return getNextClassDate(timestamp)
+    }
+
+    let currentTimestamp = getFirstClassDate(startTemp.getTime())
+
+    // Clasificar las sesiones de la IA en colas independientes según la secuencia del horario semanal
+    const catedraQueue: any[] = []
+    const laboratorioQueue: any[] = []
+
+    sesiones.forEach((sesion, index) => {
+      const dayOfWeek = data.dias_semana[index % data.dias_semana.length]
+      const targetType = data.dias_tipo?.[dayOfWeek] || (index % 2 === 0 ? 'catedra' : 'laboratorio')
+      
+      const sesionConTipo = { ...sesion, target_tipo_bloque: targetType }
+      if (targetType === 'laboratorio') {
+        laboratorioQueue.push(sesionConTipo)
+      } else {
+        catedraQueue.push(sesionConTipo)
+      }
+    })
+
     let correlativoSesion = 1
 
-    while (sesionIndex < sesiones.length) {
-      const sesionIA = sesiones[sesionIndex]
+    while (catedraQueue.length > 0 || laboratorioQueue.length > 0) {
+      // Asegurarse de que el día actual esté a mediodía local
       const dateObj = new Date(currentTimestamp)
-      const dateStr = stringifyDate(dateObj)
+      dateObj.setHours(12, 0, 0, 0)
+      const cleanTimestamp = dateObj.getTime()
 
+      const dateStr = stringifyDate(dateObj)
       const feriado = FERIADOS_DUOC_2026.find(f => f.fecha === dateStr)
+
+      // Calcular semana calendario (de lunes a domingo)
+      const diffTime = cleanTimestamp - startOfSemesterMonday.getTime()
+      const diffDays = Math.round(diffTime / (24 * 60 * 60 * 1000))
+      const semanaIndex = Math.floor(diffDays / 7) + 1
 
       if (feriado) {
         let suspenderClase = true
@@ -2250,33 +2296,54 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 
         if (suspenderClase) {
           clasesFinales.push({
-            semana: Math.ceil(correlativoSesion / data.dias_semana.length) || 1,
+            semana: semanaIndex,
             sesion: correlativoSesion,
-            fecha: currentTimestamp,
+            fecha: cleanTimestamp,
             titulo: `Feriado: ${feriado.nombre}`,
             contenido: "Clase suspendida por feriado oficial en el calendario institucional.",
             tiene_evaluacion: false,
             es_feriado: true,
             detalle_feriado: feriado.nombre,
-            estado: "suspendida"
+            estado: "suspendida",
+            tipo_bloque: "catedra"
           })
 
           correlativoSesion++
-          currentTimestamp = getNextClassDate(currentTimestamp)
+          currentTimestamp = getNextClassDate(cleanTimestamp)
           continue
         }
       }
 
+      // Día de clases normal
       const currentDayOfWeek = dateObj.getDay()
+      const dayType = data.dias_tipo?.[currentDayOfWeek] || 'catedra'
+
+      let sesionIA = null
+      if (dayType === 'laboratorio') {
+        if (laboratorioQueue.length > 0) {
+          sesionIA = laboratorioQueue.shift()
+        } else if (catedraQueue.length > 0) {
+          sesionIA = catedraQueue.shift()
+        }
+      } else {
+        if (catedraQueue.length > 0) {
+          sesionIA = catedraQueue.shift()
+        } else if (laboratorioQueue.length > 0) {
+          sesionIA = laboratorioQueue.shift()
+        }
+      }
+
+      if (!sesionIA) break // Salvaguarda
+
       let tipoBloque = sesionIA.tipo_bloque
       if (!tipoBloque || !['catedra', 'laboratorio', 'evaluacion'].includes(tipoBloque)) {
-        tipoBloque = data.dias_tipo?.[currentDayOfWeek] || 'catedra'
+        tipoBloque = dayType
       }
 
       clasesFinales.push({
-        semana: sesionIA.semana || Math.ceil(correlativoSesion / data.dias_semana.length) || 1,
+        semana: semanaIndex,
         sesion: correlativoSesion,
-        fecha: currentTimestamp,
+        fecha: cleanTimestamp,
         titulo: sesionIA.titulo,
         contenido: sesionIA.contenido,
         actividades: sesionIA.actividades,
@@ -2289,8 +2356,7 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
       })
 
       correlativoSesion++
-      currentTimestamp = getNextClassDate(currentTimestamp)
-      sesionIndex++
+      currentTimestamp = getNextClassDate(cleanTimestamp)
     }
 
     // 7. Insertar en bloque en Supabase

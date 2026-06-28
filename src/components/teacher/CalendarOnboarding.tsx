@@ -154,7 +154,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
 
       // 3. Extraer días únicos y calcular tipos
       const keys = Object.keys(selectedBlocks)
-      const diasUnicos = Array.from(new Set(keys.map(k => parseInt(k.split('-')[0]))))
+      const diasUnicos = Array.from(new Set(keys.map(k => parseInt(k.split('-')[0])))).sort((a, b) => a - b)
       const bloquesUnicos = Array.from(new Set(keys.map(k => k.split('-')[1])))
 
       const diasTipo: Record<number, 'catedra' | 'laboratorio'> = {}
@@ -167,6 +167,11 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         }
       })
 
+      // Para evitar desfases de zona horaria, parseamos la fecha como local a mediodía (12:00:00)
+      const [year, month, day] = fechaInicio.split('-').map(Number)
+      const dateLocal = new Date(year, month - 1, day, 12, 0, 0, 0)
+      const fechaInicioTs = dateLocal.getTime()
+
       // 4. Invocar la generación de clases del calendario
       const result = await CalendarAPI.generateCalendarFromPDA({
         course_id: course.id,
@@ -178,7 +183,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         dias_semana: diasUnicos,
         bloques_horario: bloquesUnicos,
         dias_tipo: diasTipo,
-        fecha_inicio: new Date(fechaInicio).getTime(),
+        fecha_inicio: fechaInicioTs,
         teacher_id: course.teacher_id
       })
 

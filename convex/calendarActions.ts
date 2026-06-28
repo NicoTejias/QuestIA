@@ -135,9 +135,21 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 
         // 4. Algoritmo de Fechas cruzando con el Calendario de Duoc UC 2026
         const clasesFinales: any[] = [];
-        let currentTimestamp = args.fecha_inicio;
+        
+        // Obtener el lunes de la semana de inicio como punto de referencia
+        const getMondayOfDate = (d: Date): Date => {
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(d);
+            monday.setDate(diff);
+            monday.setHours(12, 0, 0, 0);
+            return monday;
+        };
 
-        // Ayudante para avanzar al siguiente día programado en el horario del profesor
+        const startTemp = new Date(args.fecha_inicio);
+        startTemp.setHours(12, 0, 0, 0);
+        const startOfSemesterMonday = getMondayOfDate(startTemp);
+
         const getNextClassDate = (timestamp: number): number => {
             let temp = new Date(timestamp);
             let loops = 0;
@@ -150,61 +162,113 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
                 }
                 loops++;
             }
-            return timestamp + 24 * 60 * 60 * 1000; // fallback a 1 día
+            return timestamp + 24 * 60 * 60 * 1000;
         };
 
-        let sesionIndex = 0;
+        const getFirstClassDate = (timestamp: number): number => {
+            let temp = new Date(timestamp);
+            const dayOfWeek = temp.getDay();
+            if (args.dias_semana.includes(dayOfWeek)) {
+                return temp.getTime();
+            }
+            return getNextClassDate(timestamp);
+        };
+
+        let currentTimestamp = getFirstClassDate(startTemp.getTime());
+
+        // Clasificar las sesiones de la IA en colas independientes según la secuencia del horario semanal
+        const catedraQueue: any[] = [];
+        const laboratorioQueue: any[] = [];
+
+        sesiones.forEach((sesion, index) => {
+            const dayOfWeek = args.dias_semana[index % args.dias_semana.length];
+            const targetType = (args as any).dias_tipo?.[dayOfWeek] || (index % 2 === 0 ? 'catedra' : 'laboratorio');
+            
+            const sesionConTipo = { ...sesion, target_tipo_bloque: targetType };
+            if (targetType === 'laboratorio') {
+                laboratorioQueue.push(sesionConTipo);
+            } else {
+                catedraQueue.push(sesionConTipo);
+            }
+        });
+
         let correlativoSesion = 1;
 
-        while (sesionIndex < sesiones.length) {
-            const sesionIA = sesiones[sesionIndex];
+        while (catedraQueue.length > 0 || laboratorioQueue.length > 0) {
+            // Asegurarse de que el día actual esté a mediodía local
             const dateObj = new Date(currentTimestamp);
-            const dateStr = stringifyDate(dateObj);
+            dateObj.setHours(12, 0, 0, 0);
+            const cleanTimestamp = dateObj.getTime();
 
-            // Revisar si la fecha actual es feriado
+            const dateStr = stringifyDate(dateObj);
             const feriado = FERIADOS_DUOC_2026.find(f => f.fecha === dateStr);
+
+            // Calcular semana calendario (de lunes a domingo)
+            const diffTime = cleanTimestamp - startOfSemesterMonday.getTime();
+            const diffDays = Math.round(diffTime / (24 * 60 * 60 * 1000));
+            const semanaIndex = Math.floor(diffDays / 7) + 1;
 
             if (feriado) {
                 let suspenderClase = true;
 
-                // Si es víspera o media jornada, revisar si el bloque horario del profe colisiona con el horario de suspensión
                 if (feriado.media_jornada && feriado.hora_limite) {
-                    // Por simplicidad, consideramos que si el régimen es vespertino o la clase es en la tarde/noche (típicamente bloques > 8 en Duoc, p.ej. bloques de vespertino), se suspende.
                     if (args.regimen === "vespertino") {
                         suspenderClase = true;
                     } else {
-                        // En régimen diurno, si el horario inicia después de la hora límite, se suspende
-                        // Si no, se dicta normalmente
                         suspenderClase = false; 
                     }
                 }
 
                 if (suspenderClase) {
-                    // Añadimos una clase de tipo Feriado/Suspendida al calendario
                     clasesFinales.push({
-                        semana: Math.ceil(correlativoSesion / args.dias_semana.length) || 1,
+                        semana: semanaIndex,
                         sesion: correlativoSesion,
-                        fecha: currentTimestamp,
+                        fecha: cleanTimestamp,
                         titulo: `Feriado: ${feriado.nombre}`,
                         contenido: "Clase suspendida por feriado oficial en el calendario institucional.",
                         tiene_evaluacion: false,
                         es_feriado: true,
                         detalle_feriado: feriado.nombre,
                         estado: "suspendida",
+                        tipo_bloque: "catedra"
                     });
 
                     correlativoSesion++;
-                    currentTimestamp = getNextClassDate(currentTimestamp);
-                    // NO incrementamos el index de la IA para que el contenido se dicte en la siguiente sesión válida
+                    currentTimestamp = getNextClassDate(cleanTimestamp);
                     continue;
                 }
             }
 
-            // Si no es feriado, registramos la clase real de contenido del PDA
+            // Día de clases normal
+            const currentDayOfWeek = dateObj.getDay();
+            const dayType = (args as any).dias_tipo?.[currentDayOfWeek] || 'catedra';
+
+            let sesionIA = null;
+            if (dayType === 'laboratorio') {
+                if (laboratorioQueue.length > 0) {
+                    sesionIA = laboratorioQueue.shift();
+                } else if (catedraQueue.length > 0) {
+                    sesionIA = catedraQueue.shift();
+                }
+            } else {
+                if (catedraQueue.length > 0) {
+                    sesionIA = catedraQueue.shift();
+                } else if (laboratorioQueue.length > 0) {
+                    sesionIA = laboratorioQueue.shift();
+                }
+            }
+
+            if (!sesionIA) break; // Salvaguarda
+
+            let tipoBloque = sesionIA.tipo_bloque;
+            if (!tipoBloque || !['catedra', 'laboratorio', 'evaluacion'].includes(tipoBloque)) {
+                tipoBloque = dayType;
+            }
+
             clasesFinales.push({
-                semana: sesionIA.semana || Math.ceil(correlativoSesion / args.dias_semana.length) || 1,
+                semana: semanaIndex,
                 sesion: correlativoSesion,
-                fecha: currentTimestamp,
+                fecha: cleanTimestamp,
                 titulo: sesionIA.titulo,
                 contenido: sesionIA.contenido,
                 actividades: sesionIA.actividades,
@@ -213,11 +277,11 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
                 tipo_evaluacion: sesionIA.tipo_evaluacion !== "ninguna" ? sesionIA.tipo_evaluacion : undefined,
                 titulo_evaluacion: sesionIA.titulo_evaluacion || undefined,
                 estado: "programada",
+                tipo_bloque: tipoBloque
             });
 
             correlativoSesion++;
-            currentTimestamp = getNextClassDate(currentTimestamp);
-            sesionIndex++;
+            currentTimestamp = getNextClassDate(cleanTimestamp);
         }
 
         // 5. Inserción masiva final en la base de datos
