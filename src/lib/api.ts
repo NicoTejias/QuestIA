@@ -2129,7 +2129,8 @@ La asignatura dura aproximadamente ${data.semanas_semestre} semanas.
 ${scheduleDescription}
 
 REGLAS DE EXTRACCIÓN Y PLANIFICACIÓN:
-- Extrae todas las clases secuenciales.
+- Dado que el horario semanal tiene ${data.dias_semana.length} clases a la semana, debes generar exactamente ${data.dias_semana.length} sesiones para cada semana del semestre. Por ejemplo, para la Semana 1 debes generar ${data.dias_semana.length} sesiones consecutivas en el JSON (ambas con "semana": 1, ej: sesión 1 y sesión 2). Para la Semana 2, otras ${data.dias_semana.length} sesiones (ambas con "semana": 2, ej: sesión 3 y sesión 4), y así sucesivamente para las ${data.semanas_semestre} semanas.
+- Distribuye secuencialmente el contenido temático del PDA correspondiente a cada semana entre las ${data.dias_semana.length} sesiones de esa misma semana (ej: la teoría en cátedra y la práctica/taller en laboratorio).
 - Para cada clase extrae: semana, sesión correlativa, título del tema, contenido a dictar, actividades que harán y materiales requeridos (laboratorio, software, instrumentos o guías de ejercicio).
 - Si cuentas con la "ESTRUCTURA DEL HORARIO SEMANAL", planifica las sesiones de forma alternada:
   - En los días de 🔵 Cátedra (Teoría), enfócate en contenidos teóricos y conceptuales.
