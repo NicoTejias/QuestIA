@@ -87,7 +87,8 @@ Analiza el Plan de Aula (PDA) oficial y extrae de forma secuencial y detallada l
 La asignatura dura aproximadamente ${args.semanas_semestre} semanas.
 
 REGLAS DE EXTRACCIÓN:
-- Extrae todas las clases secuenciales.
+- Dado que el horario semanal tiene ${args.dias_semana.length} clases a la semana, debes generar exactamente ${args.dias_semana.length} sesiones para cada semana del semestre. Por ejemplo, para la Semana 1 debes generar ${args.dias_semana.length} sesiones consecutivas en el JSON (ambas con "semana": 1, ej: sesión 1 y sesión 2). Para la Semana 2, otras ${args.dias_semana.length} sesiones (ambas con "semana": 2, ej: sesión 3 y sesión 4), y así sucesivamente para las ${args.semanas_semestre} semanas.
+- Distribuye secuencialmente el contenido temático del PDA correspondiente a cada semana entre las ${args.dias_semana.length} sesiones de esa misma semana (ej: la teoría en cátedra y la práctica/taller en laboratorio).
 - Para cada clase extrae: semana, sesión correlativa, título del tema, contenido a dictar, actividades que harán y materiales requeridos (laboratorio, software, instrumentos o guías de ejercicio).
 - Si la sesión corresponde a una evaluación (Prueba Escrita, Examen, Encargo o Presentación de Trabajo), indícalo en tiene_evaluacion: true, con el tipo_evaluacion respectivo.
 
