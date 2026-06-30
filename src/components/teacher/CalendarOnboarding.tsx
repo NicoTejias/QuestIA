@@ -167,6 +167,29 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         }
       })
 
+      // Construir las SESIONES de horario: cada combinación (día, tipo) es una sesión distinta.
+      // Si un mismo día tiene módulos de cátedra Y de laboratorio, son 2 sesiones diferentes
+      // de esa semana (la teórica y la práctica). Se ordenan por día y, dentro del día,
+      // por el primer módulo de cada grupo (cronológico).
+      const primerModuloPorGrupo = new Map<string, number>() // "dia-tipo" -> menor nº de módulo
+      Object.entries(selectedBlocks).forEach(([key, type]) => {
+        const [diaStr, bloqueStr] = key.split('-')
+        const grupoKey = `${diaStr}-${type}`
+        const modulo = parseInt(bloqueStr)
+        const actual = primerModuloPorGrupo.get(grupoKey)
+        if (actual === undefined || modulo < actual) {
+          primerModuloPorGrupo.set(grupoKey, modulo)
+        }
+      })
+
+      const sesionesHorario = Array.from(primerModuloPorGrupo.entries())
+        .map(([grupoKey, primerModulo]) => {
+          const [diaStr, tipo] = grupoKey.split('-')
+          return { dia: parseInt(diaStr), tipo: tipo as 'catedra' | 'laboratorio', orden: primerModulo }
+        })
+        .sort((a, b) => (a.dia - b.dia) || (a.orden - b.orden))
+        .map(({ dia, tipo }) => ({ dia, tipo }))
+
       // Para evitar desfases de zona horaria, parseamos la fecha como local a mediodía (12:00:00)
       const [year, month, day] = fechaInicio.split('-').map(Number)
       const dateLocal = new Date(year, month - 1, day, 12, 0, 0, 0)
@@ -183,6 +206,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         dias_semana: diasUnicos,
         bloques_horario: bloquesUnicos,
         dias_tipo: diasTipo,
+        sesiones_horario: sesionesHorario,
         fecha_inicio: fechaInicioTs,
         teacher_id: course.teacher_id
       })

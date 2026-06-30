@@ -2072,9 +2072,16 @@ export const CalendarAPI = {
     dias_semana: number[];
     bloques_horario: string[];
     dias_tipo?: Record<number, 'catedra' | 'laboratorio'>;
+    sesiones_horario?: { dia: number; tipo: 'catedra' | 'laboratorio' }[];
     fecha_inicio: number;
     teacher_id: string;
   }) {
+    // Sesiones por semana reales: cada (día, tipo) es una sesión distinta.
+    // Si no llega sesiones_horario (compatibilidad), se asume 1 sesión por día.
+    const sesionesHorario = data.sesiones_horario && data.sesiones_horario.length > 0
+      ? data.sesiones_horario
+      : data.dias_semana.map(dia => ({ dia, tipo: (data.dias_tipo?.[dia] || 'catedra') as 'catedra' | 'laboratorio' }))
+    const sesionesPorSemana = sesionesHorario.length
     // 1. Obtener el documento del PDA
     const { data: doc, error: docError } = await supabase
       .from('course_documents')
@@ -2129,8 +2136,9 @@ La asignatura dura aproximadamente ${data.semanas_semestre} semanas.
 ${scheduleDescription}
 
 REGLAS DE EXTRACCIÓN Y PLANIFICACIÓN:
-- Dado que el horario semanal tiene ${data.dias_semana.length} clases a la semana, debes generar exactamente ${data.dias_semana.length} sesiones para cada semana del semestre. Por ejemplo, para la Semana 1 debes generar ${data.dias_semana.length} sesiones consecutivas en el JSON (ambas con "semana": 1, ej: sesión 1 y sesión 2). Para la Semana 2, otras ${data.dias_semana.length} sesiones (ambas con "semana": 2, ej: sesión 3 y sesión 4), y así sucesivamente para las ${data.semanas_semestre} semanas.
-- Distribuye secuencialmente el contenido temático del PDA correspondiente a cada semana entre las ${data.dias_semana.length} sesiones de esa misma semana (ej: la teoría en cátedra y la práctica/taller en laboratorio).
+- Dado que el horario semanal tiene ${sesionesPorSemana} sesiones a la semana, debes generar exactamente ${sesionesPorSemana} sesiones para cada semana del semestre. Por ejemplo, para la Semana 1 debes generar ${sesionesPorSemana} sesiones consecutivas en el JSON (todas con "semana": 1, ej: sesión 1 y sesión 2). Para la Semana 2, otras ${sesionesPorSemana} sesiones (todas con "semana": 2, ej: sesión 3 y sesión 4), y así sucesivamente para las ${data.semanas_semestre} semanas.
+- Cada semana se compone de ${sesionesPorSemana} sesiones distintas según este patrón fijo de horario (en este orden): ${sesionesHorario.map((s, i) => `sesión ${i + 1} = ${s.tipo === 'laboratorio' ? 'Laboratorio (práctica)' : 'Cátedra (teoría)'}`).join('; ')}. Una sesión de Cátedra y una de Laboratorio de la MISMA semana abordan el mismo tema semanal pero por separado: la cátedra desarrolla la teoría y el laboratorio la práctica/taller asociada a esa teoría.
+- Distribuye secuencialmente el contenido temático del PDA correspondiente a cada semana entre las ${sesionesPorSemana} sesiones de esa misma semana (ej: la teoría en cátedra y la práctica/taller en laboratorio).
 - Para cada clase extrae: semana, sesión correlativa, título del tema, contenido a dictar, actividades que harán y materiales requeridos (laboratorio, software, instrumentos o guías de ejercicio).
 - Si cuentas con la "ESTRUCTURA DEL HORARIO SEMANAL", planifica las sesiones de forma alternada:
   - En los días de 🔵 Cátedra (Teoría), enfócate en contenidos teóricos y conceptuales.
@@ -2225,7 +2233,6 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 
     const startTemp = new Date(data.fecha_inicio)
     startTemp.setHours(12, 0, 0, 0)
-    const startOfSemesterMonday = getMondayOfDate(startTemp)
 
     const getNextClassDate = (timestamp: number): number => {
       let temp = new Date(timestamp)
@@ -2252,114 +2259,99 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
       return getNextClassDate(timestamp)
     }
 
-    let currentTimestamp = getFirstClassDate(startTemp.getTime())
+    // Fecha del primer día de clases (define la Semana 1)
+    const firstClassTimestamp = getFirstClassDate(startTemp.getTime())
+    const firstClassMonday = getMondayOfDate(new Date(firstClassTimestamp))
 
-    // Clasificar las sesiones de la IA en colas independientes según la secuencia del horario semanal
+    // Colas de sesiones IA por tipo, preservando el orden de llegada del PDA.
     const catedraQueue: any[] = []
     const laboratorioQueue: any[] = []
-
-    sesiones.forEach((sesion, index) => {
-      const dayOfWeek = data.dias_semana[index % data.dias_semana.length]
-      const targetType = data.dias_tipo?.[dayOfWeek] || (index % 2 === 0 ? 'catedra' : 'laboratorio')
-      
-      const sesionConTipo = { ...sesion, target_tipo_bloque: targetType }
-      if (targetType === 'laboratorio') {
-        laboratorioQueue.push(sesionConTipo)
-      } else {
-        catedraQueue.push(sesionConTipo)
-      }
+    sesiones.forEach((sesion: any) => {
+      const t = sesion.tipo_bloque
+      if (t === 'laboratorio') laboratorioQueue.push(sesion)
+      else catedraQueue.push(sesion) // catedra y evaluacion (teóricas) van a la cola de cátedra
     })
+
+    // Devuelve el timestamp (mediodía local) del día `dayOfWeek` dentro de la semana cuyo lunes es `mondayTs`.
+    const getDateOfDayInWeek = (mondayTs: number, dayOfWeek: number): number => {
+      // getDay(): 0=Domingo..6=Sábado. El lunes es offset 0; domingo es offset 6.
+      const offset = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+      const d = new Date(mondayTs)
+      d.setDate(d.getDate() + offset)
+      d.setHours(12, 0, 0, 0)
+      return d.getTime()
+    }
 
     let correlativoSesion = 1
 
-    while (catedraQueue.length > 0 || laboratorioQueue.length > 0) {
-      // Asegurarse de que el día actual esté a mediodía local
-      const dateObj = new Date(currentTimestamp)
-      dateObj.setHours(12, 0, 0, 0)
-      const cleanTimestamp = dateObj.getTime()
+    // Recorremos semana a semana; dentro de cada semana, cada sesión de horario (día + tipo)
+    // es una sesión distinta. Así un mismo día con cátedra y laboratorio produce 2 sesiones.
+    for (let semanaIndex = 1; semanaIndex <= data.semanas_semestre; semanaIndex++) {
+      if (catedraQueue.length === 0 && laboratorioQueue.length === 0) break
 
-      const dateStr = stringifyDate(dateObj)
-      const feriado = FERIADOS_DUOC_2026.find(f => f.fecha === dateStr)
+      const mondayTs = firstClassMonday.getTime() + (semanaIndex - 1) * 7 * 24 * 60 * 60 * 1000
 
-      // Calcular semana calendario (de lunes a domingo)
-      const diffTime = cleanTimestamp - startOfSemesterMonday.getTime()
-      const diffDays = Math.round(diffTime / (24 * 60 * 60 * 1000))
-      const semanaIndex = Math.floor(diffDays / 7) + 1
+      for (const slot of sesionesHorario) {
+        if (catedraQueue.length === 0 && laboratorioQueue.length === 0) break
 
-      if (feriado) {
-        let suspenderClase = true
+        const cleanTimestamp = getDateOfDayInWeek(mondayTs, slot.dia)
+        const dateObj = new Date(cleanTimestamp)
+        const dateStr = stringifyDate(dateObj)
+        const feriado = FERIADOS_DUOC_2026.find(f => f.fecha === dateStr)
 
-        if (feriado.media_jornada && feriado.hora_limite) {
-          if (data.regimen === "vespertino") {
-            suspenderClase = true
-          } else {
-            suspenderClase = false 
+        // Feriado que suspende la clase: se registra como sesión suspendida (no consume sesión IA).
+        if (feriado) {
+          let suspenderClase = true
+          if (feriado.media_jornada && feriado.hora_limite) {
+            suspenderClase = data.regimen === "vespertino"
+          }
+          if (suspenderClase) {
+            clasesFinales.push({
+              semana: semanaIndex,
+              sesion: correlativoSesion,
+              fecha: cleanTimestamp,
+              titulo: `Feriado: ${feriado.nombre}`,
+              contenido: "Clase suspendida por feriado oficial en el calendario institucional.",
+              tiene_evaluacion: false,
+              es_feriado: true,
+              detalle_feriado: feriado.nombre,
+              estado: "suspendida",
+              tipo_bloque: slot.tipo
+            })
+            correlativoSesion++
+            continue
           }
         }
 
-        if (suspenderClase) {
-          clasesFinales.push({
-            semana: semanaIndex,
-            sesion: correlativoSesion,
-            fecha: cleanTimestamp,
-            titulo: `Feriado: ${feriado.nombre}`,
-            contenido: "Clase suspendida por feriado oficial en el calendario institucional.",
-            tiene_evaluacion: false,
-            es_feriado: true,
-            detalle_feriado: feriado.nombre,
-            estado: "suspendida",
-            tipo_bloque: "catedra"
-          })
-
-          correlativoSesion++
-          currentTimestamp = getNextClassDate(cleanTimestamp)
-          continue
+        // Tomar la sesión IA del tipo del slot; si esa cola se agotó, usar la otra como respaldo.
+        let sesionIA: any = null
+        if (slot.tipo === 'laboratorio') {
+          sesionIA = laboratorioQueue.shift() || catedraQueue.shift()
+        } else {
+          sesionIA = catedraQueue.shift() || laboratorioQueue.shift()
         }
+        if (!sesionIA) break // Salvaguarda
+
+        // El tipo del bloque lo define el horario del profesor (slot), salvo que sea evaluación.
+        const tipoBloque = sesionIA.tiene_evaluacion ? 'evaluacion' : slot.tipo
+
+        clasesFinales.push({
+          semana: semanaIndex,
+          sesion: correlativoSesion,
+          fecha: cleanTimestamp,
+          titulo: sesionIA.titulo,
+          contenido: sesionIA.contenido,
+          actividades: sesionIA.actividades,
+          materiales_requeridos: sesionIA.materiales_sugeridos,
+          tiene_evaluacion: sesionIA.tiene_evaluacion,
+          tipo_evaluacion: sesionIA.tipo_evaluacion !== "ninguna" ? sesionIA.tipo_evaluacion : undefined,
+          titulo_evaluacion: sesionIA.titulo_evaluacion || undefined,
+          estado: "programada",
+          tipo_bloque: tipoBloque
+        })
+
+        correlativoSesion++
       }
-
-      // Día de clases normal
-      const currentDayOfWeek = dateObj.getDay()
-      const dayType = data.dias_tipo?.[currentDayOfWeek] || 'catedra'
-
-      let sesionIA = null
-      if (dayType === 'laboratorio') {
-        if (laboratorioQueue.length > 0) {
-          sesionIA = laboratorioQueue.shift()
-        } else if (catedraQueue.length > 0) {
-          sesionIA = catedraQueue.shift()
-        }
-      } else {
-        if (catedraQueue.length > 0) {
-          sesionIA = catedraQueue.shift()
-        } else if (laboratorioQueue.length > 0) {
-          sesionIA = laboratorioQueue.shift()
-        }
-      }
-
-      if (!sesionIA) break // Salvaguarda
-
-      let tipoBloque = sesionIA.tipo_bloque
-      if (!tipoBloque || !['catedra', 'laboratorio', 'evaluacion'].includes(tipoBloque)) {
-        tipoBloque = dayType
-      }
-
-      clasesFinales.push({
-        semana: semanaIndex,
-        sesion: correlativoSesion,
-        fecha: cleanTimestamp,
-        titulo: sesionIA.titulo,
-        contenido: sesionIA.contenido,
-        actividades: sesionIA.actividades,
-        materiales_requeridos: sesionIA.materiales_sugeridos,
-        tiene_evaluacion: sesionIA.tiene_evaluacion,
-        tipo_evaluacion: sesionIA.tipo_evaluacion !== "ninguna" ? sesionIA.tipo_evaluacion : undefined,
-        titulo_evaluacion: sesionIA.titulo_evaluacion || undefined,
-        estado: "programada",
-        tipo_bloque: tipoBloque
-      })
-
-      correlativoSesion++
-      currentTimestamp = getNextClassDate(cleanTimestamp)
     }
 
     // 7. Insertar en bloque en Supabase
