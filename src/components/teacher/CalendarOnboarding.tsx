@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Calendar, Upload, Loader2, Info, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CalendarAPI, DocumentsAPI, supabase } from '../../lib/api'
+import { extractTextFromFile, getFileType } from '../../utils/documentParser'
 
 // Módulos horarios individuales de Duoc UC (40 minutos c/u, 10 min de recreo cada 2 módulos)
 const BLOQUES_DUOC = [
@@ -51,11 +52,45 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
   const [loading, setLoading] = useState(false)
   const [fileName, setFileName] = useState('')
 
+  // Fuente del PDA: documentos ya subidos al ramo (recomendado) o un archivo nuevo
+  const [fuente, setFuente] = useState<'existentes' | 'nuevo'>('existentes')
+  const [docsRamo, setDocsRamo] = useState<any[]>([])
+  const [docsSeleccionados, setDocsSeleccionados] = useState<string[]>([])
+  const [docsLoading, setDocsLoading] = useState(true)
+
+  useEffect(() => {
+    let activo = true
+    ;(async () => {
+      try {
+        const docs = await DocumentsAPI.getDocumentsByCourse(course.id)
+        if (!activo) return
+        // Priorizar documentos maestros (contexto IA); el PDA queda preseleccionado.
+        const maestros = (docs || []).filter((d: any) => d.is_master_doc && d.content_text)
+        setDocsRamo(maestros)
+        const pda = maestros.find((d: any) => d.master_doc_type === 'PDA')
+        if (pda) setDocsSeleccionados([pda.id])
+        else if (maestros.length === 0) setFuente('nuevo')
+      } catch (err) {
+        console.error('Error cargando documentos del ramo', err)
+        setFuente('nuevo')
+      } finally {
+        if (activo) setDocsLoading(false)
+      }
+    })()
+    return () => { activo = false }
+  }, [course.id])
+
+  const toggleDocSeleccionado = (docId: string) => {
+    setDocsSeleccionados(prev =>
+      prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]
+    )
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
-      if (file.type !== 'application/pdf') {
-        toast.error('El plan de aula (PDA) debe ser un archivo PDF.')
+      if (!getFileType(file.name)) {
+        toast.error('El plan de aula (PDA) debe ser PDF, DOCX, PPTX o XLSX.')
         return
       }
       setPdaFile(file)
@@ -93,8 +128,12 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
       toast.error('Por favor selecciona al menos un bloque de clases en el horario.')
       return
     }
-    if (!pdaFile) {
-      toast.error('Por favor sube el archivo PDF del PDA de la asignatura.')
+    if (fuente === 'existentes' && docsSeleccionados.length === 0) {
+      toast.error('Selecciona al menos un documento del ramo para calendarizar.')
+      return
+    }
+    if (fuente === 'nuevo' && !pdaFile) {
+      toast.error('Por favor sube el archivo del PDA de la asignatura.')
       return
     }
 
@@ -102,55 +141,83 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
     try {
       setLoading(true)
 
-      // 1. Subir el archivo del PDA
-      const fileExt = pdaFile.name.split('.').pop()?.toLowerCase() || 'pdf'
-      const storagePath = `${course.id}/${Date.now()}_PDA.${fileExt}`
-      
-      const uploadedPath = await DocumentsAPI.uploadFile(pdaFile, storagePath)
+      // 1-2. Resolver el documento fuente del PDA según la fuente elegida.
+      let documentId: string
 
-      // 2. Extraer texto básico del PDF (simulamos o delegamos al extractor del proyecto si existe)
-      let contentText = "PDA de la asignatura. Clases y sesiones planificadas."
-      try {
-        contentText = `PLAN DE ASIGNATURA Y AULA (PDA) PARA EL CURSO.
-        Semana 1: Introducción a la asignatura. Conceptos de circuitos eléctricos y magnitudes físicas.
-        Semana 2: Ley de Ohm y circuitos resistivos serie.
-        Semana 3: Leyes de Kirchhoff y circuitos paralelos.
-        Semana 4: Evaluación 1: Prueba Teórica de Circuitos de Corriente Continua.
-        Semana 5: Divisores de tensión y corriente.
-        Semana 6: Teorema de Thevenin y Norton.
-        Semana 7: Análisis de mallas y nodos.
-        Semana 8: Evaluación 2: Trabajo Práctico de Laboratorio de Medición de Parámetros.
-        Semana 9: Condensadores e inductores en corriente continua.
-        Semana 10: Circuitos de corriente alterna monofásica.
-        Semana 11: Impedancia y admitancia.
-        Semana 12: Evaluación 3: Prueba de Circuitos de Corriente Alterna.
-        Semana 13: Potencia eléctrica y factor de potencia.
-        Semana 14: Sistemas trifásicos equilibrados.
-        Semana 15: Proyecto Final: Presentación de Diseños Eléctricos.
-        Semana 16: Examen Transversal de la Asignatura.`
-      } catch (err) {
-        console.error("Error leyendo PDF", err)
+      if (fuente === 'existentes') {
+        // Combinar el texto de los documentos ya subidos al ramo (sin re-subir nada).
+        const elegidos = docsRamo.filter(d => docsSeleccionados.includes(d.id))
+        const contentText = elegidos
+          .map(d => `=== DOCUMENTO: ${d.file_name} ===\n${d.content_text || ''}`)
+          .join('\n\n')
+
+        if (contentText.replace(/--- Página \d+ ---|=== DOCUMENTO:.*===/g, '').trim().length < 100) {
+          throw new Error('Los documentos seleccionados no contienen suficiente texto legible para calendarizar.')
+        }
+
+        // Si es un único documento, usarlo directamente; si son varios, registrar un PDA combinado.
+        if (elegidos.length === 1) {
+          documentId = elegidos[0].id
+        } else {
+          const combinado = await supabase
+            .from('course_documents')
+            .insert({
+              course_id: course.id,
+              teacher_id: course.teacher_id,
+              file_name: `PDA combinado (${elegidos.length} documentos)`,
+              file_type: 'pdf',
+              file_size: 0,
+              content_text: contentText,
+              uploaded_at: Date.now(),
+              is_master_doc: true,
+              master_doc_type: 'PDA'
+            })
+            .select('id')
+            .single()
+          if (!combinado.data?.id) throw new Error('Error al registrar el documento combinado del PDA.')
+          documentId = combinado.data.id
+        }
+      } else {
+        // Subir y procesar un archivo nuevo (PDF/DOCX/PPTX/XLSX con texto seleccionable).
+        const fileExt = pdaFile!.name.split('.').pop()?.toLowerCase() || 'pdf'
+        const storagePath = `${course.id}/${Date.now()}_PDA.${fileExt}`
+        const uploadedPath = await DocumentsAPI.uploadFile(pdaFile!, storagePath)
+
+        let contentText = ""
+        try {
+          contentText = await extractTextFromFile(pdaFile!)
+        } catch (err: any) {
+          console.error("Error leyendo el PDA", err)
+          throw new Error(`No se pudo leer el contenido del PDA: ${err.message || 'archivo ilegible'}.`)
+        }
+
+        if (!contentText || contentText.replace(/--- Página \d+ ---/g, '').trim().length < 100) {
+          throw new Error(
+            'El PDA no contiene texto legible. Es probable que sea un PDF escaneado (imagen). ' +
+            'Sube una versión con texto seleccionable o expórtalo nuevamente desde el documento original.'
+          )
+        }
+
+        const docId = await supabase
+          .from('course_documents')
+          .insert({
+            course_id: course.id,
+            teacher_id: course.teacher_id,
+            file_name: pdaFile!.name,
+            file_type: fileExt,
+            file_size: pdaFile!.size,
+            file_path: uploadedPath,
+            content_text: contentText,
+            uploaded_at: Date.now(),
+            is_master_doc: true,
+            master_doc_type: 'PDA'
+          })
+          .select('id')
+          .single()
+
+        if (!docId.data?.id) throw new Error("Error al registrar el documento del PDA.")
+        documentId = docId.data.id
       }
-
-      // Guardar el registro de documento maestro PDA en Supabase
-      const docId = await supabase
-        .from('course_documents')
-        .insert({
-          course_id: course.id,
-          teacher_id: course.teacher_id,
-          file_name: pdaFile.name,
-          file_type: 'pdf',
-          file_size: pdaFile.size,
-          file_path: uploadedPath,
-          content_text: contentText,
-          uploaded_at: Date.now(),
-          is_master_doc: true,
-          master_doc_type: 'PDA'
-        })
-        .select('id')
-        .single()
-
-      if (!docId.data?.id) throw new Error("Error al registrar el documento del PDA.")
 
       // 3. Extraer días únicos y calcular tipos
       const keys = Object.keys(selectedBlocks)
@@ -198,7 +265,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
       // 4. Invocar la generación de clases del calendario
       const result = await CalendarAPI.generateCalendarFromPDA({
         course_id: course.id,
-        document_id: docId.data.id,
+        document_id: documentId,
         semestre: semestre,
         seccion: seccion,
         regimen: regimen,
@@ -313,24 +380,97 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           </div>
 
           <div>
-            <label className="block text-slate-300 text-sm font-medium mb-2">Planificación de Aula (PDA - PDF)</label>
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-950 rounded-lg p-4 cursor-pointer transition-all"
-            >
-              <Upload className="w-6 h-6 text-slate-400 mb-2" />
-              <span className="text-slate-300 text-sm font-medium">
-                {fileName ? fileName : 'Selecciona o arrastra el PDF del PDA'}
-              </span>
-              <span className="text-slate-500 text-xs mt-1">Solo archivos .pdf oficiales de Duoc</span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                className="hidden"
-                onChange={handleFileChange}
-              />
+            <label className="block text-slate-300 text-sm font-medium mb-2">Fuente del contenido (PDA)</label>
+
+            {/* Selector de fuente */}
+            <div className="bg-slate-950 border border-slate-800 rounded-lg p-0.5 flex mb-3">
+              <button
+                type="button"
+                onClick={() => setFuente('existentes')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${
+                  fuente === 'existentes' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Documentos del ramo
+              </button>
+              <button
+                type="button"
+                onClick={() => setFuente('nuevo')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-semibold transition-all ${
+                  fuente === 'nuevo' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Subir nuevo
+              </button>
             </div>
+
+            {fuente === 'existentes' ? (
+              <div className="border border-slate-800 bg-slate-950 rounded-lg p-3 space-y-2 max-h-56 overflow-y-auto">
+                {docsLoading ? (
+                  <div className="flex items-center justify-center gap-2 text-slate-500 text-sm py-4">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Cargando documentos del ramo...
+                  </div>
+                ) : docsRamo.length === 0 ? (
+                  <div className="text-center text-slate-500 text-sm py-4">
+                    Este ramo no tiene documentos de contexto IA cargados.{' '}
+                    <button type="button" onClick={() => setFuente('nuevo')} className="text-indigo-400 hover:text-indigo-300 font-semibold">
+                      Sube uno nuevo
+                    </button>.
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-500 mb-1">
+                      Selecciona el/los documento(s) que describen el temario semanal. Si eliges varios, se combinan.
+                    </p>
+                    {docsRamo.map((doc) => {
+                      const sel = docsSeleccionados.includes(doc.id)
+                      return (
+                        <button
+                          key={doc.id}
+                          type="button"
+                          onClick={() => toggleDocSeleccionado(doc.id)}
+                          className={`w-full flex items-center gap-2 text-left p-2 rounded-lg border transition-all ${
+                            sel ? 'bg-indigo-500/10 border-indigo-500/40' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                            sel ? 'bg-indigo-500 border-indigo-500' : 'border-slate-600'
+                          }`}>
+                            {sel && <CheckCircle2 className="w-3 h-3 text-white" />}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm text-slate-200 font-medium truncate">{doc.file_name}</p>
+                            <p className="text-[10px] text-slate-500">
+                              {doc.master_doc_type ? `Maestro: ${doc.master_doc_type}` : 'Documento'} · {(doc.content_text?.length || 0).toLocaleString()} caracteres
+                            </p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </>
+                )}
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-950 rounded-lg p-4 cursor-pointer transition-all"
+              >
+                <Upload className="w-6 h-6 text-slate-400 mb-2" />
+                <span className="text-slate-300 text-sm font-medium">
+                  {fileName ? fileName : 'Selecciona o arrastra el PDA'}
+                </span>
+                <span className="text-slate-500 text-xs mt-1">PDF, DOCX, PPTX o XLSX con texto seleccionable</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.pptx,.xlsx,.xls"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </div>
+            )}
           </div>
         </div>
 
