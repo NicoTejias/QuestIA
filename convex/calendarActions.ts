@@ -152,6 +152,7 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 
         const getNextClassDate = (timestamp: number): number => {
             let temp = new Date(timestamp);
+            temp.setHours(12, 0, 0, 0);
             let loops = 0;
             while (loops < 14) {
                 temp.setDate(temp.getDate() + 1);
@@ -167,6 +168,7 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 
         const getFirstClassDate = (timestamp: number): number => {
             let temp = new Date(timestamp);
+            temp.setHours(12, 0, 0, 0);
             const dayOfWeek = temp.getDay();
             if (args.dias_semana.includes(dayOfWeek)) {
                 return temp.getTime();
