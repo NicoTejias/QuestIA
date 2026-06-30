@@ -8,6 +8,13 @@ interface CalendarDashboardProps {
   onResetConfig: () => void // Permite reconfigurar el horario/PDA
 }
 
+const getLocalDateString = (date: Date): string => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
 export default function CalendarDashboard({ course, onResetConfig }: CalendarDashboardProps) {
   const [clases, setClases] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -307,9 +314,9 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
 
                 {/* Celdas de Días */}
                 {getDaysInMonth(currentMonth).map((day, idx) => {
-                  const dateStr = day.toISOString().split('T')[0]
+                  const dateStr = getLocalDateString(day)
                   const clasesDia = clases.filter(c => {
-                    const cDate = new Date(c.fecha).toISOString().split('T')[0]
+                    const cDate = getLocalDateString(new Date(c.fecha))
                     return cDate === dateStr
                   })
 
