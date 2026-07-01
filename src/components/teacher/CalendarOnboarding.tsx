@@ -167,6 +167,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
               file_name: `PDA combinado (${elegidos.length} documentos)`,
               file_type: 'pdf',
               file_size: 0,
+              file_path: '',
               content_text: contentText,
               uploaded_at: Date.now(),
               is_master_doc: true,
