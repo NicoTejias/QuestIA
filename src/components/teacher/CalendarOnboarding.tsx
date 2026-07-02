@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Calendar, Upload, Loader2, Info, CheckCircle2 } from 'lucide-react'
+import { Calendar, Upload, Loader2, Info, CheckCircle2, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { CalendarAPI, DocumentsAPI, supabase } from '../../lib/api'
 import { extractTextFromFile, getFileType } from '../../utils/documentParser'
@@ -40,17 +40,54 @@ interface CalendarOnboardingProps {
   onSuccess: () => void
 }
 
+// Una sección del ramo: nombre + su propio horario/régimen/fecha de inicio.
+interface SeccionConfig {
+  id: string
+  nombre: string
+  regimen: 'diurno' | 'vespertino'
+  fechaInicio: string
+  selectedBlocks: Record<string, 'catedra' | 'laboratorio'> // llave: "dia-bloque"
+}
+
+const nuevaSeccion = (nombre = ''): SeccionConfig => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  nombre,
+  regimen: 'diurno',
+  fechaInicio: '',
+  selectedBlocks: {},
+})
+
 export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboardingProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [semestre, setSemestre] = useState<'2026-1' | '2026-2'>('2026-1')
-  const [seccion, setSeccion] = useState('')
-  const [regimen, setRegimen] = useState<'diurno' | 'vespertino'>('diurno')
   const [semanas, setSemanas] = useState(18)
-  const [fechaInicio, setFechaInicio] = useState('')
-  const [selectedBlocks, setSelectedBlocks] = useState<Record<string, 'catedra' | 'laboratorio'>>({}) // llave: "dia-bloque", valor: "catedra" | "laboratorio"
+
+  // Secciones del ramo: el docente puede configurar el horario de cada una.
+  const [secciones, setSecciones] = useState<SeccionConfig[]>([nuevaSeccion('Sección 1')])
+  const [seccionActivaId, setSeccionActivaId] = useState<string>('')
+
   const [pdaFile, setPdaFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [fileName, setFileName] = useState('')
+
+  // Sección actualmente en edición en la grilla de horario.
+  const seccionActiva = secciones.find(s => s.id === seccionActivaId) || secciones[0]
+
+  const updateSeccion = (id: string, patch: Partial<SeccionConfig>) => {
+    setSecciones(prev => prev.map(s => (s.id === id ? { ...s, ...patch } : s)))
+  }
+
+  const agregarSeccion = () => {
+    const nueva = nuevaSeccion(`Sección ${secciones.length + 1}`)
+    setSecciones(prev => [...prev, nueva])
+    setSeccionActivaId(nueva.id)
+  }
+
+  const eliminarSeccion = (id: string) => {
+    if (secciones.length <= 1) return
+    setSecciones(prev => prev.filter(s => s.id !== id))
+    if (seccionActivaId === id) setSeccionActivaId('')
+  }
 
   // Fuente del PDA: documentos ya subidos al ramo (recomendado) o un archivo nuevo
   const [fuente, setFuente] = useState<'existentes' | 'nuevo'>('existentes')
@@ -98,34 +135,42 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
     }
   }
 
+  // Alterna un bloque del horario de la sección activa: vacío → cátedra → laboratorio → vacío.
   const toggleBlock = (diaId: number, bloqueId: string) => {
+    if (!seccionActiva) return
     const key = `${diaId}-${bloqueId}`
-    setSelectedBlocks(prev => {
-      const copy = { ...prev }
-      if (!copy[key]) {
-        copy[key] = 'catedra'
-      } else if (copy[key] === 'catedra') {
-        copy[key] = 'laboratorio'
-      } else {
-        delete copy[key]
-      }
-      return copy
-    })
+    const copy = { ...seccionActiva.selectedBlocks }
+    if (!copy[key]) {
+      copy[key] = 'catedra'
+    } else if (copy[key] === 'catedra') {
+      copy[key] = 'laboratorio'
+    } else {
+      delete copy[key]
+    }
+    updateSeccion(seccionActiva.id, { selectedBlocks: copy })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!seccion.trim()) {
-      toast.error('Por favor ingresa la sección del ramo.')
-      return
+    // Validar cada sección: nombre, fecha de inicio y al menos un bloque de horario.
+    for (const s of secciones) {
+      if (!s.nombre.trim()) {
+        toast.error('Cada sección debe tener un nombre.')
+        return
+      }
+      if (!s.fechaInicio) {
+        toast.error(`Selecciona la fecha de inicio para "${s.nombre}".`)
+        return
+      }
+      if (Object.keys(s.selectedBlocks).length === 0) {
+        toast.error(`Marca al menos un bloque de horario para "${s.nombre}".`)
+        return
+      }
     }
-    if (!fechaInicio) {
-      toast.error('Por favor selecciona la fecha de inicio del semestre.')
-      return
-    }
-    if (Object.keys(selectedBlocks).length === 0) {
-      toast.error('Por favor selecciona al menos un bloque de clases en el horario.')
+    const nombres = secciones.map(s => s.nombre.trim().toLowerCase())
+    if (new Set(nombres).size !== nombres.length) {
+      toast.error('Hay secciones con el mismo nombre. Usa nombres distintos.')
       return
     }
     if (fuente === 'existentes' && docsSeleccionados.length === 0) {
@@ -220,66 +265,65 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         documentId = docId.data.id
       }
 
-      // 3. Extraer días únicos y calcular tipos
-      const keys = Object.keys(selectedBlocks)
-      const diasUnicos = Array.from(new Set(keys.map(k => parseInt(k.split('-')[0])))).sort((a, b) => a - b)
-      const bloquesUnicos = Array.from(new Set(keys.map(k => k.split('-')[1])))
+      // 3. Generar el calendario para CADA sección con su propio horario.
+      // El contenido del PDA es el mismo; solo cambian días, horas y fechas por sección.
+      let totalClases = 0
 
-      const diasTipo: Record<number, 'catedra' | 'laboratorio'> = {}
-      Object.entries(selectedBlocks).forEach(([key, type]) => {
-        const diaId = parseInt(key.split('-')[0])
-        if (type === 'laboratorio') {
-          diasTipo[diaId] = 'laboratorio'
-        } else if (!diasTipo[diaId]) {
-          diasTipo[diaId] = 'catedra'
-        }
-      })
+      for (let i = 0; i < secciones.length; i++) {
+        const s = secciones[i]
+        const keys = Object.keys(s.selectedBlocks)
+        const diasUnicos = Array.from(new Set(keys.map(k => parseInt(k.split('-')[0])))).sort((a, b) => a - b)
+        const bloquesUnicos = Array.from(new Set(keys.map(k => k.split('-')[1])))
 
-      // Construir las SESIONES de horario: cada combinación (día, tipo) es una sesión distinta.
-      // Si un mismo día tiene módulos de cátedra Y de laboratorio, son 2 sesiones diferentes
-      // de esa semana (la teórica y la práctica). Se ordenan por día y, dentro del día,
-      // por el primer módulo de cada grupo (cronológico).
-      const primerModuloPorGrupo = new Map<string, number>() // "dia-tipo" -> menor nº de módulo
-      Object.entries(selectedBlocks).forEach(([key, type]) => {
-        const [diaStr, bloqueStr] = key.split('-')
-        const grupoKey = `${diaStr}-${type}`
-        const modulo = parseInt(bloqueStr)
-        const actual = primerModuloPorGrupo.get(grupoKey)
-        if (actual === undefined || modulo < actual) {
-          primerModuloPorGrupo.set(grupoKey, modulo)
-        }
-      })
-
-      const sesionesHorario = Array.from(primerModuloPorGrupo.entries())
-        .map(([grupoKey, primerModulo]) => {
-          const [diaStr, tipo] = grupoKey.split('-')
-          return { dia: parseInt(diaStr), tipo: tipo as 'catedra' | 'laboratorio', orden: primerModulo }
+        const diasTipo: Record<number, 'catedra' | 'laboratorio'> = {}
+        Object.entries(s.selectedBlocks).forEach(([key, type]) => {
+          const diaId = parseInt(key.split('-')[0])
+          if (type === 'laboratorio') diasTipo[diaId] = 'laboratorio'
+          else if (!diasTipo[diaId]) diasTipo[diaId] = 'catedra'
         })
-        .sort((a, b) => (a.dia - b.dia) || (a.orden - b.orden))
-        .map(({ dia, tipo }) => ({ dia, tipo }))
 
-      // Para evitar desfases de zona horaria, parseamos la fecha como local a mediodía (12:00:00)
-      const [year, month, day] = fechaInicio.split('-').map(Number)
-      const dateLocal = new Date(year, month - 1, day, 12, 0, 0, 0)
-      const fechaInicioTs = dateLocal.getTime()
+        // Cada combinación (día, tipo) es una sesión distinta (cátedra y laboratorio por separado).
+        const primerModuloPorGrupo = new Map<string, number>()
+        Object.entries(s.selectedBlocks).forEach(([key, type]) => {
+          const [diaStr, bloqueStr] = key.split('-')
+          const grupoKey = `${diaStr}-${type}`
+          const modulo = parseInt(bloqueStr)
+          const actual = primerModuloPorGrupo.get(grupoKey)
+          if (actual === undefined || modulo < actual) primerModuloPorGrupo.set(grupoKey, modulo)
+        })
 
-      // 4. Invocar la generación de clases del calendario
-      const result = await CalendarAPI.generateCalendarFromPDA({
-        course_id: course.id,
-        document_id: documentId,
-        semestre: semestre,
-        seccion: seccion,
-        regimen: regimen,
-        semanas_semestre: semanas,
-        dias_semana: diasUnicos,
-        bloques_horario: bloquesUnicos,
-        dias_tipo: diasTipo,
-        sesiones_horario: sesionesHorario,
-        fecha_inicio: fechaInicioTs,
-        teacher_id: course.teacher_id
-      })
+        const sesionesHorario = Array.from(primerModuloPorGrupo.entries())
+          .map(([grupoKey, primerModulo]) => {
+            const [diaStr, tipo] = grupoKey.split('-')
+            return { dia: parseInt(diaStr), tipo: tipo as 'catedra' | 'laboratorio', orden: primerModulo }
+          })
+          .sort((a, b) => (a.dia - b.dia) || (a.orden - b.orden))
+          .map(({ dia, tipo }) => ({ dia, tipo }))
 
-      toast.success(`¡Planificación creada! Se generaron ${result.count} clases y hitos.`);
+        // Parsear la fecha como local a mediodía para evitar desfases de zona horaria.
+        const [year, month, day] = s.fechaInicio.split('-').map(Number)
+        const fechaInicioTs = new Date(year, month - 1, day, 12, 0, 0, 0).getTime()
+
+        const result = await CalendarAPI.generateCalendarFromPDA({
+          course_id: course.id,
+          document_id: documentId,
+          semestre: semestre,
+          seccion: s.nombre.trim(),
+          regimen: s.regimen,
+          semanas_semestre: semanas,
+          dias_semana: diasUnicos,
+          bloques_horario: bloquesUnicos,
+          dias_tipo: diasTipo,
+          sesiones_horario: sesionesHorario,
+          fecha_inicio: fechaInicioTs,
+          teacher_id: course.teacher_id,
+          // Solo limpiar todo el calendario al procesar la primera sección; el resto se agrega.
+          replace_all: i === 0
+        })
+        totalClases += result.count
+      }
+
+      toast.success(`¡Planificación creada! Se generaron ${totalClases} clases en ${secciones.length} ${secciones.length === 1 ? 'sección' : 'secciones'}.`);
       onSuccess()
     } catch (err: any) {
       console.error(err)
@@ -301,7 +345,8 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Parámetros del Curso */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Campos compartidos por todas las secciones */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-slate-300 text-sm font-medium mb-2">Semestre</label>
             <select
@@ -312,46 +357,6 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
               <option value="2026-1">2026-1 (Primer Semestre)</option>
               <option value="2026-2">2026-2 (Segundo Semestre)</option>
             </select>
-          </div>
-
-          <div>
-            <label className="block text-slate-300 text-sm font-medium mb-2">Sección</label>
-            <input
-              type="text"
-              placeholder="Ej: 001D"
-              value={seccion}
-              onChange={(e) => setSeccion(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-slate-300 text-sm font-medium mb-2">Régimen</label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setRegimen('diurno')}
-                className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
-                  regimen === 'diurno'
-                    ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                    : 'bg-slate-950 border-slate-800 text-slate-400'
-                }`}
-              >
-                Diurno
-              </button>
-              <button
-                type="button"
-                onClick={() => setRegimen('vespertino')}
-                className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
-                  regimen === 'vespertino'
-                    ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
-                    : 'bg-slate-950 border-slate-800 text-slate-400'
-                }`}
-              >
-                Vespertino
-              </button>
-            </div>
           </div>
 
           <div>
@@ -367,19 +372,107 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           </div>
         </div>
 
-        {/* Fecha Inicio y Carga PDA */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-slate-300 text-sm font-medium mb-2">Fecha de la Primera Clase</label>
-            <input
-              type="date"
-              value={fechaInicio}
-              onChange={(e) => setFechaInicio(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              required
-            />
-          </div>
+        {/* Secciones del ramo: pestañas + configuración por sección */}
+        {seccionActiva && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-slate-300 text-sm font-medium">Secciones del Ramo</label>
+              <button
+                type="button"
+                onClick={agregarSeccion}
+                className="flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1.5 rounded-lg transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" /> Agregar sección
+              </button>
+            </div>
 
+            {/* Pestañas de secciones */}
+            <div className="flex flex-wrap gap-2">
+              {secciones.map((s) => (
+                <div
+                  key={s.id}
+                  className={`flex items-center gap-1 rounded-lg border transition-all ${
+                    s.id === seccionActiva.id
+                      ? 'bg-indigo-600 border-indigo-500 text-white'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSeccionActivaId(s.id)}
+                    className="py-1.5 pl-3 pr-1 text-xs font-semibold"
+                  >
+                    {s.nombre || 'Sin nombre'}
+                    <span className="ml-1 opacity-60">({Object.keys(s.selectedBlocks).length} bloq.)</span>
+                  </button>
+                  {secciones.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => eliminarSeccion(s.id)}
+                      title="Eliminar sección"
+                      className="p-1 pr-2 opacity-70 hover:opacity-100"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Campos de la sección activa */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-950/40 border border-slate-800 rounded-lg p-3">
+              <div>
+                <label className="block text-slate-400 text-xs font-medium mb-1">Nombre de la sección</label>
+                <input
+                  type="text"
+                  placeholder="Ej: 001D"
+                  value={seccionActiva.nombre}
+                  onChange={(e) => updateSeccion(seccionActiva.id, { nombre: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-400 text-xs font-medium mb-1">Régimen</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateSeccion(seccionActiva.id, { regimen: 'diurno' })}
+                    className={`flex-1 py-2 px-2 rounded-lg border text-xs font-medium transition-all ${
+                      seccionActiva.regimen === 'diurno'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    Diurno
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateSeccion(seccionActiva.id, { regimen: 'vespertino' })}
+                    className={`flex-1 py-2 px-2 rounded-lg border text-xs font-medium transition-all ${
+                      seccionActiva.regimen === 'vespertino'
+                        ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    Vespertino
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-slate-400 text-xs font-medium mb-1">Fecha de la primera clase</label>
+                <input
+                  type="date"
+                  value={seccionActiva.fechaInicio}
+                  onChange={(e) => updateSeccion(seccionActiva.id, { fechaInicio: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Carga PDA */}
+        <div className="grid grid-cols-1 gap-6">
           <div>
             <label className="block text-slate-300 text-sm font-medium mb-2">Fuente del contenido (PDA)</label>
 
@@ -478,8 +571,15 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         {/* Grilla Horaria Semanal */}
         <div className="space-y-3">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-            <label className="block text-slate-300 text-sm font-medium">Selección de Horario Semanal</label>
-            
+            <label className="block text-slate-300 text-sm font-medium">
+              Horario Semanal
+              {seccionActiva && (
+                <span className="ml-2 text-xs font-normal text-indigo-300">
+                  · editando <span className="font-semibold">{seccionActiva.nombre || 'sección'}</span>
+                </span>
+              )}
+            </label>
+
             {/* Leyenda de Colores */}
             <div className="flex gap-4 text-xs font-semibold">
               <div className="flex items-center gap-1.5 text-indigo-400">
@@ -508,17 +608,17 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
                   <tr key={b.id} className="border-b border-slate-900 hover:bg-slate-900/20">
                     <td className="p-3 font-medium bg-slate-900/10 text-slate-400 whitespace-nowrap">{b.label}</td>
                     {DIAS_SEMANA.map(d => {
-                      const blockType = selectedBlocks[`${d.id}-${b.id}`]
-                      
+                      const blockType = seccionActiva?.selectedBlocks[`${d.id}-${b.id}`]
+
                       let btnClass = 'bg-transparent border-slate-800 text-slate-500 hover:border-slate-700'
                       let label = '-'
-                      
+
                       if (blockType === 'catedra') {
                         btnClass = 'bg-indigo-500/20 border-indigo-500/60 text-indigo-300 font-bold shadow-[0_0_10px_rgba(99,102,241,0.1)]'
                         label = 'Cátedra'
                       } else if (blockType === 'laboratorio') {
                         btnClass = 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-[0_0_10px_rgba(16,185,129,0.1)]'
-                        label = 'Lab / Práct.'
+                        label = 'Lab'
                       }
 
                       return (
@@ -526,7 +626,8 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
                           <button
                             type="button"
                             onClick={() => toggleBlock(d.id, b.id)}
-                            className={`w-full py-2 px-1 text-center rounded border transition-all text-[11px] ${btnClass}`}
+                            title={blockType === 'laboratorio' ? 'Laboratorio / Práctico' : blockType === 'catedra' ? 'Cátedra' : 'Vacío'}
+                            className={`w-full min-w-[64px] py-2 px-1 text-center rounded border transition-all text-[11px] whitespace-nowrap truncate ${btnClass}`}
                           >
                             {label}
                           </button>

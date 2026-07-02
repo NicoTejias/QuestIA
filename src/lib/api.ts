@@ -1979,12 +1979,13 @@ export const EvaluacionesAPI = {
 // CALENDARIO DE CLASES
 // ============================================================
 export const CalendarAPI = {
-  async getClasesByCourse(courseId: string) {
-    const { data, error } = await supabase
+  async getClasesByCourse(courseId: string, section?: string) {
+    let query = supabase
       .from('clases_calendarizadas')
       .select('*')
       .eq('course_id', courseId)
-      .order('fecha', { ascending: true })
+    if (section !== undefined) query = query.eq('section', section)
+    const { data, error } = await query.order('fecha', { ascending: true })
     if (error) throw error
     return data || []
   },
@@ -2005,15 +2006,18 @@ export const CalendarAPI = {
     if (error) throw error
   },
 
-  async limpiarCalendario(courseId: string) {
-    const { error } = await supabase
+  async limpiarCalendario(courseId: string, section?: string) {
+    let query = supabase
       .from('clases_calendarizadas')
       .delete()
       .eq('course_id', courseId)
+    // Si se especifica sección, borra solo esa; si no, borra todo el curso.
+    if (section !== undefined) query = query.eq('section', section)
+    const { error } = await query
     if (error) throw error
   },
 
-  async bulkInsertClases(courseId: string, clases: any[], teacherId: string) {
+  async bulkInsertClases(courseId: string, clases: any[], teacherId: string, section?: string) {
     for (const c of clases) {
       let evaluacion_id = null
 
@@ -2023,6 +2027,7 @@ export const CalendarAPI = {
           .insert({
             course_id: courseId,
             teacher_id: teacherId,
+            section: section || null,
             titulo: c.titulo_evaluacion,
             tipo: c.tipo_evaluacion,
             descripcion: `Evaluación oficial planificada para la clase: ${c.titulo}`,
@@ -2041,6 +2046,7 @@ export const CalendarAPI = {
         .from('clases_calendarizadas')
         .insert({
           course_id: courseId,
+          section: section || null,
           semana: c.semana,
           sesion: c.sesion,
           fecha: c.fecha,
@@ -2075,6 +2081,7 @@ export const CalendarAPI = {
     sesiones_horario?: { dia: number; tipo: 'catedra' | 'laboratorio' }[];
     fecha_inicio: number;
     teacher_id: string;
+    replace_all?: boolean; // true: limpia TODO el calendario del curso; false: reemplaza solo esta sección
   }) {
     // Sesiones por semana reales: cada (día, tipo) es una sesión distinta.
     // Si no llega sesiones_horario (compatibilidad), se asume 1 sesión por día.
@@ -2091,8 +2098,29 @@ export const CalendarAPI = {
     if (docError) throw docError
     if (!doc || !doc.content_text) throw new Error("Documento sin texto legible.")
 
-    // 2. Guardar configuración en courses
+    // 2. Guardar configuración de horario del curso, acumulando la config de cada sección.
+    const seccionConfig = {
+      seccion: data.seccion,
+      regimen: data.regimen,
+      dias_semana: data.dias_semana,
+      bloques_horario: data.bloques_horario,
+      dias_tipo: data.dias_tipo,
+      fecha_inicio: data.fecha_inicio
+    }
+    // Leer la config existente para preservar/actualizar las secciones ya configuradas.
+    const { data: cursoActual } = await supabase
+      .from('courses')
+      .select('schedule_config')
+      .eq('id', data.course_id)
+      .single()
+    const prevConfig = (cursoActual?.schedule_config as any) || {}
+    const prevSecciones: any[] = data.replace_all ? [] : (prevConfig.secciones || [])
+    const seccionesActualizadas = [
+      ...prevSecciones.filter((s: any) => s.seccion !== data.seccion),
+      seccionConfig
+    ]
     const config = {
+      // Campos "de cabecera" para compatibilidad con vistas que leen el nivel raíz.
       semestre: data.semestre,
       seccion: data.seccion,
       regimen: data.regimen,
@@ -2100,12 +2128,14 @@ export const CalendarAPI = {
       dias_semana: data.dias_semana,
       bloques_horario: data.bloques_horario,
       dias_tipo: data.dias_tipo,
-      fecha_inicio: data.fecha_inicio
+      fecha_inicio: data.fecha_inicio,
+      // Lista con la config de todas las secciones del ramo.
+      secciones: seccionesActualizadas
     }
     await this.saveScheduleConfig(data.course_id, config)
 
-    // 3. Limpiar clases previas
-    await this.limpiarCalendario(data.course_id)
+    // 3. Limpiar clases previas: todo el curso (primera sección) o solo esta sección.
+    await this.limpiarCalendario(data.course_id, data.replace_all ? undefined : data.seccion)
 
     // 4. Llamar a Gemini (SDK del lado del cliente)
     const apiKey = import.meta.env.VITE_GOOGLE_API_KEY
@@ -2347,7 +2377,7 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
     }
 
     // 7. Insertar en bloque en Supabase
-    await this.bulkInsertClases(data.course_id, clasesFinales, data.teacher_id)
+    await this.bulkInsertClases(data.course_id, clasesFinales, data.teacher_id, data.seccion)
     return { success: true, count: clasesFinales.length }
   }
 }

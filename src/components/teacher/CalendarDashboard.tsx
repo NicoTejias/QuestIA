@@ -21,7 +21,8 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
   const [activeTab, setActiveTab] = useState<'timeline' | 'calendar'>('timeline')
   const [selectedSemana, setSelectedSemana] = useState(1)
   const [selectedClase, setSelectedClase] = useState<any | null>(null)
-  
+  const [selectedSection, setSelectedSection] = useState<string | null>(null)
+
   // Para la vista de calendario
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
@@ -42,33 +43,36 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
     loadClases()
   }, [course.id])
 
-  // Obtener el número total de semanas en el calendario
-  const maxSemanas = clases.reduce((acc, c) => Math.max(acc, c.semana), 1)
+  // Secciones presentes en el calendario (derivadas de las clases).
+  const secciones = Array.from(
+    new Set(clases.map(c => c.section).filter((s): s is string => !!s))
+  ).sort()
+
+  // Seleccionar la primera sección por defecto cuando cargan las clases.
+  useEffect(() => {
+    if (secciones.length > 0 && (selectedSection === null || !secciones.includes(selectedSection))) {
+      setSelectedSection(secciones[0])
+    }
+    // Solo debe re-evaluarse cuando cambian las clases cargadas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clases])
+
+  // Clases de la sección activa (o todas, si no hay secciones asignadas — datos legacy).
+  const clasesSection = secciones.length > 0
+    ? clases.filter(c => c.section === selectedSection)
+    : clases
+
+  // Obtener el número total de semanas en el calendario (de la sección activa)
+  const maxSemanas = clasesSection.reduce((acc, c) => Math.max(acc, c.semana), 1)
 
   // Filtrar clases de la semana seleccionada en Timeline
-  const clasesSemana = clases.filter(c => c.semana === selectedSemana)
+  const clasesSemana = clasesSection.filter(c => c.semana === selectedSemana)
 
-  // Agrupar las clases de la semana por sesión (Cátedra / Práctico / Evaluación / Feriado)
-  // para que el profesor distinga claramente las 2 sesiones que componen una semana.
-  const gruposSemana = (() => {
-    const orden = [
-      { key: 'catedra', titulo: 'Cátedra', sub: 'Clase teórica', icon: '📘', accent: 'text-indigo-300', dot: 'bg-indigo-500' },
-      { key: 'laboratorio', titulo: 'Práctico / Laboratorio', sub: 'Clase práctica', icon: '🧪', accent: 'text-emerald-300', dot: 'bg-emerald-500' },
-      { key: 'evaluacion', titulo: 'Evaluación', sub: 'Hito evaluativo', icon: '📝', accent: 'text-rose-300', dot: 'bg-rose-500' },
-      { key: 'feriado', titulo: 'Feriados', sub: 'Clases suspendidas', icon: '🚫', accent: 'text-red-300', dot: 'bg-red-500' },
-    ] as const
-
-    const clasificar = (c: any) => {
-      if (c.es_feriado) return 'feriado'
-      if (c.tiene_evaluacion) return 'evaluacion'
-      if (c.tipo_bloque === 'laboratorio') return 'laboratorio'
-      return 'catedra'
-    }
-
-    return orden
-      .map(g => ({ ...g, clases: clasesSemana.filter(c => clasificar(c) === g.key) }))
-      .filter(g => g.clases.length > 0)
-  })()
+  // Clases de la semana ordenadas por fecha y luego por sesión, para mostrarlas en tarjetas
+  // una al lado de la otra (horizontal) o apiladas (vertical). El tipo se distingue por badge.
+  const clasesSemanaOrdenadas = [...clasesSemana].sort(
+    (a, b) => (a.fecha - b.fecha) || (a.sesion - b.sesion)
+  )
 
   // Sesiones reales (excluye feriados) para numerar "Sesión X de N" dentro de la semana.
   const totalSesionesSemana = clasesSemana.filter(c => !c.es_feriado).length
@@ -122,10 +126,11 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800 backdrop-blur-sm">
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            Planificación Curricular - Sección {course.schedule_config?.seccion || 'N/A'}
+            Planificación Curricular{secciones.length > 0 ? ` - Sección ${selectedSection || ''}` : ''}
           </h2>
           <p className="text-slate-400 text-xs mt-1">
-            Régimen: <span className="capitalize font-semibold text-indigo-400">{course.schedule_config?.regimen}</span> | Semanas planificadas: {course.schedule_config?.semanas_semestre}
+            Semanas planificadas: {course.schedule_config?.semanas_semestre || maxSemanas}
+            {secciones.length > 1 && <> · <span className="text-indigo-400 font-semibold">{secciones.length} secciones</span></>}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -161,6 +166,26 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
           </button>
         </div>
       </div>
+
+      {/* Selector de secciones */}
+      {secciones.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2 bg-slate-900/40 border border-slate-800 rounded-xl p-2">
+          <span className="text-xs text-slate-500 font-semibold px-2">Sección:</span>
+          {secciones.map((sec) => (
+            <button
+              key={sec}
+              onClick={() => { setSelectedSection(sec); setSelectedSemana(1) }}
+              className={`py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
+                sec === selectedSection
+                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-md'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+              }`}
+            >
+              {sec}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
@@ -205,123 +230,110 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
                     </p>
                   )}
 
-                  {gruposSemana.map((grupo) => (
-                    <div key={grupo.key} className="space-y-3">
-                      {/* Sub-encabezado del grupo de sesión */}
-                      <div className="flex items-center gap-2">
-                        <span className={`w-1.5 h-1.5 rounded-full ${grupo.dot}`} />
-                        <h4 className={`text-sm font-bold uppercase tracking-wider ${grupo.accent}`}>
-                          {grupo.icon} {grupo.titulo}
-                        </h4>
-                        <span className="text-xs text-slate-500">· {grupo.sub}</span>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    {clasesSemanaOrdenadas.map((c) => {
+                      const isFeriado = !!c.es_feriado
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {grupo.clases.map((c) => {
-                          const isFeriado = !!c.es_feriado
+                      let borderLeftColor = 'border-l-indigo-500'
+                      let bgClass = 'bg-slate-900'
+                      let badgeLabel = 'Cátedra'
+                      let badgeClass = 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
 
-                          let borderLeftColor = 'border-l-indigo-500'
-                          let bgClass = 'bg-slate-900'
-                          let badgeLabel = 'Cátedra'
-                          let badgeClass = 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                      if (isFeriado) {
+                        borderLeftColor = 'border-l-red-500'
+                        bgClass = 'bg-red-950/10'
+                        badgeLabel = 'Feriado'
+                        badgeClass = 'bg-red-500/10 text-red-400 border-red-500/20'
+                      } else if (c.tiene_evaluacion) {
+                        borderLeftColor = 'border-l-rose-500'
+                        badgeLabel = 'Evaluación'
+                        badgeClass = 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      } else if (c.tipo_bloque === 'laboratorio') {
+                        borderLeftColor = 'border-l-emerald-500'
+                        badgeLabel = 'Laboratorio'
+                        badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      }
 
-                          if (isFeriado) {
-                            borderLeftColor = 'border-l-red-500'
-                            bgClass = 'bg-red-950/10'
-                            badgeLabel = 'Feriado'
-                            badgeClass = 'bg-red-500/10 text-red-400 border-red-500/20'
-                          } else if (c.tiene_evaluacion) {
-                            borderLeftColor = 'border-l-rose-500'
-                            badgeLabel = 'Evaluación'
-                            badgeClass = 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          } else if (c.tipo_bloque === 'laboratorio') {
-                            borderLeftColor = 'border-l-emerald-500'
-                            badgeLabel = 'Laboratorio'
-                            badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          }
-
-                          return (
-                            <div
-                              key={c.id}
-                              className={`border border-slate-800 border-l-4 rounded-xl p-5 shadow-lg relative flex flex-col justify-between ${bgClass} ${borderLeftColor}`}
-                            >
-                              <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-                                      Sesión {c.sesion}
-                                    </span>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badgeClass}`}>
-                                      {badgeLabel}
-                                    </span>
-                                  </div>
-                                  <span className="text-xs text-slate-500 font-medium">
-                                    {formatFecha(c.fecha)}
-                                  </span>
-                                </div>
-
-                                <h3 className="text-lg font-bold text-white leading-snug">
-                                  {c.titulo}
-                                </h3>
-
-                                {!isFeriado && (
-                                  <p className="text-slate-400 text-sm line-clamp-3">
-                                    {c.contenido}
-                                  </p>
-                                )}
-
-                                {isFeriado && (
-                                  <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 p-2 rounded-lg border border-red-500/20">
-                                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                                    <span>{c.contenido}</span>
-                                  </div>
-                                )}
-
-                                {!isFeriado && c.materiales_requeridos && (
-                                  <div className="pt-2 border-t border-slate-800">
-                                    <span className="text-xs font-semibold text-slate-400 block mb-1">
-                                      Materiales Sugeridos:
-                                    </span>
-                                    <p className="text-xs text-slate-500">{c.materiales_requeridos}</p>
-                                  </div>
-                                )}
-
-                                {c.tiene_evaluacion && (
-                                  <div className="bg-rose-500/10 border border-rose-500/30 p-2 rounded-lg flex items-center justify-between text-xs text-rose-300">
-                                    <span className="font-bold uppercase">Hito de Evaluación</span>
-                                    <span className="capitalize">{c.titulo_evaluacion || 'Evaluación'}</span>
-                                  </div>
-                                )}
+                      return (
+                        <div
+                          key={c.id}
+                          className={`border border-slate-800 border-l-4 rounded-xl p-5 shadow-lg relative flex flex-col justify-between ${bgClass} ${borderLeftColor}`}
+                        >
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                                  Sesión {c.sesion}
+                                </span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badgeClass}`}>
+                                  {badgeLabel}
+                                </span>
                               </div>
-
-                              {/* Botones de acción rápidos */}
-                              <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-800/60">
-                                <button
-                                  onClick={() => handleUpdateClase(c.id, { materiales_pedidos: !c.materiales_pedidos })}
-                                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
-                                    c.materiales_pedidos
-                                      ? 'bg-green-500/20 border-green-500 text-green-400'
-                                      : 'bg-transparent border-slate-800 text-slate-400 hover:border-slate-700'
-                                  }`}
-                                >
-                                  <CheckSquare className="w-3.5 h-3.5" />
-                                  {c.materiales_pedidos ? 'Materiales Pedidos' : 'Pedir Materiales'}
-                                </button>
-
-                                <button
-                                  onClick={() => setSelectedClase(c)}
-                                  className="flex items-center gap-1 text-xs text-slate-300 hover:text-white font-semibold bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-all"
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                  Editar
-                                </button>
-                              </div>
+                              <span className="text-xs text-slate-500 font-medium">
+                                {formatFecha(c.fecha)}
+                              </span>
                             </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
+
+                            <h3 className="text-lg font-bold text-white leading-snug">
+                              {c.titulo}
+                            </h3>
+
+                            {!isFeriado && (
+                              <p className="text-slate-400 text-sm line-clamp-3">
+                                {c.contenido}
+                              </p>
+                            )}
+
+                            {isFeriado && (
+                              <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 p-2 rounded-lg border border-red-500/20">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                <span>{c.contenido}</span>
+                              </div>
+                            )}
+
+                            {!isFeriado && c.materiales_requeridos && (
+                              <div className="pt-2 border-t border-slate-800">
+                                <span className="text-xs font-semibold text-slate-400 block mb-1">
+                                  Materiales Sugeridos:
+                                </span>
+                                <p className="text-xs text-slate-500">{c.materiales_requeridos}</p>
+                              </div>
+                            )}
+
+                            {c.tiene_evaluacion && (
+                              <div className="bg-rose-500/10 border border-rose-500/30 p-2 rounded-lg flex items-center justify-between text-xs text-rose-300">
+                                <span className="font-bold uppercase">Hito de Evaluación</span>
+                                <span className="capitalize">{c.titulo_evaluacion || 'Evaluación'}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Botones de acción rápidos */}
+                          <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-800/60">
+                            <button
+                              onClick={() => handleUpdateClase(c.id, { materiales_pedidos: !c.materiales_pedidos })}
+                              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
+                                c.materiales_pedidos
+                                  ? 'bg-green-500/20 border-green-500 text-green-400'
+                                  : 'bg-transparent border-slate-800 text-slate-400 hover:border-slate-700'
+                              }`}
+                            >
+                              <CheckSquare className="w-3.5 h-3.5" />
+                              {c.materiales_pedidos ? 'Materiales Pedidos' : 'Pedir Materiales'}
+                            </button>
+
+                            <button
+                              onClick={() => setSelectedClase(c)}
+                              className="flex items-center gap-1 text-xs text-slate-300 hover:text-white font-semibold bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-all"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              Editar
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -361,7 +373,7 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
                 {/* Celdas de Días */}
                 {getDaysInMonth(currentMonth).map((day, idx) => {
                   const dateStr = getLocalDateString(day)
-                  const clasesDia = clases.filter(c => {
+                  const clasesDia = clasesSection.filter(c => {
                     const cDate = getLocalDateString(new Date(c.fecha))
                     return cDate === dateStr
                   })
