@@ -95,7 +95,7 @@ export const generateCalendarFromPDA = action({
         const tieneLaboratorio = sesionesHorario.some((s) => s.tipo === "laboratorio");
 
         // 3. Prompt de Gemini
-        const content = doc.content_text.substring(0, 15000);
+        const content = doc.content_text.substring(0, 40000);
         const prompt = `Eres un asistente de planificación curricular para profesores de Duoc UC.
 Analiza el Plan de Aula (PDA) oficial y extrae el temario ORGANIZADO POR SEMANA de la asignatura.
 La asignatura dura aproximadamente ${args.semanas_semestre} semanas.
@@ -105,7 +105,8 @@ REGLAS DE EXTRACCIÓN:
 - Cada semana de clases se imparte en ${sesionesPorSemana} sesión(es): ${sesionesHorario.map((s) => s.tipo === "laboratorio" ? "una de Laboratorio (práctica/taller)" : "una de Cátedra (teoría)").join(" y ")}.
 ${tieneCatedra ? '- "contenido_catedra": el contenido TEÓRICO/conceptual de esa semana (lo que se explica en la clase de cátedra).\n' : ""}${tieneLaboratorio ? '- "contenido_laboratorio": la actividad PRÁCTICA/taller de esa semana asociada a la teoría. Debe abordar el MISMO tema de la semana, pero de forma aplicada.\n' : ""}- "titulo": el nombre del tema de la semana.
 - "materiales_sugeridos": materiales, software, herramientas o equipos requeridos esa semana.
-- Si la semana corresponde a una evaluación (Prueba, Examen, Encargo o Presentación), marca "tiene_evaluacion": true con su "tipo_evaluacion" y "titulo_evaluacion".
+- EVALUACIONES: marca "tiene_evaluacion": true SOLO en las semanas donde el PDA indica EXPLÍCITAMENTE una evaluación calificada (una fecha/semana concreta con Prueba, Certamen, Examen, Encargo o Presentación con nota). NO marques evaluación por el solo hecho de que el texto mencione "evaluación", "actividad evaluada", "rúbrica" o "ponderación" de forma general. Ante la duda, deja "tiene_evaluacion": false. Es normal que la mayoría de las semanas NO tengan evaluación; típicamente hay solo 2 a 4 en todo el semestre y rara vez en semanas consecutivas.
+- Si el contenido incluye varios documentos (marcados con "=== DOCUMENTO: ... ==="), prioriza el que contenga la programación semanal del ramo (el PDA/planificación) para el temario y las fechas de evaluación.
 
 CONTENIDO DEL PDA:
 ${content}
@@ -219,6 +220,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
         for (let semanaIndex = 1; semanaIndex <= args.semanas_semestre; semanaIndex++) {
             const mondayTs = firstClassMonday.getTime() + (semanaIndex - 1) * 7 * 24 * 60 * 60 * 1000;
             const temaSemana = contenidoPorSemana.get(semanaIndex) || {};
+            // La evaluación de la semana se asigna a UNA sola sesión, no a todas.
+            let evaluacionAsignada = false;
 
             for (const slot of sesionesHorario) {
                 const cleanTimestamp = getDateOfDayInWeek(mondayTs, slot.dia);
@@ -254,9 +257,13 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
                     ? (temaSemana.contenido_laboratorio || temaSemana.contenido || 'Actividad práctica de la semana.')
                     : (temaSemana.contenido_catedra || temaSemana.contenido || 'Contenido teórico de la semana.');
 
+                // La evaluación aplica a UNA sola sesión de la semana (la primera que se genere).
+                const estaSesionTieneEval = !!temaSemana.tiene_evaluacion && !evaluacionAsignada;
+                if (estaSesionTieneEval) evaluacionAsignada = true;
+
                 const tituloBase = temaSemana.titulo || `Semana ${semanaIndex}`;
                 const sufijo = esLab ? ' (Laboratorio)' : (tieneLaboratorio ? ' (Cátedra)' : '');
-                const tipoBloque = temaSemana.tiene_evaluacion ? 'evaluacion' : slot.tipo;
+                const tipoBloque = estaSesionTieneEval ? 'evaluacion' : slot.tipo;
 
                 clasesFinales.push({
                     semana: semanaIndex,
@@ -266,9 +273,9 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
                     contenido,
                     actividades: esLab ? (temaSemana.contenido_laboratorio || undefined) : undefined,
                     materiales_requeridos: temaSemana.materiales_sugeridos || undefined,
-                    tiene_evaluacion: !!temaSemana.tiene_evaluacion,
-                    tipo_evaluacion: temaSemana.tipo_evaluacion && temaSemana.tipo_evaluacion !== "ninguna" ? temaSemana.tipo_evaluacion : undefined,
-                    titulo_evaluacion: temaSemana.titulo_evaluacion || undefined,
+                    tiene_evaluacion: estaSesionTieneEval,
+                    tipo_evaluacion: estaSesionTieneEval && temaSemana.tipo_evaluacion && temaSemana.tipo_evaluacion !== "ninguna" ? temaSemana.tipo_evaluacion : undefined,
+                    titulo_evaluacion: estaSesionTieneEval ? (temaSemana.titulo_evaluacion || undefined) : undefined,
                     estado: "programada",
                     tipo_bloque: tipoBloque
                 });
