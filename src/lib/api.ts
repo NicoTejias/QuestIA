@@ -2129,45 +2129,42 @@ export const CalendarAPI = {
       })
     }
 
+    const tieneCatedra = sesionesHorario.some(s => s.tipo === 'catedra')
+    const tieneLaboratorio = sesionesHorario.some(s => s.tipo === 'laboratorio')
+
     const prompt = `Eres un asistente de planificación curricular para profesores de Duoc UC.
-Analiza el Plan de Aula (PDA) oficial y extrae de forma secuencial y detallada la lista de sesiones de clases del ramo.
+Analiza el Plan de Aula (PDA) oficial y extrae el temario ORGANIZADO POR SEMANA de la asignatura.
 La asignatura dura aproximadamente ${data.semanas_semestre} semanas.
 
 ${scheduleDescription}
 
-REGLAS DE EXTRACCIÓN Y PLANIFICACIÓN:
-- Dado que el horario semanal tiene ${sesionesPorSemana} sesiones a la semana, debes generar exactamente ${sesionesPorSemana} sesiones para cada semana del semestre. Por ejemplo, para la Semana 1 debes generar ${sesionesPorSemana} sesiones consecutivas en el JSON (todas con "semana": 1, ej: sesión 1 y sesión 2). Para la Semana 2, otras ${sesionesPorSemana} sesiones (todas con "semana": 2, ej: sesión 3 y sesión 4), y así sucesivamente para las ${data.semanas_semestre} semanas.
-- Cada semana se compone de ${sesionesPorSemana} sesiones distintas según este patrón fijo de horario (en este orden): ${sesionesHorario.map((s, i) => `sesión ${i + 1} = ${s.tipo === 'laboratorio' ? 'Laboratorio (práctica)' : 'Cátedra (teoría)'}`).join('; ')}. Una sesión de Cátedra y una de Laboratorio de la MISMA semana abordan el mismo tema semanal pero por separado: la cátedra desarrolla la teoría y el laboratorio la práctica/taller asociada a esa teoría.
-- Distribuye secuencialmente el contenido temático del PDA correspondiente a cada semana entre las ${sesionesPorSemana} sesiones de esa misma semana (ej: la teoría en cátedra y la práctica/taller en laboratorio).
-- Para cada clase extrae: semana, sesión correlativa, título del tema, contenido a dictar, actividades que harán y materiales requeridos (laboratorio, software, instrumentos o guías de ejercicio).
-- Si cuentas con la "ESTRUCTURA DEL HORARIO SEMANAL", planifica las sesiones de forma alternada:
-  - En los días de 🔵 Cátedra (Teoría), enfócate en contenidos teóricos y conceptuales.
-  - En los días de 🟢 Laboratorio (Práctica), enfócate en actividades de taller experimentales, mediciones físicas o simulaciones por computadora. En 'actividades' asocia guías prácticas (ej: "Guía de Laboratorio N°X") y en 'materiales_sugeridos' asocia el equipamiento físico requerido (ej: protoboard, osciloscopio, multímetro) o software de simulación.
-  - El JSON resultante debe incluir el "tipo_bloque": "catedra" | "laboratorio" correspondiente para cada sesión en base al tipo de clase de ese día (la secuencia de clases se dicta alternando los días de clase de la semana de forma correlativa).
-- Si la sesión corresponde a una evaluación (Prueba Escrita, Examen, Encargo o Presentación de Trabajo), indícalo en tiene_evaluacion: true, con el tipo_evaluacion respectivo y tipo_bloque: "evaluacion".
+REGLAS DE EXTRACCIÓN:
+- Debes devolver exactamente UNA entrada por cada semana del semestre (${data.semanas_semestre} semanas en total), numeradas del 1 al ${data.semanas_semestre}. NO agrupes ni omitas semanas.
+- Cada semana de clases se imparte en ${sesionesPorSemana} sesión(es): ${sesionesHorario.map((s) => s.tipo === 'laboratorio' ? 'una de Laboratorio (práctica/taller)' : 'una de Cátedra (teoría)').join(' y ')}.
+${tieneCatedra ? '- "contenido_catedra": el contenido TEÓRICO/conceptual de esa semana (lo que se explica en la clase de cátedra).\n' : ''}${tieneLaboratorio ? '- "contenido_laboratorio": la actividad PRÁCTICA/taller de esa semana asociada a la teoría (guías de ejercicios, laboratorio, mediciones o simulaciones). Debe abordar el MISMO tema de la semana, pero de forma aplicada.\n' : ''}- "titulo": el nombre del tema de la semana.
+- "materiales_sugeridos": materiales, software, herramientas o equipos requeridos esa semana.
+- Si la semana corresponde a una evaluación (Prueba, Examen, Encargo o Presentación), marca "tiene_evaluacion": true con su "tipo_evaluacion" y "titulo_evaluacion".
 
 CONTENIDO DEL PDA:
 ${content}
 
-RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utilizando estrictamente este formato:
+RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utilizando estrictamente este formato (una entrada por semana):
 {
-  "sesiones": [
+  "semanas": [
     {
       "semana": 1,
-      "sesion": 1,
-      "titulo": "Título de la clase",
-      "contenido": "Detalle del contenido que se enseñará en esta clase",
-      "actividades": "Actividad práctica o teórica de aula",
-      "materiales_sugeridos": "Materiales, software, herramientas o equipos requeridos",
+      "titulo": "Tema de la semana",
+      "contenido_catedra": "Contenido teórico a dictar en cátedra",
+      "contenido_laboratorio": "Actividad práctica/taller de laboratorio de esa semana",
+      "materiales_sugeridos": "Materiales, software o equipos requeridos",
       "tiene_evaluacion": false,
       "tipo_evaluacion": "ninguna",
-      "titulo_evaluacion": "",
-      "tipo_bloque": "catedra"
+      "titulo_evaluacion": ""
     }
   ]
 }`
 
-    let sesiones: any[] = []
+    let semanasPDA: any[] = []
     try {
       const result = await model.generateContent(prompt)
       const responseText = result.response.text()
@@ -2176,7 +2173,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
       const jsonMatch = responseText.match(/\{[\s\S]*\}/)
       if (!jsonMatch) throw new Error("La IA no retornó un formato JSON válido.")
       const parsedData = JSON.parse(jsonMatch[0])
-      sesiones = parsedData.sesiones || []
+      // Nuevo formato (por semana) con compatibilidad hacia el formato anterior (por sesión).
+      semanasPDA = parsedData.semanas || parsedData.sesiones || []
     } catch (err: any) {
       console.error("Gemini Error:", err)
       const errMsg = err.message || ""
@@ -2186,7 +2184,14 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
       throw err
     }
 
-    if (sesiones.length === 0) throw new Error("No se detectaron sesiones válidas en el PDA.")
+    if (semanasPDA.length === 0) throw new Error("No se detectaron contenidos válidos en el PDA.")
+
+    // Ordenar e indexar el contenido por número de semana (para lookup rápido y determinista).
+    const contenidoPorSemana = new Map<number, any>()
+    semanasPDA.forEach((s: any, idx: number) => {
+      const num = Number(s.semana) || (idx + 1)
+      if (!contenidoPorSemana.has(num)) contenidoPorSemana.set(num, s)
+    })
 
     // 5. Constante de Feriados 2026
     const FERIADOS_DUOC_2026 = [
@@ -2263,15 +2268,6 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
     const firstClassTimestamp = getFirstClassDate(startTemp.getTime())
     const firstClassMonday = getMondayOfDate(new Date(firstClassTimestamp))
 
-    // Colas de sesiones IA por tipo, preservando el orden de llegada del PDA.
-    const catedraQueue: any[] = []
-    const laboratorioQueue: any[] = []
-    sesiones.forEach((sesion: any) => {
-      const t = sesion.tipo_bloque
-      if (t === 'laboratorio') laboratorioQueue.push(sesion)
-      else catedraQueue.push(sesion) // catedra y evaluacion (teóricas) van a la cola de cátedra
-    })
-
     // Devuelve el timestamp (mediodía local) del día `dayOfWeek` dentro de la semana cuyo lunes es `mondayTs`.
     const getDateOfDayInWeek = (mondayTs: number, dayOfWeek: number): number => {
       // getDay(): 0=Domingo..6=Sábado. El lunes es offset 0; domingo es offset 6.
@@ -2284,22 +2280,20 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 
     let correlativoSesion = 1
 
-    // Recorremos semana a semana; dentro de cada semana, cada sesión de horario (día + tipo)
-    // es una sesión distinta. Así un mismo día con cátedra y laboratorio produce 2 sesiones.
+    // El NÚMERO de sesiones por semana lo determina el HORARIO del profesor (sesionesHorario),
+    // NO la cantidad de objetos que devuelva la IA. Por cada semana generamos una sesión por
+    // cada slot (día + tipo): así cátedra y laboratorio de una misma semana son 2 sesiones.
     for (let semanaIndex = 1; semanaIndex <= data.semanas_semestre; semanaIndex++) {
-      if (catedraQueue.length === 0 && laboratorioQueue.length === 0) break
-
       const mondayTs = firstClassMonday.getTime() + (semanaIndex - 1) * 7 * 24 * 60 * 60 * 1000
+      const temaSemana = contenidoPorSemana.get(semanaIndex) || {}
 
       for (const slot of sesionesHorario) {
-        if (catedraQueue.length === 0 && laboratorioQueue.length === 0) break
-
         const cleanTimestamp = getDateOfDayInWeek(mondayTs, slot.dia)
         const dateObj = new Date(cleanTimestamp)
         const dateStr = stringifyDate(dateObj)
         const feriado = FERIADOS_DUOC_2026.find(f => f.fecha === dateStr)
 
-        // Feriado que suspende la clase: se registra como sesión suspendida (no consume sesión IA).
+        // Feriado que suspende la clase: se registra como sesión suspendida.
         if (feriado) {
           let suspenderClase = true
           if (feriado.media_jornada && feriado.hora_limite) {
@@ -2323,29 +2317,27 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
           }
         }
 
-        // Tomar la sesión IA del tipo del slot; si esa cola se agotó, usar la otra como respaldo.
-        let sesionIA: any = null
-        if (slot.tipo === 'laboratorio') {
-          sesionIA = laboratorioQueue.shift() || catedraQueue.shift()
-        } else {
-          sesionIA = catedraQueue.shift() || laboratorioQueue.shift()
-        }
-        if (!sesionIA) break // Salvaguarda
+        // El contenido depende del tipo de sesión: cátedra usa la teoría, laboratorio la práctica.
+        const esLab = slot.tipo === 'laboratorio'
+        const contenido = esLab
+          ? (temaSemana.contenido_laboratorio || temaSemana.contenido || 'Actividad práctica de la semana.')
+          : (temaSemana.contenido_catedra || temaSemana.contenido || 'Contenido teórico de la semana.')
 
-        // El tipo del bloque lo define el horario del profesor (slot), salvo que sea evaluación.
-        const tipoBloque = sesionIA.tiene_evaluacion ? 'evaluacion' : slot.tipo
+        const tituloBase = temaSemana.titulo || `Semana ${semanaIndex}`
+        const sufijo = esLab ? ' (Laboratorio)' : (tieneLaboratorio ? ' (Cátedra)' : '')
+        const tipoBloque = temaSemana.tiene_evaluacion ? 'evaluacion' : slot.tipo
 
         clasesFinales.push({
           semana: semanaIndex,
           sesion: correlativoSesion,
           fecha: cleanTimestamp,
-          titulo: sesionIA.titulo,
-          contenido: sesionIA.contenido,
-          actividades: sesionIA.actividades,
-          materiales_requeridos: sesionIA.materiales_sugeridos,
-          tiene_evaluacion: sesionIA.tiene_evaluacion,
-          tipo_evaluacion: sesionIA.tipo_evaluacion !== "ninguna" ? sesionIA.tipo_evaluacion : undefined,
-          titulo_evaluacion: sesionIA.titulo_evaluacion || undefined,
+          titulo: `${tituloBase}${sufijo}`,
+          contenido,
+          actividades: esLab ? (temaSemana.contenido_laboratorio || undefined) : undefined,
+          materiales_requeridos: temaSemana.materiales_sugeridos || undefined,
+          tiene_evaluacion: !!temaSemana.tiene_evaluacion,
+          tipo_evaluacion: temaSemana.tipo_evaluacion && temaSemana.tipo_evaluacion !== "ninguna" ? temaSemana.tipo_evaluacion : undefined,
+          titulo_evaluacion: temaSemana.titulo_evaluacion || undefined,
           estado: "programada",
           tipo_bloque: tipoBloque
         })
