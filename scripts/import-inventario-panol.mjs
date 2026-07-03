@@ -9,8 +9,10 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import * as XLSX from 'xlsx'
+import pkg from 'xlsx'
 import { createClient } from '@supabase/supabase-js'
+
+const XLSX = pkg.default || pkg
 
 // Cargar variables desde .env.local (sin dependencias externas)
 function loadEnv() {
