@@ -2082,13 +2082,14 @@ export const CalendarAPI = {
     fecha_inicio: number;
     teacher_id: string;
     replace_all?: boolean; // true: limpia TODO el calendario del curso; false: reemplaza solo esta sección
+    contenido_semanas?: any[]; // temario por semana ya analizado (evita re-llamar a la IA por cada sección)
   }) {
     // Sesiones por semana reales: cada (día, tipo) es una sesión distinta.
     // Si no llega sesiones_horario (compatibilidad), se asume 1 sesión por día.
     const sesionesHorario = data.sesiones_horario && data.sesiones_horario.length > 0
       ? data.sesiones_horario
       : data.dias_semana.map(dia => ({ dia, tipo: (data.dias_tipo?.[dia] || 'catedra') as 'catedra' | 'laboratorio' }))
-    const sesionesPorSemana = sesionesHorario.length
+    const tieneLaboratorio = sesionesHorario.some(s => s.tipo === 'laboratorio')
     // 1. Obtener el documento del PDA
     const { data: doc, error: docError } = await supabase
       .from('course_documents')
@@ -2137,13 +2138,26 @@ export const CalendarAPI = {
     // 3. Limpiar clases previas: todo el curso (primera sección) o solo esta sección.
     await this.limpiarCalendario(data.course_id, data.replace_all ? undefined : data.seccion)
 
-    // 4. Llamar a Gemini (SDK del lado del cliente)
+    // 4. Analizar el PDA con IA. Si ya viene el temario analizado (multi-sección),
+    // se reutiliza y se evita una llamada por cada sección.
+    let semanasPDA: any[] = data.contenido_semanas && data.contenido_semanas.length > 0
+      ? data.contenido_semanas
+      : []
+
+    if (semanasPDA.length === 0) {
     const apiKey = import.meta.env.VITE_GOOGLE_API_KEY
     if (!apiKey) throw new Error("API Key de Google no configurada (VITE_GOOGLE_API_KEY).")
-    
+
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
-    // gemini-2.5-flash admite contexto amplio; permitimos más texto para no truncar el PDA
+    // Cascada de modelos: si uno está saturado (503) o con cuota (429), se pasa al siguiente.
+    // Se ordenan del más capaz al más disponible bajo alta demanda.
+    const MODELOS_CASCADA = [
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+    ]
+    // gemini admite contexto amplio; permitimos más texto para no truncar el PDA
     // cuando se combinan varios documentos del ramo.
     const content = doc.content_text.substring(0, 40000)
     const formatDayName = (dayNum: number): string => {
@@ -2161,9 +2175,6 @@ export const CalendarAPI = {
       })
     }
 
-    const tieneCatedra = sesionesHorario.some(s => s.tipo === 'catedra')
-    const tieneLaboratorio = sesionesHorario.some(s => s.tipo === 'laboratorio')
-
     const prompt = `Eres un asistente de planificación curricular para profesores de Duoc UC.
 Analiza el Plan de Aula (PDA) oficial y extrae el temario ORGANIZADO POR SEMANA de la asignatura.
 La asignatura dura aproximadamente ${data.semanas_semestre} semanas.
@@ -2172,8 +2183,9 @@ ${scheduleDescription}
 
 REGLAS DE EXTRACCIÓN:
 - Debes devolver exactamente UNA entrada por cada semana del semestre (${data.semanas_semestre} semanas en total), numeradas del 1 al ${data.semanas_semestre}. NO agrupes ni omitas semanas.
-- Cada semana de clases se imparte en ${sesionesPorSemana} sesión(es): ${sesionesHorario.map((s) => s.tipo === 'laboratorio' ? 'una de Laboratorio (práctica/taller)' : 'una de Cátedra (teoría)').join(' y ')}.
-${tieneCatedra ? '- "contenido_catedra": el contenido TEÓRICO/conceptual de esa semana (lo que se explica en la clase de cátedra).\n' : ''}${tieneLaboratorio ? '- "contenido_laboratorio": la actividad PRÁCTICA/taller de esa semana asociada a la teoría (guías de ejercicios, laboratorio, mediciones o simulaciones). Debe abordar el MISMO tema de la semana, pero de forma aplicada.\n' : ''}- "titulo": el nombre del tema de la semana.
+- "titulo": el nombre del tema de la semana.
+- "contenido_catedra": el contenido TEÓRICO/conceptual de esa semana (lo que se explica en la clase de cátedra).
+- "contenido_laboratorio": la actividad PRÁCTICA/taller de esa semana asociada a la teoría (guías de ejercicios, laboratorio, mediciones o simulaciones). Debe abordar el MISMO tema de la semana, pero de forma aplicada.
 - "materiales_sugeridos": materiales, software, herramientas o equipos requeridos esa semana.
 - EVALUACIONES: marca "tiene_evaluacion": true SOLO en las semanas donde el PDA indica EXPLÍCITAMENTE una evaluación calificada (una fecha/semana concreta con Prueba, Certamen, Examen, Encargo o Presentación con nota). NO marques evaluación por el solo hecho de que el texto mencione "evaluación", "actividad evaluada", "rúbrica", "ponderación" o criterios de logro de forma general. Ante la duda, deja "tiene_evaluacion": false. Es normal que la mayoría de las semanas NO tengan evaluación; típicamente hay solo 2 a 4 evaluaciones en todo el semestre y rara vez en semanas consecutivas.
 - Si el contenido incluye varios documentos (marcados con "=== DOCUMENTO: ... ==="), prioriza el que contenga la programación semanal del ramo (el PDA/planificación) para el temario y las fechas de evaluación.
@@ -2197,10 +2209,43 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
   ]
 }`
 
-    let semanasPDA: any[] = []
+    // Genera texto probando la cascada de modelos. Para errores transitorios (503/429/500)
+    // reintenta el mismo modelo con backoff; si igual falla, pasa al siguiente modelo.
+    const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))
+    const esErrorTransitorio = (msg: string) =>
+      msg.includes("503") || msg.includes("429") || msg.includes("500") ||
+      msg.includes("high demand") || msg.includes("overloaded") || msg.includes("UNAVAILABLE")
+
+    const generarConCascada = async (): Promise<string> => {
+      let ultimoError: any = null
+      for (const modelName of MODELOS_CASCADA) {
+        const model = genAI.getGenerativeModel({ model: modelName })
+        // Hasta 2 intentos por modelo ante errores transitorios.
+        for (let intento = 0; intento < 2; intento++) {
+          try {
+            const result = await model.generateContent(prompt)
+            return result.response.text()
+          } catch (err: any) {
+            ultimoError = err
+            const errMsg = err.message || ""
+            // La API key bloqueada no se resuelve cambiando de modelo: abortar de inmediato.
+            if (errMsg.includes("API_KEY_SERVICE_BLOCKED") || errMsg.includes("blocked") || errMsg.includes("403")) {
+              throw new Error("API Key bloqueada (API_KEY_SERVICE_BLOCKED). Debes ir a la consola de Google Cloud (https://console.cloud.google.com), editar la API Key de este proyecto en 'APIs y Servicios > Credenciales' y habilitar la API 'Generative Language API'.")
+            }
+            if (esErrorTransitorio(errMsg) && intento === 0) {
+              await sleep(1500) // breve espera antes de reintentar el mismo modelo
+              continue
+            }
+            break // no transitorio o ya reintentado: probar siguiente modelo
+          }
+        }
+        console.warn(`Modelo ${modelName} no disponible, probando el siguiente…`)
+      }
+      throw ultimoError || new Error("No se pudo generar el contenido con ningún modelo de IA.")
+    }
+
     try {
-      const result = await model.generateContent(prompt)
-      const responseText = result.response.text()
+      const responseText = await generarConCascada()
 
       // Parsear JSON
       const jsonMatch = responseText.match(/\{[\s\S]*\}/)
@@ -2211,11 +2256,13 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
     } catch (err: any) {
       console.error("Gemini Error:", err)
       const errMsg = err.message || ""
-      if (errMsg.includes("API_KEY_SERVICE_BLOCKED") || errMsg.includes("blocked") || errMsg.includes("403")) {
-        throw new Error("API Key bloqueada (API_KEY_SERVICE_BLOCKED). Debes ir a la consola de Google Cloud (https://console.cloud.google.com), editar la API Key de este proyecto en 'APIs y Servicios > Credenciales' y habilitar la API 'Generative Language API'.")
+      if (errMsg.includes("API_KEY_SERVICE_BLOCKED")) throw err
+      if (esErrorTransitorio(errMsg)) {
+        throw new Error("Los modelos de IA están con alta demanda en este momento. Espera unos minutos e intenta de nuevo.")
       }
       throw err
     }
+    } // fin del análisis con IA (se omite si vino contenido_semanas)
 
     if (semanasPDA.length === 0) throw new Error("No se detectaron contenidos válidos en el PDA.")
 
@@ -2387,7 +2434,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 
     // 7. Insertar en bloque en Supabase
     await this.bulkInsertClases(data.course_id, clasesFinales, data.teacher_id, data.seccion)
-    return { success: true, count: clasesFinales.length }
+    // Devolvemos el temario analizado para reutilizarlo en las demás secciones (evita re-llamar a la IA).
+    return { success: true, count: clasesFinales.length, semanas: semanasPDA }
   }
 }
 

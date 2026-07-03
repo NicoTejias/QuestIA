@@ -9,11 +9,16 @@
  * npx convex env set OPENAI_API_KEY sk-...
  */
 
-const GEMINI_MODELS = ["gemini-3-flash-preview", "gemini-2.0-flash"];
+// Cascada de modelos reales, del más capaz al más disponible bajo alta demanda.
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"];
 
-function isRateLimitError(err: unknown): boolean {
+// Errores transitorios: cuota (429) o sobrecarga del modelo (503). En ambos casos
+// tiene sentido probar el siguiente modelo de la cascada.
+function isTransientError(err: unknown): boolean {
     const msg = err instanceof Error ? err.message : String(err);
-    return msg.includes("429") || msg.includes("Too Many Requests") || msg.includes("quota");
+    return msg.includes("429") || msg.includes("Too Many Requests") || msg.includes("quota") ||
+        msg.includes("503") || msg.includes("500") || msg.includes("high demand") ||
+        msg.includes("overloaded") || msg.includes("UNAVAILABLE");
 }
 
 async function tryGemini(key: string, model: string, prompt: string): Promise<string> {
@@ -63,11 +68,11 @@ export async function generateWithFallback(prompt: string): Promise<string> {
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err);
                 errors.push(`${model}: ${msg.substring(0, 120)}`);
-                if (!isRateLimitError(err)) {
-                    // Error que no es de cuota → no tiene sentido probar el siguiente modelo
+                if (!isTransientError(err)) {
+                    // Error que no es transitorio (cuota/sobrecarga) → no tiene sentido probar otro modelo
                     break;
                 }
-                // Es cuota agotada → probar el siguiente modelo
+                // Cuota agotada o modelo sobrecargado → probar el siguiente modelo
             }
         }
     }
@@ -87,11 +92,11 @@ export async function generateWithFallback(prompt: string): Promise<string> {
         throw new Error("No hay API keys configuradas. Configura GEMINI_API_KEY o OPENAI_API_KEY.");
     }
 
-    const isAllQuota = errors.every(e => isRateLimitError(new Error(e)));
-    if (isAllQuota) {
+    const isAllTransient = errors.every(e => isTransientError(new Error(e)));
+    if (isAllTransient) {
         throw new Error(
-            "Cuota de IA agotada temporalmente. Espera unos minutos o configura OPENAI_API_KEY como respaldo. " +
-            "Ejecuta: npx convex env set OPENAI_API_KEY sk-..."
+            "Los modelos de IA están con alta demanda o cuota agotada temporalmente. Espera unos minutos e intenta de nuevo, " +
+            "o configura OPENAI_API_KEY como respaldo: npx convex env set OPENAI_API_KEY sk-..."
         );
     }
 
@@ -99,7 +104,7 @@ export async function generateWithFallback(prompt: string): Promise<string> {
 }
 
 /** @deprecated Usa generateWithFallback(prompt) directamente */
-export async function getGeminiModel(modelName = "gemini-3-flash-preview") {
+export async function getGeminiModel(modelName = "gemini-2.5-flash") {
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("GEMINI_API_KEY no configurada");
     const { GoogleGenerativeAI } = await import("@google/generative-ai");

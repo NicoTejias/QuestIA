@@ -320,7 +320,9 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
 
       // 3. Generar el calendario para CADA sección con su propio horario.
       // El contenido del PDA es el mismo; solo cambian días, horas y fechas por sección.
+      // La primera sección analiza el PDA con IA; las demás reutilizan ese análisis (1 sola llamada).
       let totalClases = 0
+      let contenidoSemanas: any[] | undefined = undefined
 
       for (let i = 0; i < secciones.length; i++) {
         const s = secciones[i]
@@ -371,9 +373,13 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           fecha_inicio: fechaInicioTs,
           teacher_id: course.teacher_id,
           // Solo limpiar todo el calendario al procesar la primera sección; el resto se agrega.
-          replace_all: i === 0
+          replace_all: i === 0,
+          // Reutilizar el temario ya analizado por la primera sección.
+          contenido_semanas: contenidoSemanas
         })
         totalClases += result.count
+        // Guardar el análisis de la primera sección para reutilizarlo en las siguientes.
+        if (contenidoSemanas === undefined && result.semanas) contenidoSemanas = result.semanas
       }
 
       toast.success(`¡Planificación creada! Se generaron ${totalClases} clases en ${secciones.length} ${secciones.length === 1 ? 'sección' : 'secciones'}.`);
