@@ -62,34 +62,6 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
     ? clases.filter(c => c.section === selectedSection)
     : clases
 
-  // ── Recordatorios in-app (calculados sobre TODAS las secciones) ──
-  const ahora = Date.now()
-  const hoyStr = new Date().toDateString()
-
-  // 1. Clases de hoy cuya hora de inicio ya pasó y siguen sin confirmar.
-  const porConfirmarHoy = clases.filter(c => {
-    if (c.es_feriado || c.estado !== 'programada') return false
-    if (new Date(c.fecha).toDateString() !== hoyStr) return false
-    return puedeConfirmar(c)
-  })
-
-  // 2. Clases realizadas con RAGC pendiente dentro del plazo de 24h.
-  const ragcPendiente = clases
-    .map(c => ({ c, h: horasRestantesRAGC(c) }))
-    .filter(x => x.h !== null) as { c: any; h: number }[]
-
-  // 3. Viernes: materiales por pedir y evaluaciones próximas (para solicitar copias/materiales con 48h).
-  const esViernes = new Date().getDay() === 5
-  const en7dias = ahora + 7 * 24 * 60 * 60 * 1000
-  const evaluacionesProximas = clases.filter(c =>
-    c.tiene_evaluacion && !c.es_feriado && c.fecha >= ahora && c.fecha <= en7dias
-  )
-  const materialesPorPedir = clases.filter(c =>
-    !c.es_feriado && c.materiales_requeridos && !c.materiales_pedidos && c.fecha >= ahora && c.fecha <= en7dias
-  )
-  const hayRecordatorios = porConfirmarHoy.length > 0 || ragcPendiente.length > 0 ||
-    (esViernes && (evaluacionesProximas.length > 0 || materialesPorPedir.length > 0))
-
   // Obtener el número total de semanas en el calendario (de la sección activa)
   const maxSemanas = clasesSection.reduce((acc, c) => Math.max(acc, c.semana), 1)
 
@@ -183,6 +155,34 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
       month: 'long'
     })
   }
+
+  // ── Recordatorios in-app (calculados sobre TODAS las secciones) ──
+  const ahora = Date.now()
+  const hoyStr = new Date().toDateString()
+
+  // 1. Clases de hoy cuya hora de inicio ya pasó y siguen sin confirmar.
+  const porConfirmarHoy = clases.filter(c => {
+    if (c.es_feriado || c.estado !== 'programada') return false
+    if (new Date(c.fecha).toDateString() !== hoyStr) return false
+    return puedeConfirmar(c)
+  })
+
+  // 2. Clases realizadas con RAGC pendiente dentro del plazo de 24h.
+  const ragcPendiente = clases
+    .map(c => ({ c, h: horasRestantesRAGC(c) }))
+    .filter(x => x.h !== null) as { c: any; h: number }[]
+
+  // 3. Viernes: materiales por pedir y evaluaciones próximas (para solicitar copias/materiales con 48h).
+  const esViernes = new Date().getDay() === 5
+  const en7dias = ahora + 7 * 24 * 60 * 60 * 1000
+  const evaluacionesProximas = clases.filter(c =>
+    c.tiene_evaluacion && !c.es_feriado && c.fecha >= ahora && c.fecha <= en7dias
+  )
+  const materialesPorPedir = clases.filter(c =>
+    !c.es_feriado && c.materiales_requeridos && !c.materiales_pedidos && c.fecha >= ahora && c.fecha <= en7dias
+  )
+  const hayRecordatorios = porConfirmarHoy.length > 0 || ragcPendiente.length > 0 ||
+    (esViernes && (evaluacionesProximas.length > 0 || materialesPorPedir.length > 0))
 
   return (
     <div className="space-y-6">

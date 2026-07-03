@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Calendar, Upload, Loader2, Info, CheckCircle2, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { CalendarAPI, DocumentsAPI, supabase } from '../../lib/api'
+import { CalendarAPI, DocumentsAPI, InventarioPanolAPI, supabase } from '../../lib/api'
 import { extractTextFromFile, getFileType } from '../../utils/documentParser'
 
 // Módulos horarios individuales de Duoc UC (40 minutos c/u, 10 min de recreo cada 2 módulos)
@@ -149,6 +149,14 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
   const [docsRamo, setDocsRamo] = useState<any[]>([])
   const [docsSeleccionados, setDocsSeleccionados] = useState<string[]>([])
   const [docsLoading, setDocsLoading] = useState(true)
+
+  // Inventario de pañol (referencia de materiales para la IA).
+  const [inventarioPanol, setInventarioPanol] = useState<string[]>([])
+  useEffect(() => {
+    InventarioPanolAPI.getDisponiblesNombres()
+      .then(setInventarioPanol)
+      .catch(() => setInventarioPanol([])) // si la tabla no existe aún, seguimos sin inventario
+  }, [])
 
   useEffect(() => {
     let activo = true
@@ -391,7 +399,9 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           // Solo limpiar todo el calendario al procesar la primera sección; el resto se agrega.
           replace_all: i === 0,
           // Reutilizar el temario ya analizado por la primera sección.
-          contenido_semanas: contenidoSemanas
+          contenido_semanas: contenidoSemanas,
+          // Solo la primera sección analiza; se le pasa el inventario de pañol como referencia.
+          inventario_panol: contenidoSemanas === undefined ? inventarioPanol : undefined
         })
         totalClases += result.count
         // Guardar el análisis de la primera sección para reutilizarlo en las siguientes.

@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useClerk } from "@clerk/clerk-react"
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Target, Trophy, Gift, BarChart3, LogOut, Menu, X, Settings, Sparkles, Loader2, FileText, User, Mail, ShieldCheck, HelpCircle, ArrowRightLeft, Activity } from 'lucide-react'
+import { BookOpen, Target, Trophy, Gift, BarChart3, LogOut, Menu, X, Settings, Sparkles, Loader2, FileText, User, Mail, ShieldCheck, HelpCircle, ArrowRightLeft, Activity, Package } from 'lucide-react'
 import FAQSection from '../components/FAQSection'
 import { toast } from 'sonner'
 import RamosPanel from '../components/teacher/RamosPanel'
 import CrearMisionPanel from '../components/teacher/CrearMisionPanel'
 import CrearRecompensaPanel from '../components/teacher/CrearRecompensaPanel'
 import MaterialPanel from '../components/teacher/MaterialPanel'
+import PanolPanel from '../components/teacher/PanolPanel'
 import RankingDocentePanel from '../components/teacher/RankingDocentePanel'
 import GestionCanjesPanel from '../components/teacher/GestionCanjesPanel'
 import NotificationBell from '../components/NotificationBell'
@@ -36,6 +37,7 @@ const TAB_META: Record<string, { label: string; emoji: string }> = {
     inicio: { label: 'Inicio', emoji: '📊' },
     ramos: { label: 'Mis Ramos', emoji: '📚' },
     material: { label: 'Material', emoji: '📄' },
+    panol: { label: 'Pañol', emoji: '📦' },
     desafios: { label: 'Desafíos', emoji: '🎯' },
     ranking: { label: 'Ranking', emoji: '🏆' },
     recompensas: { label: 'Recompensas', emoji: '🎁' },
@@ -71,6 +73,7 @@ export default function TeacherDashboard() {
         { id: 'inicio', label: 'Inicio', icon: <BarChart3 className="w-[17px] h-[17px]" />, tourClass: 'tour-step-estadisticas' },
         { id: 'ramos', label: 'Mis Ramos', icon: <BookOpen className="w-[17px] h-[17px]" />, tourClass: 'tour-step-ramos' },
         { id: 'material', label: 'Material', icon: <FileText className="w-[17px] h-[17px]" />, tourClass: 'tour-step-material' },
+        { id: 'panol', label: 'Pañol', icon: <Package className="w-[17px] h-[17px]" /> },
         { id: 'desafios', label: 'Desafíos', icon: <Target className="w-[17px] h-[17px]" />, tourClass: 'tour-step-desafios', badge: 'IA' },
         { id: 'ranking', label: 'Ranking', icon: <Trophy className="w-[17px] h-[17px]" />, tourClass: 'tour-step-ranking' },
         { id: 'recompensas', label: 'Recompensas', icon: <Gift className="w-[17px] h-[17px]" />, tourClass: 'tour-step-recompensas' },
@@ -230,6 +233,7 @@ export default function TeacherDashboard() {
                         />
                     )}
                     {activeTab === 'material' && <MaterialPanel courses={courses || []} />}
+                    {activeTab === 'panol' && <PanolPanel />}
                     {activeTab === 'desafios' && <CrearMisionPanel courses={courses || []} />}
                     {activeTab === 'recompensas' && <CrearRecompensaPanel courses={courses || []} />}
                     {activeTab === 'ranking' && <RankingDocentePanel />}

@@ -1978,6 +1978,47 @@ export const EvaluacionesAPI = {
 // ============================================================
 // CALENDARIO DE CLASES
 // ============================================================
+// Inventario de Pañol
+// ============================================================
+export const InventarioPanolAPI = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('inventario_panol')
+      .select('*')
+      .order('categoria', { ascending: true })
+      .order('descripcion', { ascending: true })
+    if (error) throw error
+    return data || []
+  },
+
+  // Lista compacta de nombres disponibles, para pasar a la IA como referencia de materiales.
+  async getDisponiblesNombres(): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('inventario_panol')
+      .select('descripcion')
+      .eq('disponible', true)
+    if (error) throw error
+    // Deduplicar por descripción.
+    return Array.from(new Set((data || []).map((d: any) => String(d.descripcion).trim()).filter(Boolean)))
+  },
+
+  async updateItem(id: string, updates: any) {
+    const { error } = await supabase.from('inventario_panol').update(updates).eq('id', id)
+    if (error) throw error
+  },
+
+  async createItem(item: { categoria?: string; tipo?: string; descripcion: string; stock?: number; estado?: string; observacion?: string }) {
+    const { error } = await supabase.from('inventario_panol').insert({ ...item, disponible: true })
+    if (error) throw error
+  },
+
+  async deleteItem(id: string) {
+    const { error } = await supabase.from('inventario_panol').delete().eq('id', id)
+    if (error) throw error
+  },
+}
+
+// ============================================================
 export const CalendarAPI = {
   async getClasesByCourse(courseId: string, section?: string) {
     let query = supabase
@@ -2085,6 +2126,7 @@ export const CalendarAPI = {
     teacher_id: string;
     replace_all?: boolean; // true: limpia TODO el calendario del curso; false: reemplaza solo esta sección
     contenido_semanas?: any[]; // temario por semana ya analizado (evita re-llamar a la IA por cada sección)
+    inventario_panol?: string[]; // materiales disponibles en pañol, para que la IA priorice los que existen
   }) {
     // Sesiones por semana reales: cada (día, tipo) es una sesión distinta.
     // Si no llega sesiones_horario (compatibilidad), se asume 1 sesión por día.
@@ -2177,12 +2219,19 @@ export const CalendarAPI = {
       })
     }
 
+    // Referencia de materiales disponibles en pañol (para que la IA priorice los que existen).
+    let inventarioDescription = ""
+    if (data.inventario_panol && data.inventario_panol.length > 0) {
+      const lista = data.inventario_panol.slice(0, 400).join("; ")
+      inventarioDescription = `MATERIALES DISPONIBLES EN PAÑOL (usa PREFERENTEMENTE estos en "materiales_sugeridos", citando el nombre tal cual aparece; si algo necesario no está en la lista, puedes sugerirlo igual pero indica que debe adquirirse):\n${lista}\n`
+    }
+
     const prompt = `Eres un asistente de planificación curricular para profesores de Duoc UC.
 Analiza el Plan de Aula (PDA) oficial y extrae el temario ORGANIZADO POR SEMANA de la asignatura.
 La asignatura dura aproximadamente ${data.semanas_semestre} semanas.
 
 ${scheduleDescription}
-
+${inventarioDescription}
 REGLAS DE EXTRACCIÓN:
 - Debes devolver exactamente UNA entrada por cada semana del semestre (${data.semanas_semestre} semanas en total), numeradas del 1 al ${data.semanas_semestre}. NO agrupes ni omitas semanas.
 - "titulo": el nombre del tema de la semana.
