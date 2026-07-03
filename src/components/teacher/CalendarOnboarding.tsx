@@ -48,12 +48,11 @@ interface CalendarOnboardingProps {
   onSuccess: () => void
 }
 
-// Una sección del ramo: nombre + su propio horario/régimen/fecha de inicio.
+// Una sección del ramo: nombre + su propio horario/régimen. La fecha de inicio es común al semestre.
 interface SeccionConfig {
   id: string
   nombre: string
   regimen: 'diurno' | 'vespertino'
-  fechaInicio: string
   selectedBlocks: Record<string, 'catedra' | 'laboratorio'> // llave: "dia-bloque"
 }
 
@@ -61,7 +60,6 @@ const nuevaSeccion = (nombre = ''): SeccionConfig => ({
   id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   nombre,
   regimen: 'diurno',
-  fechaInicio: '',
   selectedBlocks: {},
 })
 
@@ -69,14 +67,16 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [semestre, setSemestre] = useState<'2026-1' | '2026-2'>('2026-1')
   const [semanas, setSemanas] = useState(18)
+  // Fecha de inicio única para todo el semestre (común a todas las secciones).
+  const [fechaInicioSemestre, setFechaInicioSemestre] = useState('')
 
   // Secciones del ramo: el docente puede configurar el horario de cada una.
   const [secciones, setSecciones] = useState<SeccionConfig[]>([nuevaSeccion('Sección 1')])
   const [seccionActivaId, setSeccionActivaId] = useState<string>('')
 
-  const [pdaFile, setPdaFile] = useState<File | null>(null)
+  // Uno o varios archivos (maleta didáctica: varias presentaciones = varias sesiones en orden).
+  const [pdaFiles, setPdaFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
-  const [fileName, setFileName] = useState('')
 
   // Wizard: paso actual (1: datos comunes, 2: secciones, 3: horarios).
   const [paso, setPaso] = useState<1 | 2 | 3>(1)
@@ -84,12 +84,16 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
   // Valida el paso actual antes de avanzar. Devuelve true si es válido.
   const validarPaso = (p: number): boolean => {
     if (p === 1) {
+      if (!fechaInicioSemestre) {
+        toast.error('Selecciona la fecha de inicio del semestre.')
+        return false
+      }
       if (fuente === 'existentes' && docsSeleccionados.length === 0) {
         toast.error('Selecciona al menos un documento del ramo para calendarizar.')
         return false
       }
-      if (fuente === 'nuevo' && !pdaFile) {
-        toast.error('Sube el archivo del PDA de la asignatura.')
+      if (fuente === 'nuevo' && pdaFiles.length === 0) {
+        toast.error('Sube al menos un archivo del ramo.')
         return false
       }
     }
@@ -187,15 +191,19 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      if (!getFileType(file.name)) {
-        toast.error('El plan de aula (PDA) debe ser PDF, DOCX, PPTX o XLSX.')
-        return
-      }
-      setPdaFile(file)
-      setFileName(file.name)
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    const invalidos = files.filter(f => !getFileType(f.name))
+    if (invalidos.length > 0) {
+      toast.error('Solo se aceptan archivos PDF, DOCX, PPTX o XLSX.')
+      return
     }
+    // Se agregan a los ya seleccionados (permite ir sumando presentaciones de la maleta).
+    setPdaFiles(prev => [...prev, ...files])
+  }
+
+  const quitarArchivo = (idx: number) => {
+    setPdaFiles(prev => prev.filter((_, i) => i !== idx))
   }
 
   // Alterna un bloque del horario de la sección activa: vacío → cátedra → laboratorio → vacío.
@@ -222,14 +230,14 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
       return
     }
 
-    // Validar cada sección: nombre, fecha de inicio y al menos un bloque de horario.
+    if (!fechaInicioSemestre) {
+      toast.error('Selecciona la fecha de inicio del semestre.')
+      return
+    }
+    // Validar cada sección: nombre y al menos un bloque de horario.
     for (const s of secciones) {
       if (!s.nombre.trim()) {
         toast.error('Cada sección debe tener un nombre.')
-        return
-      }
-      if (!s.fechaInicio) {
-        toast.error(`Selecciona la fecha de inicio para "${s.nombre}".`)
         return
       }
       if (Object.keys(s.selectedBlocks).length === 0) {
@@ -246,8 +254,8 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
       toast.error('Selecciona al menos un documento del ramo para calendarizar.')
       return
     }
-    if (fuente === 'nuevo' && !pdaFile) {
-      toast.error('Por favor sube el archivo del PDA de la asignatura.')
+    if (fuente === 'nuevo' && pdaFiles.length === 0) {
+      toast.error('Por favor sube al menos un archivo del ramo.')
       return
     }
 
@@ -293,34 +301,43 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           documentId = combinado.data.id
         }
       } else {
-        // Subir y procesar un archivo nuevo (PDF/DOCX/PPTX/XLSX con texto seleccionable).
-        const fileExt = pdaFile!.name.split('.').pop()?.toLowerCase() || 'pdf'
-        const storagePath = `${course.id}/${Date.now()}_PDA.${fileExt}`
-        const uploadedPath = await DocumentsAPI.uploadFile(pdaFile!, storagePath)
-
-        let contentText = ""
-        try {
-          contentText = await extractTextFromFile(pdaFile!)
-        } catch (err: any) {
-          console.error("Error leyendo el PDA", err)
-          throw new Error(`No se pudo leer el contenido del PDA: ${err.message || 'archivo ilegible'}.`)
+        // Subir y procesar uno o varios archivos nuevos (PDA, o maleta didáctica de presentaciones).
+        // Se extrae el texto de cada uno EN ORDEN y se concatena (cada archivo = una sesión/tema).
+        const partes: string[] = []
+        for (let idx = 0; idx < pdaFiles.length; idx++) {
+          const f = pdaFiles[idx]
+          try {
+            const t = await extractTextFromFile(f)
+            partes.push(`=== DOCUMENTO ${idx + 1}: ${f.name} ===\n${t}`)
+          } catch (err: any) {
+            console.error(`Error leyendo ${f.name}`, err)
+            throw new Error(`No se pudo leer "${f.name}": ${err.message || 'archivo ilegible'}.`)
+          }
         }
+        const contentText = partes.join('\n\n')
 
-        if (!contentText || contentText.replace(/--- Página \d+ ---/g, '').trim().length < 100) {
+        if (contentText.replace(/--- Página \d+ ---|=== DOCUMENTO.*===/g, '').trim().length < 100) {
           throw new Error(
-            'El PDA no contiene texto legible. Es probable que sea un PDF escaneado (imagen). ' +
-            'Sube una versión con texto seleccionable o expórtalo nuevamente desde el documento original.'
+            'Los archivos no contienen texto legible. Probablemente son PDF escaneados (imagen). ' +
+            'Sube versiones con texto seleccionable.'
           )
         }
 
+        // Subir el primer archivo a storage como referencia física del documento maestro.
+        const primero = pdaFiles[0]
+        const fileExt = primero.name.split('.').pop()?.toLowerCase() || 'pdf'
+        const storagePath = `${course.id}/${Date.now()}_PDA.${fileExt}`
+        const uploadedPath = await DocumentsAPI.uploadFile(primero, storagePath)
+
+        const nombreDoc = pdaFiles.length === 1 ? primero.name : `Maleta didáctica (${pdaFiles.length} archivos)`
         const docId = await supabase
           .from('course_documents')
           .insert({
             course_id: course.id,
             teacher_id: course.teacher_id,
-            file_name: pdaFile!.name,
+            file_name: nombreDoc,
             file_type: fileExt,
-            file_size: pdaFile!.size,
+            file_size: primero.size,
             file_path: uploadedPath,
             content_text: contentText,
             uploaded_at: Date.now(),
@@ -330,7 +347,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           .select('id')
           .single()
 
-        if (!docId.data?.id) throw new Error("Error al registrar el documento del PDA.")
+        if (!docId.data?.id) throw new Error("Error al registrar el documento del ramo.")
         documentId = docId.data.id
       }
 
@@ -379,8 +396,8 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           .sort((a, b) => (a.dia - b.dia) || (a.orden - b.orden))
           .map(({ dia, tipo, hora_inicio, hora_fin }) => ({ dia, tipo, hora_inicio, hora_fin }))
 
-        // Parsear la fecha como local a mediodía para evitar desfases de zona horaria.
-        const [year, month, day] = s.fechaInicio.split('-').map(Number)
+        // Fecha de inicio única del semestre (común a todas las secciones).
+        const [year, month, day] = fechaInicioSemestre.split('-').map(Number)
         const fechaInicioTs = new Date(year, month - 1, day, 12, 0, 0, 0).getTime()
 
         const result = await CalendarAPI.generateCalendarFromPDA({
@@ -454,7 +471,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         {paso === 1 && (
         <>
         {/* Campos compartidos por todas las secciones */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-slate-300 text-sm font-medium mb-2">Semestre</label>
             <select
@@ -465,6 +482,16 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
               <option value="2026-1">2026-1 (Primer Semestre)</option>
               <option value="2026-2">2026-2 (Segundo Semestre)</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-slate-300 text-sm font-medium mb-2">Fecha de inicio del semestre</label>
+            <input
+              type="date"
+              value={fechaInicioSemestre}
+              onChange={(e) => setFechaInicioSemestre(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
           </div>
 
           <div>
@@ -556,22 +583,40 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
                 )}
               </div>
             ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-950 rounded-lg p-4 cursor-pointer transition-all"
-              >
-                <Upload className="w-6 h-6 text-slate-400 mb-2" />
-                <span className="text-slate-300 text-sm font-medium">
-                  {fileName ? fileName : 'Selecciona o arrastra el PDA'}
-                </span>
-                <span className="text-slate-500 text-xs mt-1">PDF, DOCX, PPTX o XLSX con texto seleccionable</span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.docx,.pptx,.xlsx,.xls"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
+              <div className="space-y-2">
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-950 rounded-lg p-4 cursor-pointer transition-all"
+                >
+                  <Upload className="w-6 h-6 text-slate-400 mb-2" />
+                  <span className="text-slate-300 text-sm font-medium">
+                    {pdaFiles.length > 0 ? `${pdaFiles.length} archivo(s) seleccionado(s) — agregar más` : 'Selecciona o arrastra el PDA'}
+                  </span>
+                  <span className="text-slate-500 text-xs mt-1">PDF, DOCX, PPTX o XLSX. Puedes subir varias presentaciones (maleta didáctica): cada una será una sesión, en orden.</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.docx,.pptx,.xlsx,.xls"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                </div>
+
+                {/* Lista ordenada de archivos (el orden = orden de sesiones) */}
+                {pdaFiles.length > 0 && (
+                  <div className="space-y-1">
+                    {pdaFiles.map((f, idx) => (
+                      <div key={idx} className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5">
+                        <span className="text-[10px] text-slate-500 font-mono w-5 shrink-0">{idx + 1}.</span>
+                        <span className="text-sm text-slate-200 truncate flex-1">{f.name}</span>
+                        <button type="button" onClick={() => quitarArchivo(idx)} className="text-slate-500 hover:text-red-400 shrink-0">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -636,7 +681,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         {/* Navegación entre secciones */}
         <div className="flex flex-wrap gap-2">
           {secciones.map((s) => {
-            const completa = Object.keys(s.selectedBlocks).length > 0 && !!s.fechaInicio
+            const completa = Object.keys(s.selectedBlocks).length > 0
             return (
               <button
                 key={s.id}
@@ -655,43 +700,32 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           })}
         </div>
 
-        {/* Régimen y fecha de la sección activa */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/40 border border-slate-800 rounded-lg p-3">
-          <div>
-            <label className="block text-slate-400 text-xs font-medium mb-1">Régimen de {seccionActiva.nombre || 'la sección'}</label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => updateSeccion(seccionActiva.id, { regimen: 'diurno' })}
-                className={`flex-1 py-2 px-2 rounded-lg border text-xs font-medium transition-all ${
-                  seccionActiva.regimen === 'diurno'
-                    ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                    : 'bg-slate-950 border-slate-800 text-slate-400'
-                }`}
-              >
-                Diurno
-              </button>
-              <button
-                type="button"
-                onClick={() => updateSeccion(seccionActiva.id, { regimen: 'vespertino' })}
-                className={`flex-1 py-2 px-2 rounded-lg border text-xs font-medium transition-all ${
-                  seccionActiva.regimen === 'vespertino'
-                    ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
-                    : 'bg-slate-950 border-slate-800 text-slate-400'
-                }`}
-              >
-                Vespertino
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-slate-400 text-xs font-medium mb-1">Fecha de la primera clase</label>
-            <input
-              type="date"
-              value={seccionActiva.fechaInicio}
-              onChange={(e) => updateSeccion(seccionActiva.id, { fechaInicio: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
+        {/* Régimen de la sección activa (la fecha de inicio es común al semestre, en el paso 1) */}
+        <div className="bg-slate-950/40 border border-slate-800 rounded-lg p-3">
+          <label className="block text-slate-400 text-xs font-medium mb-1">Régimen de {seccionActiva.nombre || 'la sección'}</label>
+          <div className="flex gap-2 max-w-xs">
+            <button
+              type="button"
+              onClick={() => updateSeccion(seccionActiva.id, { regimen: 'diurno' })}
+              className={`flex-1 py-2 px-2 rounded-lg border text-xs font-medium transition-all ${
+                seccionActiva.regimen === 'diurno'
+                  ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                  : 'bg-slate-950 border-slate-800 text-slate-400'
+              }`}
+            >
+              Diurno
+            </button>
+            <button
+              type="button"
+              onClick={() => updateSeccion(seccionActiva.id, { regimen: 'vespertino' })}
+              className={`flex-1 py-2 px-2 rounded-lg border text-xs font-medium transition-all ${
+                seccionActiva.regimen === 'vespertino'
+                  ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
+                  : 'bg-slate-950 border-slate-800 text-slate-400'
+              }`}
+            >
+              Vespertino
+            </button>
           </div>
         </div>
 

@@ -2104,6 +2104,7 @@ export const CalendarAPI = {
           tipo_bloque: c.tipo_bloque || 'catedra',
           hora_inicio: c.hora_inicio || null,
           hora_fin: c.hora_fin || null,
+          nota_recuperacion: c.nota_recuperacion || null,
           created_at: new Date().toISOString()
         })
       
@@ -2227,11 +2228,15 @@ export const CalendarAPI = {
     }
 
     const prompt = `Eres un asistente de planificación curricular para profesores de Duoc UC.
-Analiza el Plan de Aula (PDA) oficial y extrae el temario ORGANIZADO POR SEMANA de la asignatura.
+Analiza el/los documento(s) del ramo y extrae el temario ORGANIZADO POR SEMANA de la asignatura.
 La asignatura dura aproximadamente ${data.semanas_semestre} semanas.
 
 ${scheduleDescription}
 ${inventarioDescription}
+DETECCIÓN DE ESTRUCTURA (IMPORTANTE):
+- Si el documento YA VIENE ESTRUCTURADO clase por clase o sesión por sesión (por ejemplo: una planificación detallada con "Clase 1", "Sesión 2", "Semana 3: tema…"; o un conjunto de presentaciones/diapositivas donde cada una corresponde a un tema), RESPETA ese orden y esa división tal cual: mapea cada clase/sesión/presentación, en el orden dado, a las semanas correlativas (1 elemento → 1 semana). NO reordenes ni resumas.
+- Solo si el documento es un PDA/programa general SIN división por sesión, INFIERE tú la distribución semanal del temario.
+
 REGLAS DE EXTRACCIÓN:
 - Debes devolver exactamente UNA entrada por cada semana del semestre (${data.semanas_semestre} semanas en total), numeradas del 1 al ${data.semanas_semestre}. NO agrupes ni omitas semanas.
 - "titulo": el nombre del tema de la semana.
@@ -2410,6 +2415,9 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
     }
 
     let correlativoSesion = 1
+    // Evaluación cuya fecha cayó en feriado y debe reubicarse en la próxima clase disponible.
+    // { titulo, tipo_evaluacion, titulo_evaluacion, semanaOriginal }
+    let evalPendiente: any = null
 
     // El NÚMERO de sesiones por semana lo determina el HORARIO del profesor (sesionesHorario),
     // NO la cantidad de objetos que devuelva la IA. Por cada semana generamos una sesión por
@@ -2425,41 +2433,81 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
         const dateObj = new Date(cleanTimestamp)
         const dateStr = stringifyDate(dateObj)
         const feriado = FERIADOS_DUOC_2026.find(f => f.fecha === dateStr)
+        const esLab = slot.tipo === 'laboratorio'
+        const horaInicio = (slot as any).hora_inicio || undefined
+        const horaFin = (slot as any).hora_fin || undefined
 
-        // Feriado que suspende la clase: se registra como sesión suspendida.
+        // ¿A esta sesión le tocaría la evaluación de su semana?
+        const evalDeEstaSemana = !!temaSemana.tiene_evaluacion && !evaluacionAsignada
+
+        // Feriado que suspende la clase.
         if (feriado) {
           let suspenderClase = true
           if (feriado.media_jornada && feriado.hora_limite) {
             suspenderClase = data.regimen === "vespertino"
           }
           if (suspenderClase) {
+            // Si esta sesión suspendida traía la evaluación, la dejamos pendiente de reubicar.
+            if (evalDeEstaSemana) {
+              evaluacionAsignada = true
+              evalPendiente = {
+                titulo: temaSemana.titulo || `Semana ${semanaIndex}`,
+                tipo_evaluacion: temaSemana.tipo_evaluacion,
+                titulo_evaluacion: temaSemana.titulo_evaluacion,
+                semanaOriginal: semanaIndex,
+              }
+            }
             clasesFinales.push({
               semana: semanaIndex,
               sesion: correlativoSesion,
               fecha: cleanTimestamp,
               titulo: `Feriado: ${feriado.nombre}`,
-              contenido: "Clase suspendida por feriado oficial en el calendario institucional.",
+              contenido: evalDeEstaSemana
+                ? `Evaluación reprogramada por feriado. Se realizará en la próxima clase disponible.`
+                : "Clase suspendida por feriado oficial en el calendario institucional.",
               tiene_evaluacion: false,
               es_feriado: true,
               detalle_feriado: feriado.nombre,
               estado: "suspendida",
               tipo_bloque: slot.tipo,
-              hora_inicio: (slot as any).hora_inicio || undefined,
-              hora_fin: (slot as any).hora_fin || undefined
+              hora_inicio: horaInicio,
+              hora_fin: horaFin
             })
             correlativoSesion++
             continue
           }
         }
 
-        // El contenido depende del tipo de sesión: cátedra usa la teoría, laboratorio la práctica.
-        const esLab = slot.tipo === 'laboratorio'
+        // Si hay una evaluación pendiente de reubicar, esta sesión (no-feriado) la toma:
+        // la evaluación tiene PRIORIDAD y el contenido normal de esta sesión queda pendiente.
+        if (evalPendiente) {
+          clasesFinales.push({
+            semana: semanaIndex,
+            sesion: correlativoSesion,
+            fecha: cleanTimestamp,
+            titulo: `${evalPendiente.titulo} (Evaluación reprogramada)`,
+            contenido: `Evaluación reagendada desde la semana ${evalPendiente.semanaOriginal} por feriado.`,
+            tiene_evaluacion: true,
+            tipo_evaluacion: evalPendiente.tipo_evaluacion && evalPendiente.tipo_evaluacion !== "ninguna" ? evalPendiente.tipo_evaluacion : undefined,
+            titulo_evaluacion: evalPendiente.titulo_evaluacion || undefined,
+            estado: "programada",
+            tipo_bloque: "evaluacion",
+            // El contenido que iba en esta sesión queda registrado como recuperación pendiente.
+            nota_recuperacion: `Contenido desplazado por evaluación reagendada: ${esLab ? (temaSemana.contenido_laboratorio || temaSemana.titulo) : (temaSemana.contenido_catedra || temaSemana.titulo)}`,
+            hora_inicio: horaInicio,
+            hora_fin: horaFin
+          })
+          evalPendiente = null
+          correlativoSesion++
+          continue
+        }
+
+        // Sesión normal: cátedra usa la teoría, laboratorio la práctica.
         const contenido = esLab
           ? (temaSemana.contenido_laboratorio || temaSemana.contenido || 'Actividad práctica de la semana.')
           : (temaSemana.contenido_catedra || temaSemana.contenido || 'Contenido teórico de la semana.')
 
-        // La evaluación aplica a UNA sola sesión de la semana (la primera que se genere).
-        const estaSesionTieneEval = !!temaSemana.tiene_evaluacion && !evaluacionAsignada
+        const estaSesionTieneEval = evalDeEstaSemana
         if (estaSesionTieneEval) evaluacionAsignada = true
 
         const tituloBase = temaSemana.titulo || `Semana ${semanaIndex}`
@@ -2479,8 +2527,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
           titulo_evaluacion: estaSesionTieneEval ? (temaSemana.titulo_evaluacion || undefined) : undefined,
           estado: "programada",
           tipo_bloque: tipoBloque,
-          hora_inicio: (slot as any).hora_inicio || undefined,
-          hora_fin: (slot as any).hora_fin || undefined
+          hora_inicio: horaInicio,
+          hora_fin: horaFin
         })
 
         correlativoSesion++
