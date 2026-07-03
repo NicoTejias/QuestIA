@@ -184,6 +184,16 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
   const hayRecordatorios = porConfirmarHoy.length > 0 || ragcPendiente.length > 0 ||
     (esViernes && (evaluacionesProximas.length > 0 || materialesPorPedir.length > 0))
 
+  // ── Bandeja de decisiones: clases con contenido que quedó "en el aire" y aún no se recupera ──
+  // (pendiente, o suspendida por feriado, o desplazada por evaluación) de la sección activa.
+  const clasesPorRecuperar = clasesSection.filter(c => {
+    if (c.contenido_recuperado) return false
+    if (c.estado === 'pendiente') return true
+    if (c.es_feriado && c.estado === 'suspendida') return true
+    if (c.nota_recuperacion) return true
+    return false
+  }).sort((a, b) => a.fecha - b.fecha)
+
   return (
     <div className="space-y-6">
       {/* Cabecera */}
@@ -285,6 +295,64 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
               {sec}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Bandeja de decisiones: contenido pendiente por recuperar */}
+      {clasesPorRecuperar.length > 0 && (
+        <div className="bg-amber-500/5 border border-amber-500/30 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-400" />
+            <h3 className="text-sm font-bold text-amber-200">
+              Contenido por recuperar {selectedSection ? `· Sección ${selectedSection}` : ''} ({clasesPorRecuperar.length})
+            </h3>
+          </div>
+          <p className="text-xs text-slate-400">
+            Estas sesiones no se dictaron (feriado, suspensión o desplazadas por una evaluación). Decide cómo recuperar cada contenido para no perder el hilo del programa.
+          </p>
+
+          <div className="space-y-2">
+            {clasesPorRecuperar.map(c => (
+              <div key={c.id} className="bg-slate-900/60 border border-slate-800 rounded-lg p-3">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-200 truncate">
+                      Semana {c.semana} · {c.titulo}
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      {formatFecha(c.fecha)}
+                      {c.es_feriado && c.detalle_feriado ? ` · ${c.detalle_feriado}` : ''}
+                    </p>
+                    {c.nota_recuperacion && (
+                      <p className="text-[11px] text-amber-200/80 italic mt-1">{c.nota_recuperacion}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Acciones de recuperación */}
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => patchClase(c.id, { contenido_recuperado: true, forma_recuperacion: 'recuperada', estado: c.es_feriado ? c.estado : 'realizada' }, 'Marcada como recuperada')}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 transition-all"
+                  >
+                    ✓ Se pasó en otra clase
+                  </button>
+                  <button
+                    onClick={() => patchClase(c.id, { contenido_recuperado: true, forma_recuperacion: 'fusionada' }, 'Marcada como fusionada')}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-indigo-500/10 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 transition-all"
+                  >
+                    🔗 Fusionar con otra clase
+                  </button>
+                  <button
+                    onClick={() => patchClase(c.id, { contenido_recuperado: true, forma_recuperacion: 'autonoma' }, 'Marcada como trabajo autónomo')}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-sky-500/10 border-sky-500/30 text-sky-300 hover:bg-sky-500/20 transition-all"
+                  >
+                    🏠 Trabajo autónomo
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -402,9 +470,14 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
                             )}
 
                             {c.tiene_evaluacion && (
-                              <div className="bg-rose-500/10 border border-rose-500/30 p-2 rounded-lg flex items-center justify-between text-xs text-rose-300">
-                                <span className="font-bold uppercase">Hito de Evaluación</span>
-                                <span className="capitalize">{c.titulo_evaluacion || 'Evaluación'}</span>
+                              <div className="bg-rose-500/10 border border-rose-500/30 p-2 rounded-lg text-xs text-rose-300 space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold uppercase">{c.numero_evaluacion || 'Hito de Evaluación'}</span>
+                                  {c.ponderacion ? (
+                                    <span className="font-bold bg-rose-500/20 px-2 py-0.5 rounded">{c.ponderacion}%</span>
+                                  ) : null}
+                                </div>
+                                {c.titulo_evaluacion && <p className="text-rose-200/80 capitalize">{c.titulo_evaluacion}</p>}
                               </div>
                             )}
 

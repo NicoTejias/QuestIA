@@ -2105,6 +2105,8 @@ export const CalendarAPI = {
           hora_inicio: c.hora_inicio || null,
           hora_fin: c.hora_fin || null,
           nota_recuperacion: c.nota_recuperacion || null,
+          ponderacion: c.ponderacion ?? null,
+          numero_evaluacion: c.numero_evaluacion || null,
           created_at: new Date().toISOString()
         })
       
@@ -2243,8 +2245,12 @@ REGLAS DE EXTRACCIÓN:
 - "contenido_catedra": el contenido TEÓRICO/conceptual de esa semana (lo que se explica en la clase de cátedra).
 - "contenido_laboratorio": la actividad PRÁCTICA/taller de esa semana asociada a la teoría (guías de ejercicios, laboratorio, mediciones o simulaciones). Debe abordar el MISMO tema de la semana, pero de forma aplicada.
 - "materiales_sugeridos": materiales, software, herramientas o equipos requeridos esa semana.
-- EVALUACIONES: marca "tiene_evaluacion": true SOLO en las semanas donde el PDA indica EXPLÍCITAMENTE una evaluación calificada (una fecha/semana concreta con Prueba, Certamen, Examen, Encargo o Presentación con nota). NO marques evaluación por el solo hecho de que el texto mencione "evaluación", "actividad evaluada", "rúbrica", "ponderación" o criterios de logro de forma general. Ante la duda, deja "tiene_evaluacion": false. Es normal que la mayoría de las semanas NO tengan evaluación; típicamente hay solo 2 a 4 evaluaciones en todo el semestre y rara vez en semanas consecutivas.
-- Si el contenido incluye varios documentos (marcados con "=== DOCUMENTO: ... ==="), prioriza el que contenga la programación semanal del ramo (el PDA/planificación) para el temario y las fechas de evaluación.
+- EVALUACIONES: marca "tiene_evaluacion": true SOLO en las semanas donde el PDA indica EXPLÍCITAMENTE una evaluación calificada (una fecha/semana concreta con Prueba, Certamen, Examen, Encargo o Presentación con nota). NO marques evaluación por el solo hecho de que el texto mencione "evaluación", "actividad evaluada", "rúbrica", "ponderación" o criterios de logro de forma general. Ante la duda, deja "tiene_evaluacion": false.
+- PONDERACIONES: los ramos de Duoc suelen tener 3 EVALUACIONES PARCIALES y 1 EXAMEN FINAL, cada uno con su PORCENTAJE de ponderación (ej: Eval 1: 25%, Eval 2: 25%, Eval 3: 20%, Examen: 30%). Cuando una semana tenga evaluación, completa:
+  - "numero_evaluacion": "Evaluación 1" | "Evaluación 2" | "Evaluación 3" | "Examen Final" (según corresponda por orden y contexto).
+  - "ponderacion": el porcentaje numérico (sin el símbolo %, ej: 25). Si el documento no indica el porcentaje, deja 0.
+  Busca ACTIVAMENTE en todo el documento la tabla o sección de ponderaciones para asignar los porcentajes correctos.
+- Si el contenido incluye varios documentos (marcados con "=== DOCUMENTO: ... ==="), prioriza el que contenga la programación semanal del ramo (el PDA/planificación) para el temario y las fechas/ponderaciones de evaluación.
 
 CONTENIDO DEL PDA:
 ${content}
@@ -2260,7 +2266,9 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
       "materiales_sugeridos": "Materiales, software o equipos requeridos",
       "tiene_evaluacion": false,
       "tipo_evaluacion": "ninguna",
-      "titulo_evaluacion": ""
+      "titulo_evaluacion": "",
+      "numero_evaluacion": "",
+      "ponderacion": 0
     }
   ]
 }`
@@ -2454,6 +2462,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
                 titulo: temaSemana.titulo || `Semana ${semanaIndex}`,
                 tipo_evaluacion: temaSemana.tipo_evaluacion,
                 titulo_evaluacion: temaSemana.titulo_evaluacion,
+                numero_evaluacion: temaSemana.numero_evaluacion,
+                ponderacion: temaSemana.ponderacion,
                 semanaOriginal: semanaIndex,
               }
             }
@@ -2490,6 +2500,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
             tiene_evaluacion: true,
             tipo_evaluacion: evalPendiente.tipo_evaluacion && evalPendiente.tipo_evaluacion !== "ninguna" ? evalPendiente.tipo_evaluacion : undefined,
             titulo_evaluacion: evalPendiente.titulo_evaluacion || undefined,
+            numero_evaluacion: evalPendiente.numero_evaluacion || undefined,
+            ponderacion: evalPendiente.ponderacion || undefined,
             estado: "programada",
             tipo_bloque: "evaluacion",
             // El contenido que iba en esta sesión queda registrado como recuperación pendiente.
@@ -2525,6 +2537,8 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
           tiene_evaluacion: estaSesionTieneEval,
           tipo_evaluacion: estaSesionTieneEval && temaSemana.tipo_evaluacion && temaSemana.tipo_evaluacion !== "ninguna" ? temaSemana.tipo_evaluacion : undefined,
           titulo_evaluacion: estaSesionTieneEval ? (temaSemana.titulo_evaluacion || undefined) : undefined,
+          numero_evaluacion: estaSesionTieneEval ? (temaSemana.numero_evaluacion || undefined) : undefined,
+          ponderacion: estaSesionTieneEval ? (temaSemana.ponderacion || undefined) : undefined,
           estado: "programada",
           tipo_bloque: tipoBloque,
           hora_inicio: horaInicio,
