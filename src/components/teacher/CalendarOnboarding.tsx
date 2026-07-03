@@ -26,6 +26,14 @@ const BLOQUES_DUOC = [
   { id: '18', label: 'Módulo 18 (21:11 - 21:50)', regimen: 'vespertino' }
 ]
 
+// Mapa módulo → { inicio, fin } extraído de los labels ("HH:MM - HH:MM").
+const HORAS_MODULO: Record<string, { inicio: string; fin: string }> = Object.fromEntries(
+  BLOQUES_DUOC.map(b => {
+    const m = b.label.match(/\((\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})\)/)
+    return [b.id, { inicio: m?.[1] || '', fin: m?.[2] || '' }]
+  })
+)
+
 const DIAS_SEMANA = [
   { id: 1, label: 'Lunes' },
   { id: 2, label: 'Martes' },
@@ -338,22 +346,30 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         })
 
         // Cada combinación (día, tipo) es una sesión distinta (cátedra y laboratorio por separado).
-        const primerModuloPorGrupo = new Map<string, number>()
+        // Para cada grupo guardamos el módulo más temprano y el más tardío (para las horas).
+        const rangoPorGrupo = new Map<string, { min: number; max: number }>()
         Object.entries(s.selectedBlocks).forEach(([key, type]) => {
           const [diaStr, bloqueStr] = key.split('-')
           const grupoKey = `${diaStr}-${type}`
           const modulo = parseInt(bloqueStr)
-          const actual = primerModuloPorGrupo.get(grupoKey)
-          if (actual === undefined || modulo < actual) primerModuloPorGrupo.set(grupoKey, modulo)
+          const actual = rangoPorGrupo.get(grupoKey)
+          if (!actual) rangoPorGrupo.set(grupoKey, { min: modulo, max: modulo })
+          else rangoPorGrupo.set(grupoKey, { min: Math.min(actual.min, modulo), max: Math.max(actual.max, modulo) })
         })
 
-        const sesionesHorario = Array.from(primerModuloPorGrupo.entries())
-          .map(([grupoKey, primerModulo]) => {
+        const sesionesHorario = Array.from(rangoPorGrupo.entries())
+          .map(([grupoKey, rango]) => {
             const [diaStr, tipo] = grupoKey.split('-')
-            return { dia: parseInt(diaStr), tipo: tipo as 'catedra' | 'laboratorio', orden: primerModulo }
+            return {
+              dia: parseInt(diaStr),
+              tipo: tipo as 'catedra' | 'laboratorio',
+              orden: rango.min,
+              hora_inicio: HORAS_MODULO[String(rango.min)]?.inicio || '',
+              hora_fin: HORAS_MODULO[String(rango.max)]?.fin || '',
+            }
           })
           .sort((a, b) => (a.dia - b.dia) || (a.orden - b.orden))
-          .map(({ dia, tipo }) => ({ dia, tipo }))
+          .map(({ dia, tipo, hora_inicio, hora_fin }) => ({ dia, tipo, hora_inicio, hora_fin }))
 
         // Parsear la fecha como local a mediodía para evitar desfases de zona horaria.
         const [year, month, day] = s.fechaInicio.split('-').map(Number)

@@ -2061,6 +2061,8 @@ export const CalendarAPI = {
           detalle_feriado: c.detalle_feriado || null,
           estado: c.estado || 'programada',
           tipo_bloque: c.tipo_bloque || 'catedra',
+          hora_inicio: c.hora_inicio || null,
+          hora_fin: c.hora_fin || null,
           created_at: new Date().toISOString()
         })
       
@@ -2078,7 +2080,7 @@ export const CalendarAPI = {
     dias_semana: number[];
     bloques_horario: string[];
     dias_tipo?: Record<number, 'catedra' | 'laboratorio'>;
-    sesiones_horario?: { dia: number; tipo: 'catedra' | 'laboratorio' }[];
+    sesiones_horario?: { dia: number; tipo: 'catedra' | 'laboratorio'; hora_inicio?: string; hora_fin?: string }[];
     fecha_inicio: number;
     teacher_id: string;
     replace_all?: boolean; // true: limpia TODO el calendario del curso; false: reemplaza solo esta sección
@@ -2392,7 +2394,9 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
               es_feriado: true,
               detalle_feriado: feriado.nombre,
               estado: "suspendida",
-              tipo_bloque: slot.tipo
+              tipo_bloque: slot.tipo,
+              hora_inicio: (slot as any).hora_inicio || undefined,
+              hora_fin: (slot as any).hora_fin || undefined
             })
             correlativoSesion++
             continue
@@ -2425,7 +2429,9 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
           tipo_evaluacion: estaSesionTieneEval && temaSemana.tipo_evaluacion && temaSemana.tipo_evaluacion !== "ninguna" ? temaSemana.tipo_evaluacion : undefined,
           titulo_evaluacion: estaSesionTieneEval ? (temaSemana.titulo_evaluacion || undefined) : undefined,
           estado: "programada",
-          tipo_bloque: tipoBloque
+          tipo_bloque: tipoBloque,
+          hora_inicio: (slot as any).hora_inicio || undefined,
+          hora_fin: (slot as any).hora_fin || undefined
         })
 
         correlativoSesion++

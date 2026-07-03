@@ -62,6 +62,34 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
     ? clases.filter(c => c.section === selectedSection)
     : clases
 
+  // ── Recordatorios in-app (calculados sobre TODAS las secciones) ──
+  const ahora = Date.now()
+  const hoyStr = new Date().toDateString()
+
+  // 1. Clases de hoy cuya hora de inicio ya pasó y siguen sin confirmar.
+  const porConfirmarHoy = clases.filter(c => {
+    if (c.es_feriado || c.estado !== 'programada') return false
+    if (new Date(c.fecha).toDateString() !== hoyStr) return false
+    return puedeConfirmar(c)
+  })
+
+  // 2. Clases realizadas con RAGC pendiente dentro del plazo de 24h.
+  const ragcPendiente = clases
+    .map(c => ({ c, h: horasRestantesRAGC(c) }))
+    .filter(x => x.h !== null) as { c: any; h: number }[]
+
+  // 3. Viernes: materiales por pedir y evaluaciones próximas (para solicitar copias/materiales con 48h).
+  const esViernes = new Date().getDay() === 5
+  const en7dias = ahora + 7 * 24 * 60 * 60 * 1000
+  const evaluacionesProximas = clases.filter(c =>
+    c.tiene_evaluacion && !c.es_feriado && c.fecha >= ahora && c.fecha <= en7dias
+  )
+  const materialesPorPedir = clases.filter(c =>
+    !c.es_feriado && c.materiales_requeridos && !c.materiales_pedidos && c.fecha >= ahora && c.fecha <= en7dias
+  )
+  const hayRecordatorios = porConfirmarHoy.length > 0 || ragcPendiente.length > 0 ||
+    (esViernes && (evaluacionesProximas.length > 0 || materialesPorPedir.length > 0))
+
   // Obtener el número total de semanas en el calendario (de la sección activa)
   const maxSemanas = clasesSection.reduce((acc, c) => Math.max(acc, c.semana), 1)
 
@@ -110,6 +138,42 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
     } catch (err: any) {
       toast.error('Error al actualizar la clase')
     }
+  }
+
+  // Actualiza una clase (estado/RAGC/etc.) sin cerrar modal; refresca la fila en memoria.
+  const patchClase = async (claseId: string, updates: any, okMsg?: string) => {
+    try {
+      await CalendarAPI.updateClase(claseId, updates)
+      setClases(prev => prev.map(c => (c.id === claseId ? { ...c, ...updates } : c)))
+      setSelectedClase((prev: any) => (prev && prev.id === claseId ? { ...prev, ...updates } : prev))
+      if (okMsg) toast.success(okMsg)
+    } catch {
+      toast.error('No se pudo actualizar la clase')
+    }
+  }
+
+  // ¿Ya se puede confirmar la clase? Se habilita a partir de su hora de inicio.
+  const puedeConfirmar = (c: any): boolean => {
+    const now = new Date()
+    const claseDate = new Date(c.fecha)
+    const hoy = now.toDateString() === claseDate.toDateString()
+    if (claseDate < now && !hoy) return true // días pasados: siempre confirmable
+    if (!hoy) return false // días futuros: aún no
+    if (!c.hora_inicio) return true // hoy sin hora conocida: permitir
+    const [h, m] = String(c.hora_inicio).split(':').map(Number)
+    const inicio = new Date(claseDate); inicio.setHours(h || 0, m || 0, 0, 0)
+    return now >= inicio
+  }
+
+  // Horas restantes para registrar RAGC (24h desde el fin de la clase). null si no aplica.
+  const horasRestantesRAGC = (c: any): number | null => {
+    if (c.estado !== 'realizada' || c.asistencia_ragc) return null
+    const claseDate = new Date(c.fecha)
+    const [h, m] = String(c.hora_fin || c.hora_inicio || '23:59').split(':').map(Number)
+    const fin = new Date(claseDate); fin.setHours(h || 23, m || 59, 0, 0)
+    const limite = fin.getTime() + 24 * 60 * 60 * 1000
+    const restanteMs = limite - Date.now()
+    return restanteMs > 0 ? Math.ceil(restanteMs / (60 * 60 * 1000)) : 0
   }
 
   const formatFecha = (timestamp: number) => {
@@ -166,6 +230,43 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
           </button>
         </div>
       </div>
+
+      {/* Panel de recordatorios in-app */}
+      {hayRecordatorios && (
+        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            🔔 Recordatorios
+          </h3>
+
+          {porConfirmarHoy.length > 0 && (
+            <div className="text-xs text-slate-300 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2.5">
+              <span className="font-semibold text-emerald-300">{porConfirmarHoy.length}</span> clase(s) de hoy por confirmar.
+              ¿Ya las dictaste? Confírmalas y recuerda <span className="font-semibold">pasar la lista en RAGC</span>.
+            </div>
+          )}
+
+          {ragcPendiente.length > 0 && (
+            <div className="text-xs text-slate-300 bg-amber-500/5 border border-amber-500/20 rounded-lg p-2.5">
+              <span className="font-semibold text-amber-300">Asistencia RAGC pendiente</span> en {ragcPendiente.length} clase(s).
+              {' '}Más urgente: <span className="font-semibold">{Math.min(...ragcPendiente.map(x => x.h))}h restantes</span> (tienes 24h tras la clase o se descuenta la hora).
+            </div>
+          )}
+
+          {esViernes && evaluacionesProximas.length > 0 && (
+            <div className="text-xs text-slate-300 bg-rose-500/5 border border-rose-500/20 rounded-lg p-2.5">
+              📄 <span className="font-semibold text-rose-300">{evaluacionesProximas.length} evaluación(es)</span> en los próximos 7 días.
+              Recuerda solicitar la impresión de pruebas con al menos <span className="font-semibold">48h de anticipación</span>.
+            </div>
+          )}
+
+          {esViernes && materialesPorPedir.length > 0 && (
+            <div className="text-xs text-slate-300 bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-2.5">
+              🧰 <span className="font-semibold text-indigo-300">{materialesPorPedir.length} clase(s)</span> con materiales por pedir esta próxima semana.
+              Envía la solicitud a pañol con anticipación.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Selector de secciones */}
       {secciones.length > 1 && (
@@ -306,12 +407,100 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
                                 <span className="capitalize">{c.titulo_evaluacion || 'Evaluación'}</span>
                               </div>
                             )}
+
+                            {/* Estado de la sesión + control de asistencia (RAGC) */}
+                            {!isFeriado && (() => {
+                              const restanteRAGC = horasRestantesRAGC(c)
+                              const estadoLabels: Record<string, { txt: string; cls: string }> = {
+                                realizada: { txt: '✓ Realizada', cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+                                pendiente: { txt: '⏳ Pendiente (por recuperar)', cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+                                adelantada: { txt: '⏩ Adelantada', cls: 'bg-sky-500/15 text-sky-300 border-sky-500/30' },
+                                suspendida: { txt: '🚫 Suspendida', cls: 'bg-red-500/15 text-red-300 border-red-500/30' },
+                              }
+                              const badge = estadoLabels[c.estado]
+                              return (
+                                <div className="pt-2 border-t border-slate-800 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {(c.hora_inicio || c.hora_fin) && (
+                                      <span className="text-[10px] text-slate-500 font-medium">
+                                        🕒 {c.hora_inicio}{c.hora_fin ? `–${c.hora_fin}` : ''}
+                                      </span>
+                                    )}
+                                    {badge && (
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badge.cls}`}>{badge.txt}</span>
+                                    )}
+                                  </div>
+
+                                  {/* Aviso de plazo RAGC */}
+                                  {restanteRAGC !== null && (
+                                    <div className={`flex items-center justify-between gap-2 text-[11px] p-1.5 rounded border ${
+                                      restanteRAGC <= 6 ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                                    }`}>
+                                      <span>{restanteRAGC > 0 ? `Registra asistencia en RAGC (${restanteRAGC}h restantes)` : 'Plazo RAGC vencido'}</span>
+                                      <button
+                                        onClick={() => patchClase(c.id, { asistencia_ragc: true }, 'Asistencia RAGC registrada')}
+                                        className="font-bold underline hover:no-underline shrink-0"
+                                      >
+                                        Marcar RAGC
+                                      </button>
+                                    </div>
+                                  )}
+                                  {c.estado === 'realizada' && c.asistencia_ragc && (
+                                    <span className="text-[10px] text-emerald-400 font-semibold">✓ Asistencia registrada en RAGC</span>
+                                  )}
+
+                                  {/* Nota de recuperación cuando queda pendiente */}
+                                  {c.estado === 'pendiente' && c.nota_recuperacion && (
+                                    <p className="text-[11px] text-amber-200/80 italic">Recuperación: {c.nota_recuperacion}</p>
+                                  )}
+
+                                  {/* Acciones de estado */}
+                                  {c.estado !== 'realizada' && c.estado !== 'suspendida' && (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      <button
+                                        disabled={!puedeConfirmar(c)}
+                                        onClick={() => patchClase(c.id, { estado: 'realizada' }, 'Clase confirmada como realizada')}
+                                        title={puedeConfirmar(c) ? 'Confirmar que dictaste la clase' : 'Se habilita al comenzar la clase'}
+                                        className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                      >
+                                        <CheckSquare className="w-3 h-3" /> Confirmar realizada
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          const nota = window.prompt('¿Cómo se recuperará esta clase? (trabajo autónomo, repaso la próxima clase, etc.)', c.nota_recuperacion || '')
+                                          if (nota !== null) patchClase(c.id, { estado: 'pendiente', nota_recuperacion: nota || null }, 'Clase marcada como pendiente')
+                                        }}
+                                        className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 transition-all"
+                                      >
+                                        <AlertTriangle className="w-3 h-3" /> No se realizó
+                                      </button>
+                                      {puedeConfirmar(c) ? null : (
+                                        <button
+                                          onClick={() => patchClase(c.id, { estado: 'adelantada' }, 'Clase marcada como adelantada')}
+                                          className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-sky-500/10 border-sky-500/30 text-sky-300 hover:bg-sky-500/20 transition-all"
+                                        >
+                                          ⏩ Adelantar
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                  {(c.estado === 'realizada' || c.estado === 'adelantada') && (
+                                    <button
+                                      onClick={() => patchClase(c.id, { estado: 'programada', asistencia_ragc: false }, 'Estado revertido')}
+                                      className="text-[10px] text-slate-500 hover:text-slate-300 underline"
+                                    >
+                                      Deshacer estado
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </div>
 
                           {/* Botones de acción rápidos */}
                           <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-800/60">
                             <button
-                              onClick={() => handleUpdateClase(c.id, { materiales_pedidos: !c.materiales_pedidos })}
+                              onClick={() => patchClase(c.id, { materiales_pedidos: !c.materiales_pedidos }, c.materiales_pedidos ? 'Materiales desmarcados' : 'Materiales marcados como pedidos')}
                               className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
                                 c.materiales_pedidos
                                   ? 'bg-green-500/20 border-green-500 text-green-400'
@@ -373,10 +562,10 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
                 {/* Celdas de Días */}
                 {getDaysInMonth(currentMonth).map((day, idx) => {
                   const dateStr = getLocalDateString(day)
-                  const clasesDia = clasesSection.filter(c => {
-                    const cDate = getLocalDateString(new Date(c.fecha))
-                    return cDate === dateStr
-                  })
+                  // El calendario mensual muestra TODAS las secciones juntas.
+                  const clasesDia = clases
+                    .filter(c => getLocalDateString(new Date(c.fecha)) === dateStr)
+                    .sort((a, b) => (a.hora_inicio || '').localeCompare(b.hora_inicio || ''))
 
                   const isCurrentMonth = day.getMonth() === currentMonth.getMonth()
                   
@@ -408,8 +597,12 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
                             <button
                               key={c.id}
                               onClick={() => setSelectedClase(c)}
+                              title={`${c.section ? `Sección ${c.section} · ` : ''}${c.hora_inicio ? `${c.hora_inicio} · ` : ''}${c.titulo}`}
                               className={`w-full text-left truncate text-[10px] font-medium p-1 rounded border transition-all ${color}`}
                             >
+                              {c.section && <span className="font-bold opacity-80">{c.section}</span>}
+                              {c.section && ' '}
+                              {c.hora_inicio && <span className="opacity-60">{c.hora_inicio}</span>}{' '}
                               {c.titulo}
                             </button>
                           )
