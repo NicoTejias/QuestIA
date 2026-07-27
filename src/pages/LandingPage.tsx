@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Sparkles, ChevronRight, ChevronDown, Target, Trophy, Gift, Users, BarChart3, Grid3x3, LogOut } from 'lucide-react'
+import { Sparkles, ChevronRight, ChevronDown, Target, Trophy, Gift, Users, BarChart3, Grid3x3, LogOut, GraduationCap, UserCheck, PlayCircle } from 'lucide-react'
 import { useClerk, useUser } from "@clerk/clerk-react"
 import { ProfilesAPI } from '../lib/api'
 import { useSupabaseQuery } from '../hooks/useSupabaseQuery'
@@ -210,21 +210,75 @@ export default function LandingPage() {
                     </Reveal>
 
                     <Reveal delay={3}>
-                        <div className="flex gap-3 flex-wrap justify-center mb-14">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-[920px] mb-14 text-left">
+                            {/* Botón 1: Soy Docente */}
                             <Link
                                 to="/registro"
                                 onClick={() => localStorage.setItem('questia_demo_intent', 'teacher')}
-                                className="inline-flex items-center gap-2.5 bg-primary hover:bg-primary-light text-[#0a0a0a] font-extrabold text-base px-8 py-4 rounded-[14px] transition-all hover:shadow-[0_8px_32px_rgba(255,214,51,0.3)] hover:-translate-y-0.5 active:scale-[0.97] tracking-[-0.3px]"
+                                className="group relative flex flex-col justify-between p-6 rounded-2xl bg-gradient-to-b from-primary/20 via-primary/10 to-transparent border border-primary/40 hover:border-primary transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,214,51,0.25)] hover:-translate-y-1"
                             >
-                                Probar como Docente
-                                <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
+                                <div className="w-12 h-12 rounded-xl bg-primary text-[#0a0a0a] flex items-center justify-center mb-4 shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform">
+                                    <GraduationCap className="w-6 h-6" strokeWidth={2.5} />
+                                </div>
+                                <div className="mb-4">
+                                    <h3 className="text-lg font-black text-white mb-1 flex items-center gap-2">
+                                        Soy Docente
+                                    </h3>
+                                    <p className="text-xs text-[#9090c0] font-medium leading-relaxed">
+                                        Crea tu asignatura, automatiza quizzes con IA y monitorea el progreso de tus alumnos.
+                                    </p>
+                                </div>
+                                <span className="inline-flex items-center justify-center gap-1.5 bg-primary text-[#0a0a0a] text-xs font-extrabold px-4 py-2.5 rounded-lg group-hover:bg-primary-light transition-colors w-full">
+                                    Crear mi Curso <ChevronRight className="w-3.5 h-3.5" />
+                                </span>
                             </Link>
-                            <a
-                                href="#features"
-                                className="inline-flex items-center gap-2 bg-transparent text-[#f0f0f8] font-bold text-[15px] px-7 py-[13px] rounded-xl border border-white/5 hover:border-white/20 hover:bg-white/[0.04] transition-all"
+
+                            {/* Botón 2: Soy Alumno */}
+                            <Link
+                                to="/registro"
+                                onClick={() => localStorage.setItem('questia_demo_intent', 'student')}
+                                className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-white/25 hover:bg-white/[0.06] transition-all duration-300 hover:-translate-y-1"
                             >
-                                Ver funcionalidades
-                            </a>
+                                <div className="w-12 h-12 rounded-xl bg-white/10 text-white flex items-center justify-center mb-4 border border-white/15 group-hover:scale-110 transition-transform">
+                                    <UserCheck className="w-6 h-6" strokeWidth={2.5} />
+                                </div>
+                                <div className="mb-4">
+                                    <h3 className="text-lg font-black text-white mb-1 flex items-center gap-2">
+                                        Soy Alumno
+                                    </h3>
+                                    <p className="text-xs text-[#9090c0] font-medium leading-relaxed">
+                                        Ingresa a tus misiones, realiza los quizzes de tu curso y canjea tus puntos.
+                                    </p>
+                                </div>
+                                <span className="inline-flex items-center justify-center gap-1.5 bg-white/10 text-white text-xs font-bold px-4 py-2.5 rounded-lg group-hover:bg-white/20 transition-colors border border-white/15 w-full">
+                                    Ingresar como Alumno <ChevronRight className="w-3.5 h-3.5" />
+                                </span>
+                            </Link>
+
+                            {/* Botón 3: Demo Docente */}
+                            <Link
+                                to="/login"
+                                onClick={() => localStorage.setItem('questia_demo_intent', 'demo')}
+                                className="group relative flex flex-col justify-between p-6 rounded-2xl bg-gradient-to-b from-blue-500/15 via-blue-500/5 to-transparent border border-blue-500/30 hover:border-blue-400 transition-all duration-300 hover:shadow-[0_0_25px_rgba(59,130,246,0.2)] hover:-translate-y-1"
+                            >
+                                <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 group-hover:scale-110 transition-transform">
+                                    <PlayCircle className="w-6 h-6" strokeWidth={2.5} />
+                                </div>
+                                <div className="mb-4">
+                                    <div className="inline-block bg-blue-500/20 text-blue-300 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mb-1">
+                                        Prueba Rápida
+                                    </div>
+                                    <h3 className="text-lg font-black text-white mb-1 flex items-center gap-2">
+                                        Demo Docente
+                                    </h3>
+                                    <p className="text-xs text-[#9090c0] font-medium leading-relaxed">
+                                        Explora un curso completo con datos de prueba sin configuración previa.
+                                    </p>
+                                </div>
+                                <span className="inline-flex items-center justify-center gap-1.5 bg-blue-500/20 text-blue-300 text-xs font-bold px-4 py-2.5 rounded-lg group-hover:bg-blue-500/30 transition-colors border border-blue-500/30 w-full">
+                                    Ver Demo Interactiva <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                                </span>
+                            </Link>
                         </div>
                     </Reveal>
 
