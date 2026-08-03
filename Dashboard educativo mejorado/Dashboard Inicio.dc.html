@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="./image-slot.js"></script>
+  <style>
+    body { margin: 0; }
+    * { box-sizing: border-box; }
+    a { color: #8aa4ff; text-decoration: none; }
+    a:hover { color: #b0c2ff; }
+    ::selection { background: rgba(108,111,255,0.35); }
+    .qi-app { font-family: 'Inter', system-ui, sans-serif; background: #0a0b10; color: #e9e9ee; min-height: 100vh; display: flex; }
+    .qi-navbtn { display: flex; align-items: center; gap: 11px; padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: 0; background: transparent; width: 100%; text-align: left; color: #9294a3; }
+    .qi-navbtn:hover { background: rgba(255,255,255,0.05); color: #e9e9ee; }
+    .qi-navbtn.active { background: rgba(108,111,255,0.14); color: #b7bbff; }
+    .qi-icon { width: 16px; height: 16px; flex-shrink: 0; }
+    .qi-icon-sm { width: 14px; height: 14px; }
+    .qi-note-item { position: relative; padding-left: 20px; margin-bottom: 10px; font-size: 15px; line-height: 1.65; color: #cfd0d8; }
+    .qi-note-item::before { content: '•'; position: absolute; left: 4px; color: #55575f; }
+    .qi-sub { margin-left: 22px; }
+    .qi-quick { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-radius: 8px; cursor: pointer; border: 0; background: transparent; width: 100%; text-align: left; }
+    .qi-quick:hover { background: rgba(255,255,255,0.04); }
+    .qi-quick-box { width: 17px; height: 17px; border: 1.5px solid #3a3c47; border-radius: 5px; flex-shrink: 0; }
+    .qi-quick span { font-size: 14.5px; color: #cfd0d8; }
+    .qi-cal-day { display: flex; align-items: center; justify-content: center; height: 32px; font-size: 13px; color: #cfd0d8; border-radius: 8px; }
+    .qi-cal-day.muted { color: #3f414c; }
+    .qi-cal-day.today { background: #5457e5; color: #fff; font-weight: 700; }
+    .qi-action { font-size: 13.5px; padding: 3px 0; color: #8890f5; cursor: pointer; }
+    .qi-action:hover { color: #aab0ff; }
+    .qi-step-num { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #4548c9; color: #8890f5; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    .qi-stat-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 16px; display: flex; align-items: center; gap: 13px; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .qi-stat-card:hover { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(0,0,0,0.35); border-color: rgba(255,255,255,0.14); }
+    .qi-ring { width: 50px; height: 50px; border-radius: 50%; position: relative; flex-shrink: 0; }
+    .qi-ring-inner { position: absolute; inset: 5px; border-radius: 50%; background: #101118; display: flex; align-items: center; justify-content: center; }
+    .qi-stat-val { font-size: 19px; font-weight: 800; color: #fff; line-height: 1.1; }
+    .qi-stat-label { font-size: 12px; color: #8b8d99; margin-top: 2px; }
+
+    .qi-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; }
+    .qi-card-title { font-size: 14.5px; font-weight: 700; color: #d8d9e0; margin: 0 0 16px; }
+
+    .qi-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+    .qi-bar { width: 100%; border-radius: 6px 6px 3px 3px; background: linear-gradient(180deg, #8184ff, #5457e5); cursor: pointer; transition: opacity .15s ease, filter .15s ease; }
+    .qi-bar:hover { filter: brightness(1.2); }
+    .qi-bar-val { font-size: 10.5px; color: #9698ff; font-weight: 700; }
+    .qi-bar-day { font-size: 11px; color: #55575f; margin-top: 2px; }
+
+    .qi-course-card { border-radius: 14px; overflow: hidden; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); transition: transform .18s ease, box-shadow .18s ease; cursor: pointer; }
+    .qi-course-card:hover { transform: translateY(-4px); box-shadow: 0 16px 30px rgba(0,0,0,0.4); }
+    .qi-course-body { padding: 13px 14px 15px; }
+    .qi-course-name { font-size: 13.5px; font-weight: 700; color: #e9e9ee; margin-bottom: 9px; }
+    .qi-progress-track { height: 6px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .qi-progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #5457e5, #9497ff); }
+    .qi-course-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 11.5px; color: #7d7f8c; }
+
+    .qi-tile { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); cursor: pointer; transition: transform .15s ease, background .15s ease, border-color .15s ease; text-align: left; }
+    .qi-tile:hover { transform: translateY(-2px); background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); }
+    .qi-tile-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(84,87,229,0.18); }
+    .qi-tile-text { font-size: 13.5px; font-weight: 600; color: #e2e3ea; }
+    .qi-tile-sub { font-size: 11.5px; color: #74767f; margin-top: 2px; }
+  </style>
+</helmet>
+
+<div class="qi-app">
+
+  <aside style="width: 250px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.06); padding: 18px 14px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+      <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="#6b6d78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="font-size: 13px; color: #6b6d78; flex: 1;">Buscar...</span>
+      <span style="font-size: 10.5px; color: #4a4c56; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 1px 5px;">Ctrl K</span>
+    </div>
+
+    <div class="seg" style="display: flex; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden;">
+      <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding: 6px 10px; font-size: 12.5px; cursor: pointer; background: {{ docenteSegBg }}; color: {{ docenteSegColor }};">
+        <input type="radio" name="role" checked="{{ isDocente }}" onChange="{{ setDocente }}" style="display:none;"></input>
+        Docente
+      </label>
+      <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding: 6px 10px; font-size: 12.5px; cursor: pointer; border-left: 1px solid rgba(255,255,255,0.08); background: {{ alumnoSegBg }}; color: {{ alumnoSegColor }};">
+        <input type="radio" name="role" checked="{{ isAlumno }}" onChange="{{ setAlumno }}" style="display:none;"></input>
+        Alumno
+      </label>
+    </div>
+
+    <sc-if value="{{ isDocente }}">
+      <nav style="display: flex; flex-direction: column; gap: 1px;">
+        <button class="qi-navbtn active">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>
+          Inicio
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>
+          Mis Ramos
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg>
+          Material
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+          Desafíos
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+          Ranking
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path></svg>
+          Recompensas
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Mi Perfil
+        </button>
+      </nav>
+    </sc-if>
+    <sc-if value="{{ isAlumno }}">
+      <nav style="display: flex; flex-direction: column; gap: 1px;">
+        <button class="qi-navbtn active">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>
+          Inicio
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+          Notificaciones
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+          Misiones
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+          Ranking
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10a4 4 0 0 1-8 0"></path><path d="M3.103 6.034h17.794"></path><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-1.2-1.6A2 2 0 0 0 17.8 3H6.2a2 2 0 0 0-1.6.8z"></path></svg>
+          Tienda
+        </button>
+        <button class="qi-navbtn">
+          <svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Mi Perfil
+        </button>
+      </nav>
+    </sc-if>
+
+    <div style="flex: 1;"></div>
+    <div style="display: flex; align-items: center; gap: 9px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06);">
+      <div style="width: 22px; height: 22px; border-radius: 5px; background: #5457e5;"></div>
+      <span style="font-size: 13px; color: #9294a3;">questia</span>
+    </div>
+  </aside>
+
+  <main style="flex: 1; padding: 34px 48px; max-width: 760px;">
+    <div style="display: flex; gap: 12px; align-items: flex-start; margin-bottom: 26px;">
+      <div style="width: 3px; align-self: stretch; background: #5457e5; border-radius: 2px;"></div>
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0;">{{ dateLabel }}</h1>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;">
+      <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+        <div class="qi-stat-card">
+          <div class="qi-ring" style="background: {{ s.ring }};">
+            <div class="qi-ring-inner">
+              <div style="width: 7px; height: 7px; border-radius: 50%; background: {{ s.color }};"></div>
+            </div>
+          </div>
+          <div>
+            <div class="qi-stat-val">{{ s.value }}</div>
+            <div class="qi-stat-label">{{ s.label }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div class="qi-card" style="padding: 20px; margin-bottom: 20px;">
+      <h2 class="qi-card-title">Actividad semanal</h2>
+      <div style="display: flex; align-items: flex-end; gap: 10px; height: 110px;">
+        <sc-for list="{{ weekly }}" as="d" hint-placeholder-count="7">
+          <div class="qi-bar-col">
+            <span class="qi-bar-val">{{ d.value }}</span>
+            <div class="qi-bar" style="height: {{ d.pct }}%;" title="{{ d.tooltip }}"></div>
+            <span class="qi-bar-day">{{ d.day }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <h2 style="font-size: 16px; font-weight: 700; margin: 0 0 12px; color: #d8d9e0;">{{ coursesTitle }}</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 26px;">
+      <sc-for list="{{ courses }}" as="c" hint-placeholder-count="3">
+        <div class="qi-course-card">
+          <image-slot id="course-thumb-{{ $index }}" shape="rect" fit="cover" placeholder="{{ c.name }}" style="height: 80px; display: block;"></image-slot>
+          <div class="qi-course-body">
+            <div class="qi-course-name">{{ c.name }}</div>
+            <div class="qi-progress-track"><div class="qi-progress-fill" style="width: {{ c.pct }}%;"></div></div>
+            <div class="qi-course-meta"><span>{{ c.pts }} pts</span><span style="color: #b7bbff; font-weight: 700;">{{ c.pct }}%</span></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <h2 style="font-size: 16px; font-weight: 700; margin: 0 0 12px; color: #d8d9e0;">Accesos rápidos</h2>
+    <sc-if value="{{ isDocente }}">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button class="qi-tile"><div class="qi-tile-icon"><svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="#8890f5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"></path><path d="M12 12 21 3"></path><path d="M15 3h6v6"></path></svg></div><div><div class="qi-tile-text">Crear desafío con IA</div><div class="qi-tile-sub">Genera un quiz en segundos</div></div></button>
+        <button class="qi-tile"><div class="qi-tile-icon"><svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="#8890f5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg></div><div><div class="qi-tile-text">Subir material</div><div class="qi-tile-sub">PDF, DOCX y más</div></div></button>
+        <button class="qi-tile"><div class="qi-tile-icon"><svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="#8890f5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg></div><div><div class="qi-tile-text">Ver ranking</div><div class="qi-tile-sub">Compara tus ramos</div></div></button>
+        <button class="qi-tile"><div class="qi-tile-icon"><svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="#8890f5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"></rect><path d="M12 8v13"></path><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path></svg></div><div><div class="qi-tile-text">Solicitudes de canje</div><div class="qi-tile-sub">Aprueba recompensas</div></div></button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isAlumno }}">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button class="qi-tile"><div class="qi-tile-icon"><svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="#8890f5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></div><div><div class="qi-tile-text">Ver misiones</div><div class="qi-tile-sub">Nuevos desafíos disponibles</div></div></button>
+        <button class="qi-tile"><div class="qi-tile-icon"><svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="#8890f5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg></div><div><div class="qi-tile-text">Mi posición</div><div class="qi-tile-sub">Ranking general</div></div></button>
+        <button class="qi-tile"><div class="qi-tile-icon"><svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="#8890f5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10a4 4 0 0 1-8 0"></path><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-1.2-1.6A2 2 0 0 0 17.8 3H6.2a2 2 0 0 0-1.6.8z"></path></svg></div><div><div class="qi-tile-text">Canjear puntos</div><div class="qi-tile-sub">920 disponibles</div></div></button>
+        <button class="qi-tile"><div class="qi-tile-icon"><svg class="qi-icon" viewBox="0 0 24 24" fill="none" stroke="#8890f5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div><div><div class="qi-tile-text">Perfil Belbin</div><div class="qi-tile-sub">Completa tu rol de equipo</div></div></button>
+      </div>
+    </sc-if>
+  </main>
+
+  <aside style="width: 280px; flex-shrink: 0; border-left: 1px solid rgba(255,255,255,0.06); padding: 22px 20px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+      <span style="font-size: 14.5px; font-weight: 700;">{{ monthLabel }}</span>
+      <div style="display: flex; gap: 4px;">
+        <button style="width: 24px; height: 24px; border-radius: 6px; border: 0; background: transparent; color: #6b6d78; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          <svg class="qi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
+        <button style="width: 24px; height: 24px; border-radius: 6px; border: 0; background: transparent; color: #6b6d78; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+          <svg class="qi-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+        </button>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px;">
+      <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7">
+        <div style="text-align: center; font-size: 11px; color: #55575f; padding-bottom: 6px;">{{ w }}</div>
+      </sc-for>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 24px;">
+      <sc-for list="{{ calendarDays }}" as="d" hint-placeholder-count="35">
+        <div class="qi-cal-day {{ d.cls }}">{{ d.label }}</div>
+      </sc-for>
+    </div>
+
+    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #4a4c56; margin-bottom: 10px;">Primeros pasos</div>
+    <sc-for list="{{ onboarding }}" as="s" hint-placeholder-count="3">
+      <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+        <div class="qi-step-num">{{ s.n }}</div>
+        <div>
+          <div class="qi-action" style="padding: 0;">{{ s.title }}</div>
+          <div style="font-size: 12px; color: #6b6d78; margin-top: 2px;">{{ s.body }}</div>
+        </div>
+      </div>
+    </sc-for>
+  </aside>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { role: 'docente' };
+
+  buildCalendar(today) {
+    const year = today.getFullYear(), month = today.getMonth();
+    const first = new Date(year, month, 1);
+    const startDow = (first.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrev = new Date(year, month, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < startDow; i++) cells.push({ label: daysInPrev - startDow + i + 1, cls: 'muted' });
+    for (let d = 1; d <= daysInMonth; d++) cells.push({ label: d, cls: d === today.getDate() ? 'today' : '' });
+    let next = 1;
+    while (cells.length % 7 !== 0) cells.push({ label: next++, cls: 'muted' });
+    return cells;
+  }
+
+  renderVals() {
+    const isDocente = this.state.role === 'docente';
+    const today = new Date();
+    const dateLabel = today.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const monthLabel = today.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+
+    const onboardingDocente = [
+      { n: 1, title: 'Crea tu primer ramo', body: 'Organiza secciones y alumnos' },
+      { n: 2, title: 'Sube material de apoyo', body: 'PDF, DOCX con extracción de texto' },
+      { n: 3, title: 'Genera un desafío con IA', body: 'Quizzes automáticos desde tu material' },
+    ];
+    const onboardingAlumno = [
+      { n: 1, title: 'Completa tu perfil Belbin', body: '56 preguntas para tu rol de equipo' },
+      { n: 2, title: 'Únete a un ramo', body: 'Inscríbete con el código de tu docente' },
+      { n: 3, title: 'Resuelve tu primer quiz', body: 'Gana puntos de ranking y canjeables' },
+    ];
+
+    const ring = (pct, color) => `conic-gradient(${color} ${pct}%, rgba(255,255,255,0.08) 0)`;
+
+    const statsDocente = [
+      { value: '4', label: 'Ramos activos', pct: 100, color: '#5457e5' },
+      { value: '86%', label: 'Participación', pct: 86, color: '#22c55e' },
+      { value: '312', label: 'Quizzes esta semana', pct: 78, color: '#f5a524' },
+      { value: '72%', label: 'Adopción estudiantil', pct: 72, color: '#8890f5' },
+    ];
+    const statsAlumno = [
+      { value: '6 días', label: 'Racha actual', pct: 60, color: '#f5a524' },
+      { value: '#4', label: 'Ranking general', pct: 90, color: '#5457e5' },
+      { value: '1,240', label: 'Puntos totales', pct: 82, color: '#22c55e' },
+      { value: '920', label: 'Puntos canjeables', pct: 65, color: '#8890f5' },
+    ];
+    const statsSrc = isDocente ? statsDocente : statsAlumno;
+    const stats = statsSrc.map(s => ({ ...s, ring: ring(s.pct, s.color) }));
+
+    const weeklyDocenteRaw = [12, 18, 9, 22, 30, 14, 6];
+    const weeklyAlumnoRaw = [40, 65, 30, 80, 55, 90, 20];
+    const weeklyRaw = isDocente ? weeklyDocenteRaw : weeklyAlumnoRaw;
+    const maxW = Math.max(...weeklyRaw);
+    const days = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+    const weekly = weeklyRaw.map((v, i) => ({
+      day: days[i],
+      value: v,
+      pct: Math.max(6, Math.round((v / maxW) * 100)),
+      tooltip: isDocente ? `${v} quizzes completados` : `${v} pts ganados`,
+    }));
+
+    const coursesDocente = [
+      { name: 'Dibujo de Planos Eléctricos', pts: 320, pct: 68 },
+      { name: 'Instalaciones Domiciliarias', pts: 410, pct: 82 },
+      { name: 'Circuitos Digitales', pts: 190, pct: 40 },
+    ];
+    const coursesAlumno = coursesDocente;
+
+    return {
+      role: this.state.role,
+      isDocente,
+      isAlumno: !isDocente,
+      setDocente: () => this.setState({ role: 'docente' }),
+      setAlumno: () => this.setState({ role: 'alumno' }),
+      docenteSegBg: isDocente ? 'rgba(84,87,229,0.25)' : 'transparent',
+      docenteSegColor: isDocente ? '#b7bbff' : '#9294a3',
+      alumnoSegBg: !isDocente ? 'rgba(84,87,229,0.25)' : 'transparent',
+      alumnoSegColor: !isDocente ? '#b7bbff' : '#9294a3',
+      dateLabel: dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1),
+      monthLabel: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+      weekdays: ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'],
+      calendarDays: this.buildCalendar(today),
+      onboarding: isDocente ? onboardingDocente : onboardingAlumno,
+      stats,
+      weekly,
+      coursesTitle: isDocente ? 'Resumen por ramo' : 'Mis ramos',
+      courses: isDocente ? coursesDocente : coursesAlumno,
+    };
+  }
+}
+</script>
+</body>
+</html>
