@@ -65,6 +65,25 @@ const features = [
     },
 ]
 
+// Datos ficticios: solo para ilustrar la vista previa del panel en la landing.
+const dashboardStats = [
+    { value: '34', label: 'Alumnos activos', delta: '+4 esta semana', percent: 92, color: '#5457e5' },
+    { value: '87%', label: 'Asistencia promedio', delta: '+6 pts vs. julio', percent: 87, color: '#22c55e' },
+    { value: '5.8', label: 'Nota promedio', delta: '+0.4 vs. unidad 1', percent: 68, color: '#f5a524' },
+    { value: '128', label: 'Misiones completadas', delta: '+23 esta semana', percent: 74, color: '#8890f5' },
+]
+
+// Datos ficticios: eje de misiones completadas por día.
+const dashboardChart = [
+    { day: 'Lun', value: 42, height: 45 },
+    { day: 'Mar', value: 65, height: 70 },
+    { day: 'Mié', value: 33, height: 35 },
+    { day: 'Jue', value: 82, height: 88 },
+    { day: 'Vie', value: 56, height: 60 },
+    { day: 'Sáb', value: 89, height: 95 },
+    { day: 'Dom', value: 24, height: 25 },
+]
+
 const quotes = [
     {
         text: 'Mis alumnos ahora piden hacer un quiz más. La participación en clases subió notoriamente.',
@@ -251,35 +270,66 @@ export default function LandingPage() {
                             <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
                         </div>
                         <div className="aspect-video flex flex-col gap-4 p-5 sm:p-10">
-                            <div className="flex gap-3">
-                                <div className="w-[3px] bg-iris rounded-sm" />
-                                <div className="h-5 w-40 sm:w-56 rounded bg-white/10" />
+                            <div className="flex gap-3 items-center">
+                                <div className="w-[3px] self-stretch bg-iris rounded-sm" />
+                                <div>
+                                    <h3 className="text-[15px] sm:text-[17px] font-bold text-[#eceef2] leading-tight">
+                                        Panel del docente · Dibujo de Planos Eléctricos
+                                    </h3>
+                                    <p className="text-[11px] sm:text-[12px] text-[#6b6d78] mt-0.5">
+                                        Sección 002 · 34 alumnos · Semana del 3 al 9 de agosto
+                                    </p>
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                {['#5457e5', '#22c55e', '#f5a524', '#8890f5'].map((c) => (
-                                    <div key={c} className="qi-stat-card">
+                                {dashboardStats.map((s) => (
+                                    <div key={s.label} className="qi-stat-card">
                                         <div
                                             className="qi-ring"
-                                            style={{ background: `conic-gradient(${c} 70%, rgba(255,255,255,0.08) 0)` }}
+                                            style={{ background: `conic-gradient(${s.color} ${s.percent}%, rgba(255,255,255,0.08) 0)` }}
                                         >
                                             <div className="qi-ring-inner">
-                                                <div className="w-[7px] h-[7px] rounded-full" style={{ background: c }} />
+                                                <span className="text-[10px] font-bold" style={{ color: s.color }}>
+                                                    {s.percent}%
+                                                </span>
                                             </div>
                                         </div>
-                                        <div className="flex-1 space-y-1.5 min-w-0">
-                                            <div className="h-3 w-10 rounded bg-white/15" />
-                                            <div className="h-2 w-16 rounded bg-white/[0.07]" />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[17px] sm:text-[19px] font-bold text-[#eceef2] leading-none">
+                                                {s.value}
+                                            </div>
+                                            <div className="text-[10.5px] text-[#8a8c98] mt-1 truncate">{s.label}</div>
+                                            <div className="text-[10px] font-semibold mt-0.5" style={{ color: s.color }}>
+                                                {s.delta}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            <div className="qi-card flex-1 p-5 flex items-end gap-2.5">
-                                {[45, 70, 35, 88, 60, 95, 25].map((h, i) => (
-                                    <div key={i} className="flex-1 qi-bar" style={{ height: `${h}%` }} />
-                                ))}
+                            <div className="qi-card flex-1 p-5 flex flex-col min-h-0">
+                                <div className="flex items-baseline justify-between mb-3">
+                                    <h4 className="text-[12.5px] sm:text-[13.5px] font-bold text-[#d8d9e0]">
+                                        Misiones completadas por día
+                                    </h4>
+                                    <span className="text-[10.5px] text-[#6b6d78] hidden sm:block">
+                                        Promedio: 61 misiones/día
+                                    </span>
+                                </div>
+                                <div className="flex-1 flex items-end gap-2.5 min-h-0">
+                                    {dashboardChart.map((d) => (
+                                        <div key={d.day} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                                            <span className="text-[10px] font-semibold text-[#a6a8b3]">{d.value}</span>
+                                            <div className="w-full qi-bar" style={{ height: `${d.height}%` }} />
+                                            <span className="text-[10px] text-[#6b6d78]">{d.day}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <p className="text-[11.5px] text-[#6b6d78] mt-3 text-center">
+                        * Vista referencial del panel. Los datos mostrados son ficticios y solo ilustran la interfaz.
+                    </p>
                 </div>
             </section>
 
