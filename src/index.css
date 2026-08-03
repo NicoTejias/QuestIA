@@ -20,6 +20,15 @@
   --color-gold-light: #fbbf24;
   --color-success: #10b981;
   --color-danger: #ef4444;
+
+  /* Paleta índigo del rediseño de dashboards */
+  --color-iris: var(--iris);
+  --color-iris-light: var(--iris-light);
+  --color-iris-soft: var(--iris-soft);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-quiet: var(--quiet);
+  --color-quieter: var(--quieter);
   --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   
   --animate-gradient-x: gradient-x 15s ease infinite;
@@ -43,6 +52,15 @@
   --text-muted: #64748b;
   --border-dim: rgba(255, 255, 255, 0.05);
 
+  /* Índigo del rediseño: acento de dashboards y landing */
+  --iris: #5457e5;
+  --iris-light: #8890f5;
+  --iris-soft: #b7bbff;
+  --ink: #0a0b10;
+  --ink-soft: #101118;
+  --quiet: #9294a3;
+  --quieter: #6b6d78;
+
   --font-size-base: 18px;
 }
 
@@ -54,6 +72,14 @@
   --text-dim: #475569;
   --text-muted: #94a3b8;
   --border-dim: rgba(0, 0, 0, 0.05);
+
+  --iris: #4a4dd6;
+  --iris-light: #5457e5;
+  --iris-soft: #3f42c4;
+  --ink: #f4f5f9;
+  --ink-soft: #ffffff;
+  --quiet: #5b5d6b;
+  --quieter: #7c7e8a;
 }
 
 @keyframes gradient-x {
@@ -159,4 +185,183 @@
 
 .animate-phone-bounce {
   animation: phone-bounce 2s ease-in-out infinite;
+}
+
+/* ── Rediseño de dashboards (paleta índigo) ────────────────── */
+
+.qi-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+}
+
+.qi-card-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #d8d9e0;
+  margin: 0 0 16px;
+}
+
+.qi-stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.qi-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.qi-ring {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.qi-ring-inner {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qi-bar {
+  width: 100%;
+  border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(180deg, #8184ff, var(--iris));
+  transition: filter 0.15s ease;
+}
+
+.qi-bar:hover {
+  filter: brightness(1.2);
+}
+
+.qi-course-card {
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.qi-course-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.4);
+}
+
+.qi-progress-track {
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.qi-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--iris), #9497ff);
+}
+
+.qi-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.qi-tile:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.qi-tile-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(84, 87, 229, 0.18);
+}
+
+.qi-cal-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  font-size: 13px;
+  color: #cfd0d8;
+  border-radius: 8px;
+}
+
+.qi-cal-day.muted {
+  color: #3f414c;
+}
+
+.qi-cal-day.today {
+  background: var(--iris);
+  color: #fff;
+  font-weight: 700;
+}
+
+.qi-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #4548c9;
+  color: var(--iris-light);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .qi-card,
+[data-theme='light'] .qi-stat-card,
+[data-theme='light'] .qi-course-card,
+[data-theme='light'] .qi-tile {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .qi-card-title {
+  color: #1e293b;
+}
+
+[data-theme='light'] .qi-cal-day {
+  color: #334155;
+}
+
+[data-theme='light'] .qi-cal-day.muted {
+  color: #cbd5e1;
+}
+
+[data-theme='light'] .qi-progress-track {
+  background: rgba(0, 0, 0, 0.08);
 }

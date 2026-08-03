@@ -13,3 +13,8 @@ export function getFirstName(fullName?: string): string {
     if (!fullName) return ''
     return fullName.split(' ')[0]
 }
+
+/** Capitaliza la primera letra: las fechas de es-CL vienen en minúscula. */
+export function capitalize(s: string): string {
+    return s.charAt(0).toUpperCase() + s.slice(1)
+}

@@ -39,14 +39,14 @@ export default function DashboardSidebar({
             <div className="p-6 border-b border-white/5 shrink-0 pt-safe">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/20 p-1.5">
-                            <Sparkles className="w-6 h-6 text-primary" />
+                        <div className="w-10 h-10 bg-iris/20 rounded-xl flex items-center justify-center border border-iris/25 p-1.5">
+                            <Sparkles className="w-6 h-6 text-iris-light" />
                         </div>
                         <div>
                             <span className="text-lg font-black text-white block tracking-tighter italic leading-none mb-1">
-                                Quest<span className="text-primary">IA</span>
+                                Quest<span className="text-iris-light">IA</span>
                             </span>
-                            <span className="text-[10px] font-black text-primary uppercase tracking-widest opacity-80 italic">Panel Alumno</span>
+                            <span className="text-[10px] font-black text-iris-soft uppercase tracking-widest opacity-80 italic">Panel Alumno</span>
                         </div>
                     </div>
                     <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white" title="Cerrar panel de navegación">
@@ -64,14 +64,14 @@ export default function DashboardSidebar({
                             {user.avatarUrl ? (
                                 <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full bg-primary/20 flex items-center justify-center">
-                                    <UserIcon className="w-6 h-6 text-primary" />
+                                <div className="w-full h-full bg-iris/20 flex items-center justify-center">
+                                    <UserIcon className="w-6 h-6 text-iris-light" />
                                 </div>
                             )}
                         </div>
                         <div className="overflow-hidden min-w-0">
                             <p className="text-white font-bold text-sm truncate">{userName}</p>
-                            <p className="text-primary-light text-[10px] font-black uppercase tracking-widest italic">{belbinRole}</p>
+                            <p className="text-iris-soft text-[10px] font-black uppercase tracking-widest italic">{belbinRole}</p>
                         </div>
                     </div>
 
@@ -118,11 +118,11 @@ export default function DashboardSidebar({
                             onClick={() => { setActiveTab(tab.id); setSelectedCourseId(null); setSidebarOpen(false) }}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left font-medium group
                                 ${activeTab === tab.id && !selectedCourseId
-                                    ? 'bg-primary text-black shadow-lg shadow-primary/25'
+                                    ? 'bg-iris text-white shadow-lg shadow-iris/25'
                                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
-                            <span className={`text-base ${activeTab === tab.id && !selectedCourseId ? 'text-black' : 'group-hover:text-primary-light'}`}>
+                            <span className={`text-base ${activeTab === tab.id && !selectedCourseId ? 'text-white' : 'group-hover:text-iris-soft'}`}>
                                 {tab.icon}
                             </span>
                             <span className="text-sm font-bold">{tab.label}</span>
@@ -134,9 +134,9 @@ export default function DashboardSidebar({
                     <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 opacity-50 italic">Acciones Rápidas</p>
                     <button
                         onClick={() => setShowTransferModal(true)}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/5 transition-all font-medium group"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-iris-soft hover:bg-iris/10 transition-all font-medium group"
                     >
-                        <ArrowRightLeft className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500 text-primary" />
+                        <ArrowRightLeft className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500 text-iris-light" />
                         <span className="text-sm text-slate-400 group-hover:text-white transition-colors">Transferir Puntos</span>
                     </button>
                 </div>

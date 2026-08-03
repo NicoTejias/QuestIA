@@ -152,6 +152,7 @@ export default function StudentDashboard() {
                                         totalRanking={totalRankingPoints}
                                         firstName={firstName}
                                         onSelectCourse={(id) => setSelectedCourseId(id)}
+                                        onTabChange={setActiveTab}
                                         user={profile}
                                     />
 
