@@ -20,6 +20,7 @@ import CalendarDashboard from './CalendarDashboard'
 import { useProfile } from '../../hooks/useProfile'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { MissionsAPI, RewardsAPI, QuizzesAPI, CoursesAPI, DocumentsAPI, supabase } from '../../lib/api'
+import { SemesterAPI } from '../../lib/semesterApi'
 
 export default function CourseDetail({ course, onBack }: { course: any, onBack: () => void }) {
     const { user } = useProfile()
@@ -68,6 +69,32 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
 
     const [processing, setProcessing] = useState(false)
     const [exporting, setExporting] = useState<string | null>(null)
+
+    // Modo del ramo: con alumnos vinculados, o solo organización de clases.
+    // Los ramos antiguos no tienen la columna, así que se asume habilitado.
+    const [studentsEnabled, setStudentsEnabled] = useState<boolean>(course.students_enabled !== false)
+    const [togglingStudents, setTogglingStudents] = useState(false)
+
+    const handleToggleStudents = async () => {
+        const nuevo = !studentsEnabled
+        setTogglingStudents(true)
+        // Optimista: la UI cambia de inmediato y se revierte si falla.
+        setStudentsEnabled(nuevo)
+        try {
+            await SemesterAPI.setStudentsEnabled(course.id, nuevo)
+            course.students_enabled = nuevo
+            toast.success(
+                nuevo
+                    ? 'Alumnos habilitados en este ramo.'
+                    : 'Ramo en modo solo organización: sin alumnos vinculados.'
+            )
+        } catch (e: any) {
+            setStudentsEnabled(!nuevo)
+            toast.error(e.message || 'No se pudo cambiar el modo del ramo.')
+        } finally {
+            setTogglingStudents(false)
+        }
+    }
 
     const handleGivePoints = async () => {
         if (!givingPoints || !user) return
@@ -174,16 +201,49 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                 </div>
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mt-2">
                     <p className="text-slate-400">{course.description || 'Sin descripción.'}</p>
-                    <button 
-                        onClick={() => {
-                            localStorage.setItem('questia_simulate_student', 'true');
-                            window.location.href = '/alumno';
-                        }}
-                        className="bg-accent text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-accent-light transition-all shadow-lg shadow-accent/25 hover:shadow-accent/40 active:scale-95 whitespace-nowrap"
-                    >
-                        <Gamepad2 className="w-5 h-5" />
-                        Probar como Alumno
-                    </button>
+                    {studentsEnabled && (
+                        <button
+                            onClick={() => {
+                                localStorage.setItem('questia_simulate_student', 'true');
+                                window.location.href = '/alumno';
+                            }}
+                            className="bg-accent text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-accent-light transition-all shadow-lg shadow-accent/25 hover:shadow-accent/40 active:scale-95 whitespace-nowrap"
+                        >
+                            <Gamepad2 className="w-5 h-5" />
+                            Probar como Alumno
+                        </button>
+                    )}
+                </div>
+
+                {/* Modo del ramo: el docente decide si vincula alumnos o solo organiza sus clases. */}
+                <div className="mt-5 pt-5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                    <label htmlFor="toggle-alumnos" className="flex items-start gap-3 cursor-pointer min-w-0">
+                        <span className="relative inline-flex shrink-0 mt-0.5">
+                            <input
+                                id="toggle-alumnos"
+                                type="checkbox"
+                                role="switch"
+                                checked={studentsEnabled}
+                                onChange={handleToggleStudents}
+                                disabled={togglingStudents}
+                                className="peer sr-only"
+                            />
+                            <span className="w-11 h-6 rounded-full bg-white/10 border border-white/15 transition-colors peer-checked:bg-accent peer-checked:border-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent/50 peer-disabled:opacity-50" />
+                            <span className="absolute left-[3px] top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-transform peer-checked:translate-x-5 pointer-events-none" />
+                        </span>
+                        <span className="min-w-0">
+                            <span className="text-white font-bold text-sm flex items-center gap-2">
+                                <Users className="w-4 h-4 text-accent-light" />
+                                Vincular alumnos a este ramo
+                            </span>
+                            <span className="text-slate-400 text-xs block mt-0.5 leading-relaxed">
+                                {studentsEnabled
+                                    ? 'Activo: puedes importar la lista, asignar desafíos, puntos y recompensas.'
+                                    : 'Desactivado: el ramo queda solo para organizar tus clases, material y calendario.'}
+                            </span>
+                        </span>
+                    </label>
+                    {togglingStudents && <Loader2 className="w-4 h-4 animate-spin text-slate-400 shrink-0" />}
                 </div>
             </div>
 
@@ -250,7 +310,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                         </ul>
                     )}
                 </div>
-                <div className="bg-surface-light border border-white/5 rounded-2xl p-6">
+                <div className={`bg-surface-light border border-white/5 rounded-2xl p-6 ${studentsEnabled ? '' : 'hidden'}`}>
                     <h3 className="text-lg font-bold text-white mb-4 flex items-center justify-between">
                         <span className="flex items-center gap-2"><Gift className="w-5 h-5 text-gold" /> Recompensas</span>
                         <span className="text-xs bg-gold/10 text-gold px-2.5 py-1 rounded-full">{rewards?.length || 0}</span>
@@ -274,7 +334,7 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
                     )}
                 </div>
 
-                <div className="bg-surface-light border border-white/5 rounded-2xl overflow-hidden flex flex-col">
+                <div className={`bg-surface-light border border-white/5 rounded-2xl overflow-hidden flex-col ${studentsEnabled ? 'flex' : 'hidden'}`}>
                     <div className="p-6 border-b border-white/5">
                         <div className="flex items-center gap-3 mb-4">
                             <Target className="w-5 h-5 text-primary-light" />
@@ -438,10 +498,28 @@ export default function CourseDetail({ course, onBack }: { course: any, onBack: 
             {/* Cierre del grid principal de 2 columnas */}
             </div>
 
-            <BadgesPanel courseId={course.id} students={students ?? []} />
+            {studentsEnabled && <BadgesPanel courseId={course.id} students={students ?? []} />}
+
+            {/* Aviso del modo solo organización: explica qué se ocultó y cómo revertirlo. */}
+            {!studentsEnabled && (
+                <div className="bg-surface-light border border-white/5 rounded-2xl p-6 flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                        <Calendar className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <div>
+                        <p className="text-white font-bold text-sm mb-1">Ramo en modo solo organización</p>
+                        <p className="text-slate-400 text-xs leading-relaxed max-w-xl">
+                            Este ramo está pensado para organizar tus clases: calendario, planificación,
+                            material y evaluaciones siguen disponibles. Las funciones de alumnos
+                            (lista, desafíos, recompensas, insignias y puntos) están ocultas.
+                            Activa <strong className="text-slate-300">Vincular alumnos</strong> arriba para habilitarlas.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Separador inferior: Lista de Alumnos Completa */}
-            <div className="bg-surface-light border border-white/5 rounded-2xl p-6">
+            <div className={`bg-surface-light border border-white/5 rounded-2xl p-6 ${studentsEnabled ? '' : 'hidden'}`}>
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
                     <div className="flex flex-col gap-1">
                         <h3 className="text-2xl font-black text-white flex items-center gap-3">

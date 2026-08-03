@@ -184,6 +184,18 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
                                 </div>
                             </div>
                             {c.career_id && <p className="text-xs text-accent-light/70 mt-1 font-medium">{(careers || []).find((cr: any) => cr.id === c.career_id)?.name || ''}</p>}
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {c.students_enabled === false && (
+                                    <span className="text-[9px] font-bold uppercase tracking-wider bg-white/5 text-slate-400 px-2 py-1 rounded-full border border-white/10">
+                                        Solo organización
+                                    </span>
+                                )}
+                                {c.closed_at && (
+                                    <span className="text-[9px] font-bold uppercase tracking-wider bg-accent/10 text-accent-light px-2 py-1 rounded-full border border-accent/20">
+                                        Semestre cerrado
+                                    </span>
+                                )}
+                            </div>
                             {c.description && <p className="text-slate-400 text-sm mt-3 line-clamp-2">{c.description}</p>}
                         </div>
                     ))}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useClerk } from "@clerk/clerk-react"
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Target, Trophy, Gift, BarChart3, LogOut, Menu, X, Settings, Sparkles, Loader2, FileText, User, Mail, ShieldCheck, HelpCircle, ArrowRightLeft, Package } from 'lucide-react'
+import { BookOpen, Target, Trophy, Gift, BarChart3, LogOut, Menu, X, Settings, Sparkles, Loader2, FileText, User, Mail, ShieldCheck, HelpCircle, ArrowRightLeft, Package, Archive } from 'lucide-react'
 import FAQSection from '../components/FAQSection'
 import { toast } from 'sonner'
 import RamosPanel from '../components/teacher/RamosPanel'
@@ -13,6 +13,7 @@ import RankingDocentePanel from '../components/teacher/RankingDocentePanel'
 import GestionCanjesPanel from '../components/teacher/GestionCanjesPanel'
 import NotificationBell from '../components/NotificationBell'
 import AdminPanel from '../components/teacher/AdminPanel'
+import CierreSemestrePanel from '../components/teacher/CierreSemestrePanel'
 import InicioDocente from '../components/teacher/InicioDocente'
 import TeacherTour from '../components/teacher/TeacherTour'
 import ContactWidget from '../components/ContactWidget'
@@ -29,6 +30,7 @@ const TAB_META: Record<string, { label: string; emoji: string }> = {
     ranking: { label: 'Ranking', emoji: '🏆' },
     recompensas: { label: 'Recompensas', emoji: '🎁' },
     canjes: { label: 'Gestión Canjes', emoji: '🔄' },
+    cierre: { label: 'Cierre de Semestre', emoji: '🗄️' },
     perfil: { label: 'Mi Perfil', emoji: '👤' },
     admin: { label: 'Panel Admin', emoji: '🛡️' },
 }
@@ -64,6 +66,7 @@ export default function TeacherDashboard() {
         { id: 'ranking', label: 'Ranking', icon: <Trophy className="w-[17px] h-[17px]" />, tourClass: 'tour-step-ranking' },
         { id: 'recompensas', label: 'Recompensas', icon: <Gift className="w-[17px] h-[17px]" />, tourClass: 'tour-step-recompensas' },
         { id: 'canjes', label: 'Gestión Canjes', icon: <ArrowRightLeft className="w-[17px] h-[17px]" /> },
+        { id: 'cierre', label: 'Cierre de Semestre', icon: <Archive className="w-[17px] h-[17px]" /> },
         { id: 'perfil', label: 'Mi Perfil', icon: <User className="w-[17px] h-[17px]" /> },
         ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Panel Admin', icon: <ShieldCheck className="w-[17px] h-[17px] text-red-500" /> }] : []),
     ]
@@ -223,6 +226,7 @@ export default function TeacherDashboard() {
                     {activeTab === 'recompensas' && <CrearRecompensaPanel courses={courses || []} />}
                     {activeTab === 'ranking' && <RankingDocentePanel />}
                     {activeTab === 'canjes' && <GestionCanjesPanel />}
+                    {activeTab === 'cierre' && <CierreSemestrePanel user={user} />}
                     {activeTab === 'perfil' && <PerfilPanel user={user} coursesCount={coursesCount} />}
                     {activeTab === 'admin' && user?.role === 'admin' && <AdminPanel />}
                 </div>

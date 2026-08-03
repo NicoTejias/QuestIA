@@ -224,13 +224,17 @@ export const CoursesAPI = {
     }
     const { data: enrollments, error } = await supabase.from('enrollments').select('*, courses(*)').eq('user_id', clerkId)
     if (error) throw error
-    return (enrollments || []).map(en => ({
-      ...en.courses,
-      total_points: en.total_points,
-      spendable_points: en.spendable_points,
-      ranking_points: en.ranking_points,
-      rank: 1
-    }))
+    return (enrollments || [])
+      // Un ramo en modo "solo organización" no se muestra al alumno: el docente
+      // lo usa únicamente para planificar sus clases.
+      .filter(en => en.courses && en.courses.students_enabled !== false)
+      .map(en => ({
+        ...en.courses,
+        total_points: en.total_points,
+        spendable_points: en.spendable_points,
+        ranking_points: en.ranking_points,
+        rank: 1
+      }))
   },
 
   async getCourseById(courseId: string) {
