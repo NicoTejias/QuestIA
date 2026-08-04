@@ -152,6 +152,67 @@ async function fetchAll<T = any>(
     return out
 }
 
+/** Una clase próxima, ya resuelta con el nombre del ramo para mostrarla directo. */
+export interface ProximaClase {
+    id: string
+    courseId: string
+    courseName: string
+    courseCode: string
+    fecha: number
+    titulo: string | null
+    section: string | null
+    horaInicio: string | null
+    tipoBloque: string | null
+    esFeriado: boolean
+}
+
+/**
+ * Próximas clases del docente a partir de hoy, ordenadas por fecha.
+ * Alimenta la agenda de la barra lateral del dashboard.
+ */
+export async function getProximasClases(
+    teacherId: string,
+    role: string,
+    limite = 5
+): Promise<ProximaClase[]> {
+    let cq = supabase.from('courses').select('id, name, code')
+    if (role !== 'admin') cq = cq.eq('teacher_id', teacherId)
+    const { data: courses, error: cErr } = await cq
+    if (cErr) throw cErr
+    if (!courses || courses.length === 0) return []
+
+    const porId = new Map(courses.map(c => [c.id, c]))
+
+    // Desde el inicio del día de hoy: una clase de esta mañana sigue siendo relevante.
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+
+    const { data, error } = await supabase
+        .from('clases_calendarizadas')
+        .select('id, course_id, fecha, titulo, section, hora_inicio, tipo_bloque, es_feriado, estado')
+        .in('course_id', [...porId.keys()])
+        .gte('fecha', hoy.getTime())
+        .order('fecha', { ascending: true })
+        .limit(limite)
+    if (error) throw error
+
+    return (data || []).map(cl => {
+        const curso = porId.get(cl.course_id)
+        return {
+            id: cl.id,
+            courseId: cl.course_id,
+            courseName: curso?.name || 'Ramo',
+            courseCode: curso?.code || '',
+            fecha: Number(cl.fecha),
+            titulo: cl.titulo,
+            section: cl.section,
+            horaInicio: cl.hora_inicio,
+            tipoBloque: cl.tipo_bloque,
+            esFeriado: !!cl.es_feriado,
+        }
+    })
+}
+
 export const SemesterAPI = {
     /**
      * Estado de cierre de cada ramo del docente: fecha de término, si ya terminó

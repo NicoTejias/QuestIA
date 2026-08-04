@@ -19,7 +19,10 @@ import TeacherTour from '../components/teacher/TeacherTour'
 import ContactWidget from '../components/ContactWidget'
 import { useProfile } from '../hooks/useProfile'
 import { useSupabaseQuery } from '../hooks/useSupabaseQuery'
-import { CoursesAPI } from '../lib/api'
+import { CoursesAPI, AnalyticsAPI } from '../lib/api'
+import { getProximasClases, type ProximaClase } from '../lib/semesterApi'
+import { SideRail, RailSection, type OnboardingStep } from '../components/dashboard/primitives'
+import { capitalize } from '../utils/dashboardUtils'
 
 const TAB_META: Record<string, { label: string; emoji: string }> = {
     inicio: { label: 'Inicio', emoji: '📊' },
@@ -43,6 +46,13 @@ export default function TeacherDashboard() {
     const { data: courses } = useSupabaseQuery(
         () => user ? CoursesAPI.getMyCourses(user.clerk_id, user.role) : Promise.resolve([]),
         [user]
+    )
+
+    // Stats a nivel de layout: la barra lateral es fija, así que sus datos ya no
+    // pueden vivir dentro de la pestaña de Inicio.
+    const { data: stats } = useSupabaseQuery(
+        () => (user ? AnalyticsAPI.getTeacherStats(user.clerk_id, user.role) : Promise.resolve(null)),
+        [user?.clerk_id]
     )
 
     const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -80,6 +90,18 @@ export default function TeacherDashboard() {
     }
 
     const currentMeta = TAB_META[activeTab] || { label: tabs.find(t => t.id === activeTab)?.label || '', emoji: '📄' }
+
+    // Primeros pasos pendientes. Van en el rail, visibles desde cualquier sección.
+    const onboardingSteps: OnboardingStep[] = []
+    if (coursesCount === 0) {
+        onboardingSteps.push({ title: 'Crea tu primer ramo', body: 'Organiza secciones y alumnos', onClick: () => setActiveTab('ramos') })
+    }
+    if (stats && (stats.totalDocuments ?? 0) === 0) {
+        onboardingSteps.push({ title: 'Sube material de apoyo', body: 'PDF, DOCX con extracción de texto', onClick: () => setActiveTab('material') })
+    }
+    if (stats && (stats.totalMissionsCreated ?? 0) === 0) {
+        onboardingSteps.push({ title: 'Genera un desafío con IA', body: 'Quizzes automáticos desde tu material', onClick: () => setActiveTab('desafios') })
+    }
 
     return (
         <div className="h-screen-dvh bg-ink flex overflow-hidden relative" style={{ fontFamily: "'Outfit', sans-serif" }}>
@@ -204,31 +226,39 @@ export default function TeacherDashboard() {
                     </div>
                 </header>
 
-                {/* Scroll area */}
-                <div className="flex-1 overflow-y-auto px-7 py-[26px] pb-safe">
-                    {activeTab === 'inicio' && (
-                        <InicioDocente
-                            user={user}
-                            courses={courses || []}
-                            onTabChange={setActiveTab}
-                        />
-                    )}
-                    {activeTab === 'ramos' && (
-                        <RamosPanel
-                            courses={courses || []}
-                            selectedCourse={selectedCourse}
-                            setSelectedCourse={setSelectedCourse}
-                        />
-                    )}
-                    {activeTab === 'material' && <MaterialPanel courses={courses || []} />}
-                    {activeTab === 'panol' && <PanolPanel />}
-                    {activeTab === 'desafios' && <CrearMisionPanel courses={courses || []} />}
-                    {activeTab === 'recompensas' && <CrearRecompensaPanel courses={courses || []} />}
-                    {activeTab === 'ranking' && <RankingDocentePanel />}
-                    {activeTab === 'canjes' && <GestionCanjesPanel />}
-                    {activeTab === 'cierre' && <CierreSemestrePanel user={user} />}
-                    {activeTab === 'perfil' && <PerfilPanel user={user} coursesCount={coursesCount} />}
-                    {activeTab === 'admin' && user?.role === 'admin' && <AdminPanel />}
+                {/* Cuerpo + barra lateral fija.
+                    El rail es hermano del área de scroll, no hijo: así queda fijo
+                    y solo el cuerpo se desplaza al cambiar de sección. */}
+                <div className="flex-1 flex min-h-0 overflow-hidden">
+                    <div className="flex-1 min-w-0 overflow-y-auto px-7 py-[26px] pb-safe">
+                        {activeTab === 'inicio' && (
+                            <InicioDocente
+                                user={user}
+                                courses={courses || []}
+                                onTabChange={setActiveTab}
+                            />
+                        )}
+                        {activeTab === 'ramos' && (
+                            <RamosPanel
+                                courses={courses || []}
+                                selectedCourse={selectedCourse}
+                                setSelectedCourse={setSelectedCourse}
+                            />
+                        )}
+                        {activeTab === 'material' && <MaterialPanel courses={courses || []} />}
+                        {activeTab === 'panol' && <PanolPanel />}
+                        {activeTab === 'desafios' && <CrearMisionPanel courses={courses || []} />}
+                        {activeTab === 'recompensas' && <CrearRecompensaPanel courses={courses || []} />}
+                        {activeTab === 'ranking' && <RankingDocentePanel />}
+                        {activeTab === 'canjes' && <GestionCanjesPanel />}
+                        {activeTab === 'cierre' && <CierreSemestrePanel user={user} />}
+                        {activeTab === 'perfil' && <PerfilPanel user={user} coursesCount={coursesCount} />}
+                        {activeTab === 'admin' && user?.role === 'admin' && <AdminPanel />}
+                    </div>
+
+                    <SideRail steps={onboardingSteps}>
+                        <RailAgenda courses={courses || []} onTabChange={setActiveTab} />
+                    </SideRail>
                 </div>
             </main>
 
@@ -254,6 +284,89 @@ export default function TeacherDashboard() {
     )
 }
 
+
+/**
+ * Agenda de próximas clases en la barra lateral.
+ * Bloque de ejemplo de cómo extender el rail: se le pasa como children a SideRail.
+ */
+function RailAgenda({ courses, onTabChange }: { courses: any[]; onTabChange: (tab: string) => void }) {
+    const { user } = useProfile()
+    const { data: clases, isLoading } = useSupabaseQuery<ProximaClase[]>(
+        () => (user ? getProximasClases(user.clerk_id, user.role, 5) : Promise.resolve([])),
+        [user?.clerk_id, courses.length]
+    )
+
+    if (isLoading) {
+        return (
+            <RailSection title="Próximas clases">
+                <div className="flex justify-center py-3">
+                    <Loader2 className="w-4 h-4 animate-spin text-quieter" />
+                </div>
+            </RailSection>
+        )
+    }
+
+    if (!clases || clases.length === 0) {
+        return (
+            <RailSection title="Próximas clases">
+                <button
+                    onClick={() => onTabChange('ramos')}
+                    className="text-[12px] text-quieter hover:text-iris-light text-left leading-relaxed transition-colors"
+                >
+                    No hay clases programadas. Planifica el semestre desde el calendario de un ramo.
+                </button>
+            </RailSection>
+        )
+    }
+
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+
+    return (
+        <RailSection title="Próximas clases">
+            <div className="flex flex-col gap-2">
+                {clases.map(cl => {
+                    const fecha = new Date(cl.fecha)
+                    const esHoy = fecha.setHours(0, 0, 0, 0) === hoy.getTime()
+                    const etiqueta = esHoy
+                        ? 'Hoy'
+                        : capitalize(
+                            new Date(cl.fecha).toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' })
+                        )
+
+                    return (
+                        <button
+                            key={cl.id}
+                            onClick={() => onTabChange('ramos')}
+                            className={`text-left p-2.5 rounded-xl border transition-colors ${
+                                esHoy
+                                    ? 'bg-iris/[0.1] border-iris/25 hover:border-iris/40'
+                                    : 'bg-white/[0.03] border-white/5 hover:border-white/15'
+                            }`}
+                        >
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <span className={`text-[10px] font-extrabold uppercase tracking-wider ${esHoy ? 'text-iris-soft' : 'text-quieter'}`}>
+                                    {etiqueta}
+                                </span>
+                                {cl.horaInicio && (
+                                    <span className="text-[10px] text-quieter font-mono">{cl.horaInicio}</span>
+                                )}
+                                {cl.esFeriado && (
+                                    <span className="text-[9px] font-bold uppercase text-amber-400/80 ml-auto">Feriado</span>
+                                )}
+                            </div>
+                            <div className="text-[12px] font-bold text-text-main truncate">{cl.courseCode}</div>
+                            <div className="text-[11px] text-quieter truncate mt-0.5">
+                                {cl.titulo || cl.courseName}
+                                {cl.section ? ` · ${cl.section}` : ''}
+                            </div>
+                        </button>
+                    )
+                })}
+            </div>
+        </RailSection>
+    )
+}
 
 function PerfilPanel({ user, coursesCount }: { user: any, coursesCount: number }) {
     const navigate = useNavigate()

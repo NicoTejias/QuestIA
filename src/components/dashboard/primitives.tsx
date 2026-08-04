@@ -204,13 +204,24 @@ export interface OnboardingStep {
     onClick?: () => void
 }
 
-export function SideRail({ steps }: { steps: OnboardingStep[] }) {
+/** Título de sección del rail, para que los bloques nuevos se vean consistentes. */
+export function RailSection({ title, children }: { title: string; children: ReactNode }) {
+    return (
+        <section className="mb-6 last:mb-0">
+            <div className="text-[11px] uppercase tracking-[0.06em] text-quieter mb-2.5">{title}</div>
+            {children}
+        </section>
+    )
+}
+
+/** Calendario del mes en curso. Bloque fijo del rail. */
+export function RailCalendar() {
     const today = new Date()
     const monthLabel = capitalize(today.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }))
     const days = buildCalendar(today)
 
     return (
-        <aside className="w-[280px] shrink-0 border-l border-white/5 px-5 py-6 hidden xl:block overflow-y-auto">
+        <section className="mb-6">
             <div className="flex items-center justify-between mb-4">
                 <span className="text-[14.5px] font-bold text-text-main">{monthLabel}</span>
             </div>
@@ -220,32 +231,54 @@ export function SideRail({ steps }: { steps: OnboardingStep[] }) {
                     <div key={w} className="text-center text-[11px] text-quieter pb-1.5">{w}</div>
                 ))}
             </div>
-            <div className="grid grid-cols-7 gap-0.5 mb-6">
+            <div className="grid grid-cols-7 gap-0.5">
                 {days.map((d) => (
                     <div key={d.key} className={`qi-cal-day ${d.cls}`}>{d.label}</div>
                 ))}
             </div>
+        </section>
+    )
+}
 
-            {steps.length > 0 && (
-                <>
-                    <div className="text-[11px] uppercase tracking-[0.06em] text-quieter mb-2.5">Primeros pasos</div>
-                    {steps.map((s, i) => (
-                        <div key={s.title} className="flex gap-2.5 mb-3.5">
-                            <div className="qi-step-num">{i + 1}</div>
-                            <div className="min-w-0">
-                                <button
-                                    onClick={s.onClick}
-                                    disabled={!s.onClick}
-                                    className="text-[13.5px] text-iris-light hover:text-iris-soft text-left disabled:cursor-default disabled:hover:text-iris-light"
-                                >
-                                    {s.title}
-                                </button>
-                                <div className="text-xs text-quieter mt-0.5">{s.body}</div>
-                            </div>
-                        </div>
-                    ))}
-                </>
-            )}
+/** Lista de primeros pasos. Se oculta sola cuando no queda ninguno pendiente. */
+export function RailSteps({ steps }: { steps: OnboardingStep[] }) {
+    if (steps.length === 0) return null
+
+    return (
+        <RailSection title="Primeros pasos">
+            {steps.map((s, i) => (
+                <div key={s.title} className="flex gap-2.5 mb-3.5">
+                    <div className="qi-step-num">{i + 1}</div>
+                    <div className="min-w-0">
+                        <button
+                            onClick={s.onClick}
+                            disabled={!s.onClick}
+                            className="text-[13.5px] text-iris-light hover:text-iris-soft text-left disabled:cursor-default disabled:hover:text-iris-light"
+                        >
+                            {s.title}
+                        </button>
+                        <div className="text-xs text-quieter mt-0.5">{s.body}</div>
+                    </div>
+                </div>
+            ))}
+        </RailSection>
+    )
+}
+
+/**
+ * Barra lateral derecha fija del dashboard.
+ *
+ * Vive en el layout, no dentro de una pestaña: se mantiene visible al cambiar
+ * de sección y hace scroll por su cuenta, independiente del cuerpo.
+ * Para sumar bloques nuevos basta con pasarlos como `children`
+ * (idealmente envueltos en `RailSection`).
+ */
+export function SideRail({ steps = [], children }: { steps?: OnboardingStep[]; children?: ReactNode }) {
+    return (
+        <aside className="w-[280px] shrink-0 border-l border-white/5 hidden xl:flex flex-col h-full overflow-y-auto custom-scrollbar px-5 py-6">
+            <RailCalendar />
+            <RailSteps steps={steps} />
+            {children}
         </aside>
     )
 }

@@ -8,10 +8,8 @@ import {
     StatCards,
     CourseGrid,
     QuickTiles,
-    SideRail,
     type StatItem,
     type CourseCardItem,
-    type OnboardingStep,
 } from '../dashboard/primitives'
 import { capitalize } from '../../utils/dashboardUtils'
 
@@ -64,20 +62,10 @@ export default function InicioDocente({ user, courses, onTabChange }: Props) {
         }
     })
 
-    const steps: OnboardingStep[] = []
-    if (coursesCount === 0) {
-        steps.push({ title: 'Crea tu primer ramo', body: 'Organiza secciones y alumnos', onClick: () => onTabChange('ramos') })
-    }
-    if ((stats?.totalDocuments ?? 0) === 0) {
-        steps.push({ title: 'Sube material de apoyo', body: 'PDF, DOCX con extracción de texto', onClick: () => onTabChange('material') })
-    }
-    if ((stats?.totalMissionsCreated ?? 0) === 0) {
-        steps.push({ title: 'Genera un desafío con IA', body: 'Quizzes automáticos desde tu material', onClick: () => onTabChange('desafios') })
-    }
-
     return (
-        <div className="flex">
-            <div className="flex-1 min-w-0 max-w-[860px]">
+        // La barra lateral (calendario, primeros pasos, agenda) vive en el layout
+        // del dashboard para quedar fija en todas las secciones.
+        <div className="max-w-[860px]">
                 <PageHeading>{dateLabel}</PageHeading>
 
                 <StatCards stats={statItems} />
@@ -183,9 +171,6 @@ export default function InicioDocente({ user, courses, onTabChange }: Props) {
                         },
                     ]}
                 />
-            </div>
-
-            <SideRail steps={steps} />
         </div>
     )
 }
