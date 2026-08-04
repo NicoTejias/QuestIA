@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Loader2, ChevronRight, CheckCircle, Edit3, Trash2, Search, User } from 'lucide-react'
+import { Plus, Loader2, ChevronRight, CheckCircle, Edit3, Trash2, Search, User, CalendarRange } from 'lucide-react'
 import CourseDetail from './CourseDetail'
 import { toast } from 'sonner'
 import ConfirmModal from '../ConfirmModal'
@@ -8,10 +8,34 @@ import { EditCourseModal } from './EditModals'
 import { useProfile } from '../../hooks/useProfile'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { CoursesAPI, supabase } from '../../lib/api'
+import { useSemester } from '../../context/SemesterContext'
+import {
+    esSemestreValido,
+    semestreDeFecha,
+    opcionesDeSemestre,
+    formatSemestre,
+    formatSemestreCorto,
+} from '../../lib/semesters'
 
-export default function RamosPanel({ courses, selectedCourse, setSelectedCourse }: { courses: any[], selectedCourse: any, setSelectedCourse: (c: any) => void }) {
+export default function RamosPanel({
+    courses,
+    selectedCourse,
+    setSelectedCourse,
+    onCoursesChanged,
+}: {
+    courses: any[]
+    selectedCourse: any
+    setSelectedCourse: (c: any) => void
+    /** Avisa al dashboard que recargue los ramos (crear/eliminar cambia la lista). */
+    onCoursesChanged?: () => void
+}) {
     const { user } = useProfile()
     const navigate = useNavigate()
+    const { semestreActivo, semestresDisponibles } = useSemester()
+
+    // El ramo nuevo hereda el semestre activo; si se está viendo "Todos" o
+    // "Sin semestre", se propone el semestre en curso según el calendario.
+    const semestrePorDefecto = esSemestreValido(semestreActivo) ? semestreActivo : semestreDeFecha()
     
     // Careers query
     const { data: careers } = useSupabaseQuery<any[]>(
@@ -23,7 +47,9 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
     )
 
     const [showCreate, setShowCreate] = useState(false)
-    const [formData, setFormData] = useState({ name: '', code: '', description: '', career_id: '' })
+    const [formData, setFormData] = useState({
+        name: '', code: '', description: '', career_id: '', semester: semestrePorDefecto,
+    })
     const [creating, setCreating] = useState(false)
     const [success, setSuccess] = useState('')
 
@@ -47,12 +73,15 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
                 code: formData.code,
                 description: formData.description,
                 career_id: formData.career_id || undefined,
+                semester: formData.semester || undefined,
             })
-            setSuccess(`Ramo "${formData.name}" creado exitosamente.`)
-            setFormData({ name: '', code: '', description: '', career_id: '' })
+            setSuccess(
+                `Ramo "${formData.name}" creado en ${formatSemestreCorto(formData.semester)}.`
+            )
+            setFormData({ name: '', code: '', description: '', career_id: '', semester: semestrePorDefecto })
             setShowCreate(false)
-            // Note: The parent component (TeacherDashboard) should refetch courses.
-            // For now, we rely on the next refresh or a custom refetch prop if needed.
+            // Recargar: el ramo nuevo debe aparecer sin esperar a un refresh manual.
+            onCoursesChanged?.()
             setTimeout(() => setSuccess(''), 4000)
         } catch (err: any) {
             toast.error(err.message || 'Error al crear el ramo')
@@ -69,6 +98,7 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
             if (error) throw error
             toast.success('Ramo eliminado correctamente')
             setCourseToDelete(null)
+            onCoursesChanged?.()
         } catch (err: any) {
             toast.error(err.message || 'Error al eliminar el ramo')
         } finally {
@@ -143,6 +173,24 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
                             <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
                     </select>
+                    <div>
+                        <label htmlFor="nuevo-ramo-semestre" className="block text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">
+                            Semestre
+                        </label>
+                        <select
+                            id="nuevo-ramo-semestre"
+                            value={formData.semester}
+                            onChange={e => setFormData({ ...formData, semester: e.target.value })}
+                            className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accent"
+                        >
+                            {opcionesDeSemestre(semestresDisponibles).map(s => (
+                                <option key={s} value={s}>{formatSemestre(s)}</option>
+                            ))}
+                        </select>
+                        <p className="text-slate-500 text-xs mt-2">
+                            Define en qué periodo aparece el ramo. Después podrás programar su calendario.
+                        </p>
+                    </div>
                     <button onClick={handleCreate} disabled={creating || !formData.name || !formData.code} className="bg-accent text-white font-bold px-6 py-3 rounded-xl hover:bg-accent-light transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" title="Confirmar creación de ramo">
                         {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                         {creating ? 'Creando...' : 'Crear Ramo'}
@@ -151,11 +199,38 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
             )}
 
             {filteredCourses.length === 0 && !showCreate ? (
-                <div className="bg-surface-light border border-dashed border-white/10 rounded-2xl p-10 text-center">
-                    <Search className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                    <h4 className="text-white font-semibold mb-2">No se encontraron ramos</h4>
-                    <p className="text-slate-400 text-sm">Prueba con otro término de búsqueda o crea uno nuevo.</p>
-                </div>
+                searchTerm ? (
+                    <div className="bg-surface-light border border-dashed border-white/10 rounded-2xl p-10 text-center">
+                        <Search className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                        <h4 className="text-white font-semibold mb-2">No se encontraron ramos</h4>
+                        <p className="text-slate-400 text-sm">Prueba con otro término de búsqueda o crea uno nuevo.</p>
+                    </div>
+                ) : (
+                    /* Semestre sin ramos: es el punto de partida del periodo nuevo,
+                       no un error de búsqueda. */
+                    <div className="bg-surface-light border border-dashed border-accent/25 rounded-2xl p-10 text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-4">
+                            <CalendarRange className="w-7 h-7 text-accent-light" />
+                        </div>
+                        <h4 className="text-white font-bold text-lg mb-2">
+                            {esSemestreValido(semestreActivo)
+                                ? `Aún no tienes ramos en ${formatSemestre(semestreActivo)}`
+                                : 'Aún no tienes ramos'}
+                        </h4>
+                        <p className="text-slate-400 text-sm max-w-md mx-auto mb-5 leading-relaxed">
+                            Crea los ramos que dictarás este periodo. Después, dentro de cada ramo,
+                            usa <strong className="text-slate-300">Calendario y Planificación</strong> para
+                            programar el semestre a partir del PDA.
+                        </p>
+                        <button
+                            onClick={() => setShowCreate(true)}
+                            className="bg-accent hover:bg-accent-light text-white font-black px-6 py-3 rounded-2xl transition-all active:scale-95 inline-flex items-center gap-2 text-sm shadow-lg shadow-accent/20"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Crear el primer ramo
+                        </button>
+                    </div>
+                )
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredCourses.map((c: any) => (
@@ -185,6 +260,11 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
                             </div>
                             {c.career_id && <p className="text-xs text-accent-light/70 mt-1 font-medium">{(careers || []).find((cr: any) => cr.id === c.career_id)?.name || ''}</p>}
                             <div className="flex flex-wrap gap-2 mt-2">
+                                {c.semester && (
+                                    <span className="text-[9px] font-bold uppercase tracking-wider bg-iris/10 text-iris-soft px-2 py-1 rounded-full border border-iris/20">
+                                        {formatSemestreCorto(c.semester)}
+                                    </span>
+                                )}
                                 {c.students_enabled === false && (
                                     <span className="text-[9px] font-bold uppercase tracking-wider bg-white/5 text-slate-400 px-2 py-1 rounded-full border border-white/10">
                                         Solo organización
@@ -204,7 +284,12 @@ export default function RamosPanel({ courses, selectedCourse, setSelectedCourse 
 
             <EditCourseModal
                 isOpen={!!editingCourse}
-                onClose={() => setEditingCourse(null)}
+                onClose={() => {
+                    setEditingCourse(null)
+                    // Editar puede cambiar el semestre del ramo: hay que recargar
+                    // para que salga del período actual si corresponde.
+                    onCoursesChanged?.()
+                }}
                 data={editingCourse}
             />
             <ConfirmModal

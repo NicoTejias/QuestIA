@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
     Archive, CheckCircle2, Lock, Loader2, CalendarCheck, Users, Target,
     TrendingUp, Download, AlertTriangle, RotateCcw, ClipboardList, Award, Percent,
+    CalendarPlus,
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
@@ -11,18 +12,35 @@ import ConfirmModal from '../ConfirmModal'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { SemesterAPI, type SemesterReport } from '../../lib/semesterApi'
 import { exportToExcel } from '../../utils/ExportData'
+import { useSemester } from '../../context/SemesterContext'
+import { esSemestreValido, formatSemestre, siguienteSemestre } from '../../lib/semesters'
 
 interface Props {
     user: any
+    /** Cambia de pestaña al abrir el semestre siguiente. */
+    onTabChange?: (tab: string) => void
+    /** Recarga los ramos del dashboard: cerrar cambia su estado. */
+    onCoursesChanged?: () => void
 }
 
 const fmtFecha = (ts: number | null | undefined) =>
     ts ? new Date(ts).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'
 
-export default function CierreSemestrePanel({ user }: Props) {
+export default function CierreSemestrePanel({ user, onTabChange, onCoursesChanged }: Props) {
+    const { semestreActivo, setSemestreActivo, semestresDisponibles } = useSemester()
+
+    // El cierre opera sobre un semestre concreto. Si se está viendo "Todos" o
+    // "Sin semestre", se toma el más reciente con ramos.
+    const semestreObjetivo = esSemestreValido(semestreActivo)
+        ? semestreActivo
+        : semestresDisponibles[0] || null
+
     const { data: estado, isLoading, refetch } = useSupabaseQuery(
-        () => (user ? SemesterAPI.getSemesterStatus(user.clerk_id, user.role) : Promise.resolve([])),
-        [user?.clerk_id]
+        () =>
+            user && semestreObjetivo
+                ? SemesterAPI.getSemesterStatus(user.clerk_id, user.role, semestreObjetivo)
+                : Promise.resolve([]),
+        [user?.clerk_id, semestreObjetivo]
     )
 
     const [seleccionados, setSeleccionados] = useState<string[] | null>(null)
@@ -70,6 +88,7 @@ export default function CierreSemestrePanel({ user }: Props) {
             setConfirmarCierre(false)
             toast.success(`Semestre cerrado en ${res.cerrados} ${res.cerrados === 1 ? 'ramo' : 'ramos'}.`)
             refetch()
+            onCoursesChanged?.()
         } catch (e: any) {
             toast.error(e.message || 'No se pudo cerrar el semestre.')
         } finally {
@@ -85,6 +104,7 @@ export default function CierreSemestrePanel({ user }: Props) {
             setInforme(null)
             toast.success('Semestre reabierto.')
             refetch()
+            onCoursesChanged?.()
         } catch (e: any) {
             toast.error(e.message || 'No se pudo reabrir.')
         } finally {
@@ -136,12 +156,42 @@ export default function CierreSemestrePanel({ user }: Props) {
             <div className="flex items-start gap-3 mb-6">
                 <div className="w-[3px] self-stretch bg-iris rounded-sm" />
                 <div>
-                    <h1 className="text-2xl font-bold m-0 text-text-main">Cierre de Semestre</h1>
+                    <h1 className="text-2xl font-bold m-0 text-text-main">
+                        Cierre de Semestre
+                        {semestreObjetivo && (
+                            <span className="ml-2.5 text-[12px] font-bold uppercase tracking-wider bg-iris/15 text-iris-soft px-2.5 py-1 rounded-full align-middle">
+                                {formatSemestre(semestreObjetivo)}
+                            </span>
+                        )}
+                    </h1>
                     <p className="text-quiet text-sm mt-1">
                         Cierra el período y genera el informe final con las métricas de tus ramos.
                     </p>
                 </div>
             </div>
+
+            {/* Sin semestre no hay nada que cerrar. */}
+            {!semestreObjetivo && (
+                <div className="qi-card p-8 text-center">
+                    <p className="text-sm text-quiet">
+                        Tus ramos todavía no tienen un semestre asignado. Asígnales uno al crearlos
+                        o al programar su calendario para poder cerrar el período.
+                    </p>
+                </div>
+            )}
+
+            {/* Todo cerrado: el paso siguiente es abrir el semestre entrante. */}
+            {semestreObjetivo && ramos.length > 0 && cerrables.length === 0 && enCurso.length === 0 && (
+                <SiguienteSemestre
+                    semestreCerrado={semestreObjetivo}
+                    onAbrir={() => {
+                        const proximo = siguienteSemestre(semestreObjetivo)
+                        setSemestreActivo(proximo)
+                        onTabChange?.('ramos')
+                        toast.success(`Semestre ${proximo} activo. Crea los ramos del período.`)
+                    }}
+                />
+            )}
 
             {/* Estado general */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
@@ -317,6 +367,63 @@ export default function CierreSemestrePanel({ user }: Props) {
                 message="Se eliminará la marca de cierre y el informe archivado de los ramos cerrados. Podrás volver a cerrarlos para regenerar el informe."
                 confirmText="Reabrir"
             />
+        </div>
+    )
+}
+
+/* ── Apertura del semestre siguiente ────────────────────────── */
+/**
+ * Aparece cuando ya no queda nada por cerrar en el período: el paso natural
+ * es abrir el semestre entrante y programar sus ramos.
+ */
+function SiguienteSemestre({
+    semestreCerrado,
+    onAbrir,
+}: {
+    semestreCerrado: string
+    onAbrir: () => void
+}) {
+    const proximo = siguienteSemestre(semestreCerrado)
+
+    return (
+        <div className="qi-card p-6 mb-5 border-iris/25">
+            <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-iris/15 flex items-center justify-center shrink-0">
+                    <CalendarPlus className="w-5 h-5 text-iris-light" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <h2 className="text-[15px] font-bold text-text-main">
+                        {formatSemestre(semestreCerrado)} está cerrado
+                    </h2>
+                    <p className="text-quiet text-[13px] mt-1 leading-relaxed max-w-xl">
+                        El período quedó archivado y puedes volver a consultarlo cuando quieras desde
+                        el selector de semestre. Para partir el período siguiente, abre{' '}
+                        <strong className="text-text-main">{formatSemestre(proximo)}</strong> y crea
+                        ahí los ramos que vas a dictar.
+                    </p>
+
+                    <ol className="flex flex-col gap-2 mt-4 mb-5">
+                        {[
+                            'Crea los ramos del nuevo período en Mis Ramos.',
+                            'Entra a cada ramo y abre Calendario y Planificación.',
+                            'Sube el PDA y programa las semanas del semestre.',
+                        ].map((paso, i) => (
+                            <li key={paso} className="flex gap-2.5 items-start">
+                                <span className="qi-step-num mt-0.5">{i + 1}</span>
+                                <span className="text-[12.5px] text-quiet leading-relaxed">{paso}</span>
+                            </li>
+                        ))}
+                    </ol>
+
+                    <button
+                        onClick={onAbrir}
+                        className="px-4 py-2.5 bg-iris hover:bg-iris-light text-white rounded-xl transition-all inline-flex items-center gap-2 font-bold text-[13px] shadow-lg shadow-iris/20"
+                    >
+                        <CalendarPlus className="w-4 h-4" />
+                        Abrir {formatSemestre(proximo)}
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }

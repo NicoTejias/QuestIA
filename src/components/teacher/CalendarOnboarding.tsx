@@ -3,6 +3,7 @@ import { Calendar, Upload, Loader2, Info, CheckCircle2, Plus, X } from 'lucide-r
 import { toast } from 'sonner'
 import { CalendarAPI, DocumentsAPI, InventarioPanolAPI, supabase } from '../../lib/api'
 import { extractTextFromFile, getFileType } from '../../utils/documentParser'
+import { esSemestreValido, semestreDeFecha, opcionesDeSemestre, formatSemestre } from '../../lib/semesters'
 
 // Módulos horarios individuales de Duoc UC (40 minutos c/u, 10 min de recreo cada 2 módulos)
 const BLOQUES_DUOC = [
@@ -65,7 +66,10 @@ const nuevaSeccion = (nombre = ''): SeccionConfig => ({
 
 export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboardingProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [semestre, setSemestre] = useState<'2026-1' | '2026-2'>('2026-1')
+  // El semestre lo define el ramo; si aún no lo tiene, se propone el del calendario.
+  const [semestre, setSemestre] = useState<string>(
+    esSemestreValido(course.semester) ? course.semester : semestreDeFecha()
+  )
   const [semanas, setSemanas] = useState(18)
   // Fecha de inicio única para todo el semestre (común a todas las secciones).
   const [fechaInicioSemestre, setFechaInicioSemestre] = useState('')
@@ -476,11 +480,12 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
             <label className="block text-slate-300 text-sm font-medium mb-2">Semestre</label>
             <select
               value={semestre}
-              onChange={(e) => setSemestre(e.target.value as any)}
+              onChange={(e) => setSemestre(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
-              <option value="2026-1">2026-1 (Primer Semestre)</option>
-              <option value="2026-2">2026-2 (Segundo Semestre)</option>
+              {opcionesDeSemestre([semestre]).map(s => (
+                <option key={s} value={s}>{formatSemestre(s)}</option>
+              ))}
             </select>
           </div>
 

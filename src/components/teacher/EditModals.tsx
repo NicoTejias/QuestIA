@@ -3,6 +3,7 @@ import { X, Loader2, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { CoursesAPI, MissionsAPI, RewardsAPI, DocumentsAPI } from '../../lib/api'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
+import { opcionesDeSemestre, formatSemestre } from '../../lib/semesters'
 
 interface EditModalProps {
     isOpen: boolean
@@ -12,11 +13,17 @@ interface EditModalProps {
 
 export function EditCourseModal({ isOpen, onClose, data }: EditModalProps) {
     const { data: careers } = useSupabaseQuery(() => DocumentsAPI.listCareers(), [], { enabled: isOpen })
-    const [formData, setFormData] = useState({ name: '', code: '', description: '', career_id: '' })
+    const [formData, setFormData] = useState({ name: '', code: '', description: '', career_id: '', semester: '' })
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
-        if (data) setFormData({ name: data.name, code: data.code, description: data.description || '', career_id: data.career_id || '' })
+        if (data) setFormData({
+            name: data.name,
+            code: data.code,
+            description: data.description || '',
+            career_id: data.career_id || '',
+            semester: data.semester || '',
+        })
     }, [data])
 
     const handleSave = async () => {
@@ -27,6 +34,8 @@ export function EditCourseModal({ isOpen, onClose, data }: EditModalProps) {
                 code: formData.code,
                 description: formData.description,
                 career_id: formData.career_id || undefined,
+                // Cadena vacía = sin semestre; se guarda como NULL, no como "".
+                semester: formData.semester || null,
             })
             toast.success('Ramo actualizado con éxito')
             onClose()
@@ -72,6 +81,20 @@ export function EditCourseModal({ isOpen, onClose, data }: EditModalProps) {
                             <option value="">Sin carrera asociada</option>
                             {(careers || []).map((c: any) => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Semestre</label>
+                        <select
+                            value={formData.semester}
+                            onChange={e => setFormData({ ...formData, semester: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:border-accent/50 outline-none transition-all"
+                            title="Periodo académico del ramo"
+                        >
+                            <option value="">Sin semestre asignado</option>
+                            {opcionesDeSemestre(formData.semester ? [formData.semester] : []).map(s => (
+                                <option key={s} value={s}>{formatSemestre(s)}</option>
                             ))}
                         </select>
                     </div>

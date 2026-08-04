@@ -243,7 +243,7 @@ export const CoursesAPI = {
     return data
   },
 
-  async createCourse(teacherId: string, data: { name: string; code: string; description: string; career_id?: string }) {
+  async createCourse(teacherId: string, data: { name: string; code: string; description: string; career_id?: string; semester?: string }) {
     const { data: course, error } = await supabase.from('courses').insert({ ...data, teacher_id: teacherId }).select().single()
     if (error) throw error
     return course
@@ -2044,9 +2044,14 @@ export const CalendarAPI = {
   },
 
   async saveScheduleConfig(courseId: string, config: any) {
+    // El semestre vive en su propia columna (para filtrar el dashboard), pero se
+    // fija aquí para que calendarizar un ramo baste para dejarlo en su período.
+    const updates: Record<string, any> = { schedule_config: config }
+    if (config?.semestre) updates.semester = config.semestre
+
     const { error } = await supabase
       .from('courses')
-      .update({ schedule_config: config })
+      .update(updates)
       .eq('id', courseId)
     if (error) throw error
   },
@@ -2121,7 +2126,7 @@ export const CalendarAPI = {
   async generateCalendarFromPDA(data: {
     course_id: string;
     document_id: string;
-    semestre: '2026-1' | '2026-2';
+    semestre: string;
     seccion: string;
     regimen: 'diurno' | 'vespertino';
     semanas_semestre: number;

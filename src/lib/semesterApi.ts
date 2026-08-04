@@ -218,9 +218,11 @@ export const SemesterAPI = {
      * Estado de cierre de cada ramo del docente: fecha de término, si ya terminó
      * y si el semestre ya fue cerrado.
      */
-    async getSemesterStatus(teacherId: string, role: string) {
+    async getSemesterStatus(teacherId: string, role: string, semestre?: string) {
         let query = supabase.from('courses').select('*')
         if (role !== 'admin') query = query.eq('teacher_id', teacherId)
+        // Acotar al periodo pedido: el cierre siempre opera sobre un semestre concreto.
+        if (semestre) query = query.eq('semester', semestre)
         const { data: courses, error } = await query
         if (error) throw error
         if (!courses || courses.length === 0) return []

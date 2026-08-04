@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useClerk } from "@clerk/clerk-react"
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, Target, Trophy, Gift, BarChart3, LogOut, Menu, X, Settings, Sparkles, Loader2, FileText, User, Mail, ShieldCheck, HelpCircle, ArrowRightLeft, Package, Archive } from 'lucide-react'
@@ -23,6 +23,9 @@ import { CoursesAPI, AnalyticsAPI } from '../lib/api'
 import { getProximasClases, type ProximaClase } from '../lib/semesterApi'
 import { SideRail, RailSection, type OnboardingStep } from '../components/dashboard/primitives'
 import { capitalize } from '../utils/dashboardUtils'
+import { SemesterProvider, useSemester } from '../context/SemesterContext'
+import SemesterSwitcher from '../components/teacher/SemesterSwitcher'
+import { esSemestreValido, formatSemestre } from '../lib/semesters'
 
 const TAB_META: Record<string, { label: string; emoji: string }> = {
     inicio: { label: 'Inicio', emoji: '📊' },
@@ -39,14 +42,40 @@ const TAB_META: Record<string, { label: string; emoji: string }> = {
 }
 
 export default function TeacherDashboard() {
-    const { signOut } = useClerk()
-    const navigate = useNavigate()
-
     const { user } = useProfile()
-    const { data: courses } = useSupabaseQuery(
+    const { data: allCourses, refetch: refetchCourses } = useSupabaseQuery(
         () => user ? CoursesAPI.getMyCourses(user.clerk_id, user.role) : Promise.resolve([]),
         [user]
     )
+
+    // El provider envuelve al dashboard para que el semestre activo esté
+    // disponible en el selector y en todas las secciones.
+    return (
+        <SemesterProvider courses={allCourses || []}>
+            <TeacherDashboardInner
+                user={user}
+                allCourses={allCourses || []}
+                refetchCourses={refetchCourses}
+            />
+        </SemesterProvider>
+    )
+}
+
+function TeacherDashboardInner({
+    user,
+    allCourses,
+    refetchCourses,
+}: {
+    user: any
+    allCourses: any[]
+    refetchCourses: () => void
+}) {
+    const { signOut } = useClerk()
+    const navigate = useNavigate()
+    const { filtrarPorSemestre, semestreActivo } = useSemester()
+
+    // Todo el dashboard trabaja sobre los ramos del semestre activo.
+    const courses = useMemo(() => filtrarPorSemestre(allCourses), [allCourses, filtrarPorSemestre])
 
     // Stats a nivel de layout: la barra lateral es fija, así que sus datos ya no
     // pueden vivir dentro de la pestaña de Inicio.
@@ -201,13 +230,22 @@ export default function TeacherDashboard() {
                         >
                             <Menu className="w-5 h-5" />
                         </button>
-                        <h1 className="text-[17px] font-extrabold text-[#f0f0f8] truncate">
-                            {currentMeta.emoji} {currentMeta.label}
-                        </h1>
+                        <div className="min-w-0">
+                            <h1 className="text-[17px] font-extrabold text-[#f0f0f8] truncate leading-tight">
+                                {currentMeta.emoji} {currentMeta.label}
+                            </h1>
+                            {esSemestreValido(semestreActivo) && (
+                                <span className="text-[10.5px] text-[#5577aa] font-semibold">
+                                    {formatSemestre(semestreActivo)}
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="flex items-center gap-2.5">
+                        {/* Selector de semestre: cambia el contexto de todo el panel. */}
+                        <SemesterSwitcher courses={allCourses} />
                         {/* Beta badge */}
-                        <div className="bg-iris/12 border border-iris/25 rounded-full px-3 py-1 text-[10px] font-extrabold text-iris-soft uppercase tracking-[1px]">
+                        <div className="hidden sm:block bg-iris/12 border border-iris/25 rounded-full px-3 py-1 text-[10px] font-extrabold text-iris-soft uppercase tracking-[1px]">
                             Beta
                         </div>
                         {/* Notification bell (wrapped to match style) */}
@@ -243,6 +281,7 @@ export default function TeacherDashboard() {
                                 courses={courses || []}
                                 selectedCourse={selectedCourse}
                                 setSelectedCourse={setSelectedCourse}
+                                onCoursesChanged={refetchCourses}
                             />
                         )}
                         {activeTab === 'material' && <MaterialPanel courses={courses || []} />}
@@ -251,7 +290,13 @@ export default function TeacherDashboard() {
                         {activeTab === 'recompensas' && <CrearRecompensaPanel courses={courses || []} />}
                         {activeTab === 'ranking' && <RankingDocentePanel />}
                         {activeTab === 'canjes' && <GestionCanjesPanel />}
-                        {activeTab === 'cierre' && <CierreSemestrePanel user={user} />}
+                        {activeTab === 'cierre' && (
+                            <CierreSemestrePanel
+                                user={user}
+                                onTabChange={setActiveTab}
+                                onCoursesChanged={refetchCourses}
+                            />
+                        )}
                         {activeTab === 'perfil' && <PerfilPanel user={user} coursesCount={coursesCount} />}
                         {activeTab === 'admin' && user?.role === 'admin' && <AdminPanel />}
                     </div>
