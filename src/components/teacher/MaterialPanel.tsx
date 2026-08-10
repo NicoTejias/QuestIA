@@ -5,6 +5,7 @@ import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '.
 import { useGooglePicker } from '../../hooks/useGooglePicker'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { DocumentsAPI } from '../../lib/api'
+import { CourseNotebookPanel } from './CourseNotebookPanel'
 
 export default function MaterialPanel({ courses }: { courses: any[] }) {
     const { data: documents } = useSupabaseQuery(() => DocumentsAPI.getMyDocuments(), [])
@@ -322,6 +323,8 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                     Importar desde Google Drive
                 </button>
             </div>
+
+            {selectedCourse && <CourseNotebookPanel courseId={selectedCourse as any} />}
 
             {/* Resumen de Bóveda Maestra (IA Context) */}
             {documents && documents.filter((d: any) => d.is_master_doc).length > 0 && (
