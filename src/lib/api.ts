@@ -2570,13 +2570,37 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 // ============================================================
 export const DriveSyncAPI = {
   async getCourseNotebook(courseId: string) {
-    const { data, error } = await supabase
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, name, code, description, drive_folder_id, drive_folder_name, last_drive_sync, drive_files_manifest')
+        .eq('id', courseId)
+        .maybeSingle()
+
+      if (!error && data) {
+        return data
+      }
+    } catch {
+      // Ignorar error de columna faltante en Supabase cache
+    }
+
+    // Fallback a consulta estándar sin columnas personalizadas + caché local
+    const { data: baseData } = await supabase
       .from('courses')
-      .select('id, name, code, description, drive_folder_id, drive_folder_name, last_drive_sync, drive_files_manifest')
+      .select('id, name, code, description')
       .eq('id', courseId)
       .maybeSingle()
-    if (error) throw error
-    return data
+
+    const localData = typeof localStorage !== 'undefined' ? localStorage.getItem(`questia_notebook_${courseId}`) : null
+    const parsedLocal = localData ? JSON.parse(localData) : {}
+
+    return {
+      ...(baseData || { id: courseId, name: "Curso", code: "", description: "" }),
+      drive_folder_id: parsedLocal.drive_folder_id || null,
+      drive_folder_name: parsedLocal.drive_folder_name || null,
+      last_drive_sync: parsedLocal.last_drive_sync || null,
+      drive_files_manifest: parsedLocal.drive_files_manifest || [],
+    }
   },
 
   async syncCourseDriveFolder(courseId: string, folderId: string, accessToken?: string) {
@@ -2629,17 +2653,26 @@ export const DriveSyncAPI = {
 
     await scanFolder(folderId, "")
 
-    const { error } = await supabase
-      .from('courses')
-      .update({
+    // Guardar en caché local inmediato
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(`questia_notebook_${courseId}`, JSON.stringify({
         drive_folder_id: folderId,
         drive_files_manifest: items,
         last_drive_sync: Date.now(),
-      })
-      .eq('id', courseId)
+      }))
+    }
 
-    if (error) {
-      console.warn("Could not save to Supabase directly, returning manifest locally:", error.message)
+    try {
+      await supabase
+        .from('courses')
+        .update({
+          drive_folder_id: folderId,
+          drive_files_manifest: items,
+          last_drive_sync: Date.now(),
+        })
+        .eq('id', courseId)
+    } catch (err: any) {
+      console.warn("Respaldo guardado en caché local:", err.message)
     }
 
     return items

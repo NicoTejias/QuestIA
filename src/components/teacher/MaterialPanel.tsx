@@ -136,8 +136,10 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
         handleUpload(e.dataTransfer.files)
     }
 
-    // Agrupar documentos por curso
-    const docsByCourse = (documents || []).reduce((acc: Record<string, any[]>, doc: any) => {
+    // Agrupar documentos por curso (Filtrado si hay un ramo seleccionado)
+    const filteredDocuments = (documents || []).filter((d: any) => !selectedCourse || d.course_id === selectedCourse)
+
+    const docsByCourse = filteredDocuments.reduce((acc: Record<string, any[]>, doc: any) => {
         const cid = doc.course_id
         if (!acc[cid]) acc[cid] = []
         acc[cid].push(doc)
@@ -327,7 +329,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
             {selectedCourse && <CourseNotebookPanel courseId={selectedCourse as any} />}
 
             {/* Resumen de Bóveda Maestra (IA Context) */}
-            {documents && documents.filter((d: any) => d.is_master_doc).length > 0 && (
+            {documents && documents.filter((d: any) => d.is_master_doc && (!selectedCourse || d.course_id === selectedCourse)).length > 0 && (
                 <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-3xl shadow-xl shadow-primary/5">
                     <button
                         onClick={() => setCollapsedMasterVault(!collapsedMasterVault)}
@@ -339,7 +341,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                                 Bóveda Maestra Consolidada
                             </h3>
                             <span className="bg-primary/20 text-primary-light px-3 py-1 rounded-full text-[10px] font-black border border-primary/20">
-                                {documents.filter((d: any) => d.is_master_doc).length} DOCUMENTOS DE CONTEXTO IA
+                                {documents.filter((d: any) => d.is_master_doc && (!selectedCourse || d.course_id === selectedCourse)).length} DOCUMENTOS DE CONTEXTO IA
                             </span>
                         </div>
                         {collapsedMasterVault ? (
@@ -350,7 +352,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                     </button>
                     {!collapsedMasterVault && (
                         <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {documents.filter((d: any) => d.is_master_doc).map((doc: any) => {
+                            {documents.filter((d: any) => d.is_master_doc && (!selectedCourse || d.course_id === selectedCourse)).map((doc: any) => {
                                 const course = courses.find((c: any) => c.id === doc.course_id);
                                 return (
                                     <div key={doc.id} className="relative group">

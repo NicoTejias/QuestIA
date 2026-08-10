@@ -58,11 +58,17 @@ export default function RamosPanel({
     const [courseToDelete, setCourseToDelete] = useState<any>(null)
     const [deleting, setDeleting] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
+    const [semesterFilter, setSemesterFilter] = useState<string>('todos')
 
-    const filteredCourses = (courses || []).filter(c =>
-        (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.code || '').toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filteredCourses = (courses || []).filter(c => {
+        const matchesSearch = (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              (c.code || '').toLowerCase().includes(searchTerm.toLowerCase())
+        if (!matchesSearch) return false
+
+        if (semesterFilter === 'todos') return true
+        if (semesterFilter === 'sin_semestre') return !c.semester
+        return c.semester === semesterFilter
+    })
 
     const handleCreate = async () => {
         if (!formData.name || !formData.code || !user) return
@@ -137,16 +143,31 @@ export default function RamosPanel({
             </div>
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex-1 w-full max-w-md relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-accent transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Buscar por nombre o código..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-surface-light border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-accent transition-all placeholder:text-slate-600 shadow-inner"
-                        title="Buscar ramos"
-                    />
+                <div className="flex-1 w-full flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1 relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-accent transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nombre o código..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-surface-light border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-accent transition-all placeholder:text-slate-600 shadow-inner"
+                            title="Buscar ramos"
+                        />
+                    </div>
+                    <select
+                        value={semesterFilter}
+                        onChange={(e) => setSemesterFilter(e.target.value)}
+                        className="bg-surface-light border border-white/5 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-accent shadow-inner min-w-[170px]"
+                        title="Filtrar por semestre"
+                    >
+                        <option value="todos">Todos los semestres</option>
+                        <option value="2026-1">Semestre 2026-1</option>
+                        <option value="2026-2">Semestre 2026-2</option>
+                        <option value="2025-2">Semestre 2025-2</option>
+                        <option value="2025-1">Semestre 2025-1</option>
+                        <option value="sin_semestre">Sin semestre asignado</option>
+                    </select>
                 </div>
                 <button onClick={() => setShowCreate(!showCreate)} className="bg-accent hover:bg-accent-light text-white font-black px-6 py-3 rounded-2xl transition-all active:scale-95 flex items-center gap-2 text-sm shadow-lg shadow-accent/20" title="Crear nuevo ramo">
                     <Plus className="w-5 h-5" />
