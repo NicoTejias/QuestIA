@@ -810,3 +810,11 @@ export const getGlobalRanking = query({
         }
     },
 });
+
+export const getCourseById = query({
+    args: { id: v.id("courses") },
+    handler: async (ctx, args) => {
+        return await ctx.db.get(args.id);
+    },
+});
+
