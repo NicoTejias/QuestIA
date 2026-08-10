@@ -50,7 +50,7 @@ export default function CierreSemestrePanel({ user, onTabChange, onCoursesChange
     const [confirmarCierre, setConfirmarCierre] = useState(false)
     const [confirmarReapertura, setConfirmarReapertura] = useState(false)
 
-    const ramos = estado || []
+    const ramos = useMemo(() => estado || [], [estado])
 
     // Los ramos con fecha de término ya pasada y todavía abiertos son los cerrables.
     const cerrables = useMemo(() => ramos.filter((c: any) => c.terminado && !c.cerrado), [ramos])

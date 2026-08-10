@@ -20,6 +20,7 @@ export function useSupabaseQuery<T>(
     } finally {
       setIsLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...dependencies, options.enabled])
 
   useEffect(() => {

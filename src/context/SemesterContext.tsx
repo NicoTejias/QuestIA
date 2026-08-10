@@ -109,6 +109,7 @@ export function SemesterProvider({ courses, children }: { courses: any[]; childr
     return <SemesterContext.Provider value={value}>{children}</SemesterContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSemester(): SemesterContextValue {
     const ctx = useContext(SemesterContext)
     if (!ctx) throw new Error('useSemester debe usarse dentro de un SemesterProvider')

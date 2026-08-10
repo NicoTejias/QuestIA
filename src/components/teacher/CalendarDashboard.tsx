@@ -41,6 +41,7 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
 
   useEffect(() => {
     loadClases()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [course.id])
 
   // Secciones presentes en el calendario (derivadas de las clases).
