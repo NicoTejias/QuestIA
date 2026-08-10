@@ -25,6 +25,8 @@ import type * as courses from "../courses.js";
 import type * as crons from "../crons.js";
 import type * as demo from "../demo.js";
 import type * as documents from "../documents.js";
+import type * as drive_planning from "../drive_planning.js";
+import type * as drive_sync from "../drive_sync.js";
 import type * as email from "../email.js";
 import type * as evaluaciones from "../evaluaciones.js";
 import type * as evaluator from "../evaluator.js";
@@ -74,6 +76,8 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   demo: typeof demo;
   documents: typeof documents;
+  drive_planning: typeof drive_planning;
+  drive_sync: typeof drive_sync;
   email: typeof email;
   evaluaciones: typeof evaluaciones;
   evaluator: typeof evaluator;

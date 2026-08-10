@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { FolderOpen, FileText, RefreshCw, Sparkles, CheckCircle, BookOpen } from "lucide-react";
 
 interface CourseNotebookPanelProps {
@@ -9,7 +9,7 @@ interface CourseNotebookPanelProps {
 }
 
 export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ courseId }) => {
-  const course = useQuery(api.courses.getCourseById, { id: courseId });
+  const course = useQuery(api.courses.getCourseById, { courseId });
   const syncFolder = useAction(api.drive_sync.syncCourseDriveFolder);
   const planCourse = useAction(api.drive_planning.planCourseFromDriveNotebook);
 

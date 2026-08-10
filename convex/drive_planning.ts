@@ -1,14 +1,14 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
-import { callGeminiWithFallback } from "./geminiClient";
+import { generateWithFallback } from "./geminiClient";
 
 export const planCourseFromDriveNotebook = action({
   args: {
     courseId: v.id("courses"),
   },
   handler: async (ctx, args) => {
-    const course = await ctx.runQuery(api.courses.getCourseById, { id: args.courseId });
+    const course = await ctx.runQuery(api.courses.getCourseById, { courseId: args.courseId });
     if (!course) {
       throw new Error("Curso no encontrado");
     }
@@ -49,7 +49,7 @@ Responde estrictamente en formato JSON con la siguiente estructura:
   ]
 }`;
 
-    const responseText = await callGeminiWithFallback(prompt, { responseMimeType: "application/json" });
+    const responseText = await generateWithFallback(prompt);
     
     try {
       return JSON.parse(responseText);
