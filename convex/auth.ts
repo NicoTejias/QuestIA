@@ -34,6 +34,13 @@ const CustomPassword = Password({
 });
 
 const CustomGoogle = Google({
+  authorization: {
+    params: {
+      scope: "openid profile email https://www.googleapis.com/auth/drive.readonly",
+      access_type: "offline",
+      prompt: "consent",
+    },
+  },
   profile(profile) {
     const email = profile.email?.toLowerCase() || "";
     const allowedDomains = ["@questia.cl", "@duocuc.cl", "@profesor.duoc.cl", "@duoc.cl"];
