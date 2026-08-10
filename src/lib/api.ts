@@ -2287,30 +2287,27 @@ export const CalendarAPI = {
       inventarioDescription = `MATERIALES DISPONIBLES EN PAÑOL (usa PREFERENTEMENTE estos en "materiales_sugeridos", citando el nombre tal cual aparece; si algo necesario no está en la lista, puedes sugerirlo igual pero indica que debe adquirirse):\n${lista}\n`
     }
 
-    const prompt = `Eres un asistente de planificación curricular para profesores de Duoc UC.
-Analiza el/los documento(s) del ramo y extrae el temario ORGANIZADO POR SEMANA de la asignatura.
-La asignatura dura aproximadamente ${data.semanas_semestre} semanas.
+    const prompt = `Actúa como un experto en diseño instruccional y planificación académica.
+Tu tarea es organizar las sesiones de clases para la asignatura basándote exclusivamente en los documentos proporcionados (PDA, PA, PIA, información de uso docente, guías e instrumentos de evaluación).
 
 ${scheduleDescription}
 ${inventarioDescription}
-DETECCIÓN DE ESTRUCTURA (IMPORTANTE):
-- Si el documento YA VIENE ESTRUCTURADO clase por clase o sesión por sesión (por ejemplo: una planificación detallada con "Clase 1", "Sesión 2", "Semana 3: tema…"; o un conjunto de presentaciones/diapositivas donde cada una corresponde a un tema), RESPETA ese orden y esa división tal cual: mapea cada clase/sesión/presentación, en el orden dado, a las semanas correlativas (1 elemento → 1 semana). NO reordenes ni resumas.
-- Solo si el documento es un PDA/programa general SIN división por sesión, INFIERE tú la distribución semanal del temario.
 
-REGLAS DE EXTRACCIÓN:
-- Debes devolver exactamente UNA entrada por cada semana del semestre (${data.semanas_semestre} semanas en total), numeradas del 1 al ${data.semanas_semestre}. NO agrupes ni omitas semanas.
-- "titulo": el nombre del tema de la semana.
-- "contenido_catedra": el contenido TEÓRICO/conceptual de esa semana (lo que se explica en la clase de cátedra).
-- "contenido_laboratorio": la actividad PRÁCTICA/taller de esa semana asociada a la teoría (guías de ejercicios, laboratorio, mediciones o simulaciones). Debe abordar el MISMO tema de la semana, pero de forma aplicada.
-- "materiales_sugeridos": materiales, software, herramientas o equipos requeridos esa semana.
-- EVALUACIONES: marca "tiene_evaluacion": true SOLO en las semanas donde el PDA indica EXPLÍCITAMENTE una evaluación calificada (una fecha/semana concreta con Prueba, Certamen, Examen, Encargo o Presentación con nota). NO marques evaluación por el solo hecho de que el texto mencione "evaluación", "actividad evaluada", "rúbrica", "ponderación" o criterios de logro de forma general. Ante la duda, deja "tiene_evaluacion": false.
-- PONDERACIONES: los ramos de Duoc suelen tener 3 EVALUACIONES PARCIALES y 1 EXAMEN FINAL, cada uno con su PORCENTAJE de ponderación (ej: Eval 1: 25%, Eval 2: 25%, Eval 3: 20%, Examen: 30%). Cuando una semana tenga evaluación, completa:
-  - "numero_evaluacion": "Evaluación 1" | "Evaluación 2" | "Evaluación 3" | "Examen Final" (según corresponda por orden y contexto).
-  - "ponderacion": el porcentaje numérico (sin el símbolo %, ej: 25). Si el documento no indica el porcentaje, deja 0.
-  Busca ACTIVAMENTE en todo el documento la tabla o sección de ponderaciones para asignar los porcentajes correctos.
-- Si el contenido incluye varios documentos (marcados con "=== DOCUMENTO: ... ==="), prioriza el que contenga la programación semanal del ramo (el PDA/planificación) para el temario y las fechas/ponderaciones de evaluación.
+INSTRUCCIONES DE ESTRUCTURA Y PEDAGOGÍA:
+- Distribución Temporal: La planificación debe cubrir exactamente las ${data.semanas_semestre} semanas del semestre. Cada semana cuenta con 1 sesión teórica (cátedra) y 1 sesión práctica/laboratorio.
+- Uso de Fuentes:
+  * Utiliza el PDA (Plan Didáctico de Aula) para definir la duración de cada Experiencia de Aprendizaje (EA) y las ponderaciones de las evaluaciones.
+  * Guíate por la 'Información de uso docente' de cada actividad para determinar el contenido y objetivo específico de cada sesión semana a semana.
+  * Asegura que los contenidos cubran los Indicadores de Logro (IL) detallados en el PA (Programa de Asignatura) y el PIA (Plan Instruccional).
+- Reglas de Evaluación:
+  * Las evaluaciones sumativas deben programarse al final de cada Experiencia de Aprendizaje (EA).
+  * Las evaluaciones teóricas se realizan en horario de teoría y las prácticas en horario de laboratorio. Cada evaluación consume una sesión completa.
+  * PONDERACIONES: Busca activamente en los documentos la tabla de ponderaciones. Asigna "numero_evaluacion" (Evaluación 1, 2, 3, Examen Final) y "ponderacion" (porcentaje numérico sin %, ej: 25).
+- Hitos Finales:
+  * La penúltima semana (Semana ${data.semanas_semestre - 1}) debe reservarse exclusivamente para evaluaciones atrasadas, recuperativas y resolución de dudas finales.
+  * La última semana (Semana ${data.semanas_semestre}) debe enfocarse en la preparación intensiva y simulacros para el Examen Transversal (ET).
 
-CONTENIDO DEL PDA:
+DOCUMENTOS E INSUMOS ENTREGADOS:
 ${content}
 
 RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utilizando estrictamente este formato (una entrada por semana):
@@ -2318,10 +2315,10 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
   "semanas": [
     {
       "semana": 1,
-      "titulo": "Tema de la semana",
-      "contenido_catedra": "Contenido teórico a dictar en cátedra",
+      "titulo": "Tema/Actividad de la semana",
+      "contenido_catedra": "Contenido teórico a dictar en cátedra alineado con la información docente",
       "contenido_laboratorio": "Actividad práctica/taller de laboratorio de esa semana",
-      "materiales_sugeridos": "Materiales, software o equipos requeridos",
+      "materiales_sugeridos": "Documentos específicos (PPTs, Guías de taller, Pautas) y materiales requeridos",
       "tiene_evaluacion": false,
       "tipo_evaluacion": "ninguna",
       "titulo_evaluacion": "",

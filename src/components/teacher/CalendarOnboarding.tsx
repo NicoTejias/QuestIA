@@ -172,12 +172,13 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
       try {
         const docs = await DocumentsAPI.getDocumentsByCourse(course.id)
         if (!activo) return
-        // Priorizar documentos maestros (contexto IA); el PDA queda preseleccionado.
-        const maestros = (docs || []).filter((d: any) => d.is_master_doc && d.content_text)
-        setDocsRamo(maestros)
-        const pda = maestros.find((d: any) => d.master_doc_type === 'PDA')
-        if (pda) setDocsSeleccionados([pda.id])
-        else if (maestros.length === 0) setFuente('nuevo')
+        const disponibles = (docs || []).filter((d: any) => d.content_text)
+        setDocsRamo(disponibles)
+        if (disponibles.length > 0) {
+          setDocsSeleccionados(disponibles.map((d: any) => d.id))
+        } else {
+          setFuente('nuevo')
+        }
       } catch (err) {
         console.error('Error cargando documentos del ramo', err)
         setFuente('nuevo')
@@ -277,8 +278,8 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           .map(d => `=== DOCUMENTO: ${d.file_name} ===\n${d.content_text || ''}`)
           .join('\n\n')
 
-        if (contentText.replace(/--- Página \d+ ---|=== DOCUMENTO:.*===/g, '').trim().length < 100) {
-          throw new Error('Los documentos seleccionados no contienen suficiente texto legible para calendarizar.')
+        if (!contentText.trim()) {
+          throw new Error('Los documentos seleccionados no contienen información suficiente para calendarizar.')
         }
 
         // Si es un único documento, usarlo directamente; si son varios, registrar un PDA combinado.
