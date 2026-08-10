@@ -134,5 +134,5 @@ export function useGooglePicker() {
     return await response.blob();
   };
 
-  return { openPicker, downloadFile, isLoaded };
+  return { openPicker, downloadFile, authenticate, accessToken, isLoaded };
 }

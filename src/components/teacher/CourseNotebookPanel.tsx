@@ -13,7 +13,7 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
     () => DriveSyncAPI.getCourseNotebook(courseId),
     [courseId]
   );
-  const { openPicker, isLoaded } = useGooglePicker();
+  const { openPicker, authenticate, accessToken, isLoaded } = useGooglePicker();
 
   const [folderInput, setFolderInput] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
@@ -39,14 +39,23 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
         folderId = targetFolder.split("folders/")[1].split("?")[0];
       }
 
-      const items = await DriveSyncAPI.syncCourseDriveFolder(courseId, folderId, customToken);
+      let token = customToken || accessToken;
+      if (!token) {
+        try {
+          token = await authenticate();
+        } catch {
+          throw new Error("Se requiere autorización con tu cuenta de Google para acceder a los archivos de Google Drive.");
+        }
+      }
+
+      const items = await DriveSyncAPI.syncCourseDriveFolder(courseId, folderId, token);
       if (items.length === 0) {
-        setErrorMessage("No se encontraron archivos en la carpeta especificada. Asegúrate de que la carpeta contenga archivos (PDFs, PPTs, Docs, XLSX) y tenga permisos de lectura.");
+        setErrorMessage("No se encontraron archivos dentro de la carpeta especificada. Asegúrate de que la carpeta contenga archivos (PDFs, PPTs, Docs, XLSX).");
       }
       await refetchCourse();
     } catch (err: any) {
       console.error("Error sincronizando cuaderno de Drive:", err);
-      setErrorMessage(err.message || "Error al conectar con Google Drive. Verifica que la carpeta sea pública o tenga acceso de lectura.");
+      setErrorMessage(err.message || "Error al conectar con Google Drive. Por favor concede permisos a tu cuenta de Google.");
     } finally {
       setIsSyncing(false);
     }

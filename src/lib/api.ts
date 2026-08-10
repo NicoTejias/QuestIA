@@ -2674,25 +2674,25 @@ export const DriveSyncAPI = {
     }
   },
 
-  async syncCourseDriveFolder(courseId: string, folderId: string, accessToken?: string) {
+  async syncCourseDriveFolder(courseId: string, folderId: string, accessToken: string) {
+    if (!accessToken || accessToken === "PUBLIC_OAUTH_SESSION_TOKEN") {
+      throw new Error("Se requiere inicio de sesión con Google (OAuth2) para leer carpetas de Google Drive.")
+    }
+
     const items: Array<{ id: string; name: string; mimeType: string; path: string; category: string }> = []
-    const apiKey = (import.meta as any).env?.VITE_GOOGLE_API_KEY || ''
 
     async function scanFolder(currentFolderId: string, currentPath: string) {
-      let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${currentFolderId}' in parents and trashed = false`)}&fields=files(id,name,mimeType)&pageSize=1000`
+      const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${currentFolderId}' in parents and trashed = false`)}&fields=files(id,name,mimeType)&pageSize=1000`
       
-      const headers: Record<string, string> = {}
-      if (accessToken && accessToken !== "PUBLIC_OAUTH_SESSION_TOKEN") {
-        headers["Authorization"] = `Bearer ${accessToken}`
-      } else if (apiKey) {
-        url += `&key=${apiKey}`
-      }
-
-      const res = await fetch(url, { headers })
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
         const msg = errData?.error?.message || res.statusText
-        throw new Error(`Google Drive API: ${msg}. Verifica que la carpeta tenga permisos de lectura ('Cualquier persona con el enlace puede ver').`)
+        throw new Error(`Google Drive API: ${msg}`)
       }
 
       const data = await res.json()
