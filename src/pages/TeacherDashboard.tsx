@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useClerk } from "@clerk/clerk-react"
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, Target, Trophy, Gift, BarChart3, LogOut, Menu, X, Settings, Sparkles, Loader2, FileText, User, Mail, ShieldCheck, HelpCircle, ArrowRightLeft, Package, Archive } from 'lucide-react'
@@ -336,10 +336,18 @@ function TeacherDashboardInner({
  */
 function RailAgenda({ courses, onTabChange }: { courses: any[]; onTabChange: (tab: string) => void }) {
     const { user } = useProfile()
-    const { data: clases, isLoading } = useSupabaseQuery<ProximaClase[]>(
+    const { data: clases, isLoading, refetch } = useSupabaseQuery<ProximaClase[]>(
         () => (user ? getProximasClases(user.clerk_id, user.role, 5) : Promise.resolve([])),
         [user?.clerk_id, courses.length]
     )
+
+    useEffect(() => {
+        const handleUpdate = () => {
+            refetch()
+        }
+        window.addEventListener('questia:clases_updated', handleUpdate)
+        return () => window.removeEventListener('questia:clases_updated', handleUpdate)
+    }, [refetch])
 
     if (isLoading) {
         return (

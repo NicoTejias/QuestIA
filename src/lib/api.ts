@@ -2141,34 +2141,49 @@ export const CalendarAPI = {
         evaluacion_id = evalData.id
       }
 
-      const { error: insertError } = await supabase
+      const payload: Record<string, any> = {
+        course_id: courseId,
+        section: section || null,
+        semana: c.semana,
+        sesion: c.sesion,
+        fecha: c.fecha,
+        titulo: c.titulo,
+        contenido: c.contenido,
+        actividades: c.actividades,
+        materiales_requeridos: c.materiales_requeridos,
+        materiales_pedidos: false,
+        tiene_evaluacion: c.tiene_evaluacion,
+        evaluacion_id: evaluacion_id,
+        es_feriado: c.es_feriado || false,
+        detalle_feriado: c.detalle_feriado || null,
+        estado: c.estado || 'programada',
+        tipo_bloque: c.tipo_bloque || 'catedra',
+        hora_inicio: c.hora_inicio || null,
+        hora_fin: c.hora_fin || null,
+        nota_recuperacion: c.nota_recuperacion || null,
+        ponderacion: c.ponderacion ?? null,
+        numero_evaluacion: c.numero_evaluacion || null,
+        created_at: new Date().toISOString()
+      }
+
+      let { error: insertError } = await supabase
         .from('clases_calendarizadas')
-        .insert({
-          course_id: courseId,
-          section: section || null,
-          semana: c.semana,
-          sesion: c.sesion,
-          fecha: c.fecha,
-          titulo: c.titulo,
-          contenido: c.contenido,
-          actividades: c.actividades,
-          materiales_requeridos: c.materiales_requeridos,
-          materiales_pedidos: false,
-          tiene_evaluacion: c.tiene_evaluacion,
-          evaluacion_id: evaluacion_id,
-          es_feriado: c.es_feriado || false,
-          detalle_feriado: c.detalle_feriado || null,
-          estado: c.estado || 'programada',
-          tipo_bloque: c.tipo_bloque || 'catedra',
-          hora_inicio: c.hora_inicio || null,
-          hora_fin: c.hora_fin || null,
-          nota_recuperacion: c.nota_recuperacion || null,
-          ponderacion: c.ponderacion ?? null,
-          numero_evaluacion: c.numero_evaluacion || null,
-          created_at: new Date().toISOString()
-        })
+        .insert(payload)
       
+      if (insertError && (insertError.code === 'PGRST204' || insertError.message?.includes('schema cache') || insertError.message?.includes('numero_evaluacion'))) {
+        delete payload.numero_evaluacion
+        delete payload.nota_recuperacion
+        delete payload.detalle_feriado
+        delete payload.ponderacion
+        const retry = await supabase.from('clases_calendarizadas').insert(payload)
+        insertError = retry.error
+      }
+
       if (insertError) throw insertError
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('questia:clases_updated'))
     }
   },
 

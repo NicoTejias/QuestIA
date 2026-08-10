@@ -187,7 +187,7 @@ export async function getProximasClases(
     const hoy = new Date()
     hoy.setHours(0, 0, 0, 0)
 
-    const { data, error } = await supabase
+    const { data: initialData, error } = await supabase
         .from('clases_calendarizadas')
         .select('id, course_id, fecha, titulo, section, hora_inicio, tipo_bloque, es_feriado, estado')
         .in('course_id', [...porId.keys()])
@@ -195,6 +195,19 @@ export async function getProximasClases(
         .order('fecha', { ascending: true })
         .limit(limite)
     if (error) throw error
+
+    let data = initialData
+
+    // Fallback: si no hay clases futuras a partir de hoy, obtener las clases más recientes calendarizadas
+    if (!data || data.length === 0) {
+        const fallback = await supabase
+            .from('clases_calendarizadas')
+            .select('id, course_id, fecha, titulo, section, hora_inicio, tipo_bloque, es_feriado, estado')
+            .in('course_id', [...porId.keys()])
+            .order('fecha', { ascending: true })
+            .limit(limite)
+        data = fallback.data || []
+    }
 
     return (data || []).map(cl => {
         const curso = porId.get(cl.course_id)

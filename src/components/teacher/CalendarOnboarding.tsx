@@ -24,7 +24,8 @@ const BLOQUES_DUOC = [
   { id: '15', label: 'Módulo 15 (19:00 - 19:40)', regimen: 'vespertino' },
   { id: '16', label: 'Módulo 16 (19:41 - 20:20)', regimen: 'vespertino' },
   { id: '17', label: 'Módulo 17 (20:30 - 21:10)', regimen: 'vespertino' },
-  { id: '18', label: 'Módulo 18 (21:11 - 21:50)', regimen: 'vespertino' }
+  { id: '18', label: 'Módulo 18 (21:11 - 21:50)', regimen: 'vespertino' },
+  { id: '19', label: 'Módulo 19 (21:51 - 22:30)', regimen: 'vespertino' }
 ]
 
 // Mapa módulo → { inicio, fin } extraído de los labels ("HH:MM - HH:MM").
@@ -211,9 +212,20 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
     setPdaFiles(prev => prev.filter((_, i) => i !== idx))
   }
 
+  const isBlockEnabled = (diaId: number, blockRegimen: string, sectionRegimen: string): boolean => {
+    if (diaId === 6) {
+      // Sábado es todo vespertino
+      return blockRegimen === 'vespertino'
+    }
+    return blockRegimen === sectionRegimen
+  }
+
   // Alterna un bloque del horario de la sección activa: vacío → cátedra → laboratorio → vacío.
   const toggleBlock = (diaId: number, bloqueId: string) => {
     if (!seccionActiva) return
+    const b = BLOQUES_DUOC.find(item => item.id === bloqueId)
+    if (b && !isBlockEnabled(diaId, b.regimen, seccionActiva.regimen)) return
+
     const key = `${diaId}-${bloqueId}`
     const copy = { ...seccionActiva.selectedBlocks }
     if (!copy[key]) {
@@ -775,12 +787,16 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
                   <tr key={b.id} className="border-b border-slate-900 hover:bg-slate-900/20">
                     <td className="p-3 font-medium bg-slate-900/10 text-slate-400 whitespace-nowrap">{b.label}</td>
                     {DIAS_SEMANA.map(d => {
+                      const enabled = isBlockEnabled(d.id, b.regimen, seccionActiva.regimen)
                       const blockType = seccionActiva?.selectedBlocks[`${d.id}-${b.id}`]
 
                       let btnClass = 'bg-transparent border-slate-800 text-slate-500 hover:border-slate-700'
                       let label = '-'
 
-                      if (blockType === 'catedra') {
+                      if (!enabled) {
+                        btnClass = 'bg-slate-950/40 border-slate-900/60 text-slate-700 opacity-25 cursor-not-allowed'
+                        label = 'OFF'
+                      } else if (blockType === 'catedra') {
                         btnClass = 'bg-indigo-500/20 border-indigo-500/60 text-indigo-300 font-bold shadow-[0_0_10px_rgba(99,102,241,0.1)]'
                         label = 'Cátedra'
                       } else if (blockType === 'laboratorio') {
@@ -788,12 +804,17 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
                         label = 'Lab'
                       }
 
+                      const titleText = !enabled
+                        ? (d.id === 6 ? 'El sábado sólo permite régimen vespertino' : `Bloque no disponible para régimen ${seccionActiva.regimen}`)
+                        : (blockType === 'laboratorio' ? 'Laboratorio / Práctico' : blockType === 'catedra' ? 'Cátedra' : 'Vacío')
+
                       return (
                         <td key={d.id} className="p-2">
                           <button
                             type="button"
+                            disabled={!enabled}
                             onClick={() => toggleBlock(d.id, b.id)}
-                            title={blockType === 'laboratorio' ? 'Laboratorio / Práctico' : blockType === 'catedra' ? 'Cátedra' : 'Vacío'}
+                            title={titleText}
                             className={`w-full min-w-[64px] py-2 px-1 text-center rounded border transition-all text-[11px] whitespace-nowrap truncate ${btnClass}`}
                           >
                             {label}
