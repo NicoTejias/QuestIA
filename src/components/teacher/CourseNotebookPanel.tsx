@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FolderOpen, FileText, RefreshCw, Sparkles, CheckCircle, BookOpen } from "lucide-react";
+import { FolderOpen, FileText, RefreshCw, Sparkles, CheckCircle, BookOpen, Trash2 } from "lucide-react";
 import { useSupabaseQuery } from "../../hooks/useSupabaseQuery";
 import { DriveSyncAPI } from "../../lib/api";
 
@@ -43,6 +43,27 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
     } catch (err: any) {
       console.error("Error sincronizando cuaderno de Drive:", err);
       setErrorMessage(err.message || "Error al conectar con Google Drive. Verifica que la carpeta sea accesible.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleUnlink = async () => {
+    if (!window.confirm("¿Estás seguro de que deseas desvincular la carpeta de Google Drive de este ramo?")) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsSyncing(true);
+
+    try {
+      await DriveSyncAPI.unlinkCourseDriveFolder(courseId);
+      setFolderInput("");
+      setPlanningResult(null);
+      await refetchCourse();
+    } catch (err: any) {
+      console.error("Error desvinculando carpeta de Drive:", err);
+      setErrorMessage("No se pudo desvincular la carpeta. Intenta de nuevo.");
     } finally {
       setIsSyncing(false);
     }
@@ -175,6 +196,16 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
             >
               <Sparkles className={`w-4 h-4 ${isPlanning ? "animate-spin" : ""}`} />
               <span>{isPlanning ? "Analizando Cuaderno con Gemini..." : "Generar Planificación con IA"}</span>
+            </button>
+
+            <button
+              onClick={handleUnlink}
+              disabled={isSyncing || isPlanning}
+              className="bg-red-950/60 hover:bg-red-900/80 text-red-300 hover:text-red-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 border border-red-800/60 ml-auto"
+              title="Quitar vinculación de Google Drive en este ramo"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Desvincular Cuaderno</span>
             </button>
           </div>
         </div>

@@ -618,7 +618,30 @@ export const DocumentsAPI = {
   async getDocumentsByCourse(courseId: string) {
     const { data, error } = await supabase.from('course_documents').select('*').eq('course_id', courseId)
     if (error) throw error
-    return data || []
+    const list = data || []
+
+    try {
+      const notebook = await DriveSyncAPI.getCourseNotebook(courseId)
+      if (notebook?.drive_files_manifest?.length) {
+        const driveDocs = notebook.drive_files_manifest.map((item: any) => ({
+          id: `drive-${item.id}`,
+          course_id: courseId,
+          file_name: item.name,
+          file_type: item.mimeType?.includes('pdf') ? 'pdf' : item.mimeType?.includes('presentation') ? 'pptx' : 'docx',
+          content_text: `Documento de Google Drive: ${item.path} (${item.category || 'General'})`,
+          is_master_doc: item.category === 'syllabus',
+          master_doc_type: item.category === 'syllabus' ? 'PDA' : undefined,
+          created_at: notebook.last_drive_sync || Date.now(),
+          is_drive_file: true,
+          drive_path: item.path,
+        }))
+        return [...list, ...driveDocs]
+      }
+    } catch (err) {
+      console.warn("No se pudieron adjuntar documentos de Drive notebook:", err)
+    }
+
+    return list
   },
 
   async getMasterDocuments(courseId: string) {
@@ -628,7 +651,33 @@ export const DocumentsAPI = {
       .eq('course_id', courseId)
       .in('document_type', ['PDA', 'PIA', 'PA'])
     if (error) throw error
-    return data || []
+    const list = data || []
+
+    try {
+      const notebook = await DriveSyncAPI.getCourseNotebook(courseId)
+      if (notebook?.drive_files_manifest?.length) {
+        const driveMasterDocs = notebook.drive_files_manifest
+          .filter((item: any) => item.category === 'syllabus')
+          .map((item: any) => ({
+            id: `drive-master-${item.id}`,
+            course_id: courseId,
+            file_name: item.name,
+            document_type: 'PDA',
+            file_type: 'pdf',
+            content_text: `Programa de asignatura leído desde Google Drive: ${item.path}`,
+            is_master_doc: true,
+            master_doc_type: 'PDA',
+            created_at: notebook.last_drive_sync || Date.now(),
+            is_drive_file: true,
+            drive_path: item.path,
+          }))
+        return [...list, ...driveMasterDocs]
+      }
+    } catch (err) {
+      console.warn("No se pudieron adjuntar documentos maestros de Drive:", err)
+    }
+
+    return list
   },
 
   async listCareers() {
@@ -2569,6 +2618,28 @@ RESPONDE ÚNICAMENTE en formato JSON válido, sin markdown ni backticks, utiliza
 // GOOGLE DRIVE NOTEBOOK INTEGRATION
 // ============================================================
 export const DriveSyncAPI = {
+  async unlinkCourseDriveFolder(courseId: string) {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(`questia_notebook_${courseId}`)
+    }
+
+    try {
+      await supabase
+        .from('courses')
+        .update({
+          drive_folder_id: null,
+          drive_folder_name: null,
+          last_drive_sync: null,
+          drive_files_manifest: null,
+        })
+        .eq('id', courseId)
+    } catch (err: any) {
+      console.warn("Caché local borrada para cuaderno desvinculado:", err.message)
+    }
+
+    return true
+  },
+
   async getCourseNotebook(courseId: string) {
     try {
       const { data, error } = await supabase
