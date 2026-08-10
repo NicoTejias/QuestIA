@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { FolderOpen, FileText, RefreshCw, Sparkles, CheckCircle, BookOpen, Trash2 } from "lucide-react";
+import { FolderOpen, FileText, RefreshCw, Sparkles, CheckCircle, BookOpen, Trash2, Cloud } from "lucide-react";
 import { useSupabaseQuery } from "../../hooks/useSupabaseQuery";
+import { useGooglePicker } from "../../hooks/useGooglePicker";
 import { DriveSyncAPI } from "../../lib/api";
 
 interface CourseNotebookPanelProps {
@@ -12,6 +13,7 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
     () => DriveSyncAPI.getCourseNotebook(courseId),
     [courseId]
   );
+  const { openPicker, isLoaded } = useGooglePicker();
 
   const [folderInput, setFolderInput] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
@@ -21,7 +23,7 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
 
   const manifest: any[] = (course as any)?.drive_files_manifest || [];
 
-  const handleSync = async () => {
+  const handleSync = async (customToken?: string) => {
     const targetFolder = folderInput.trim() || (course as any)?.drive_folder_id;
     if (!targetFolder) {
       setErrorMessage("Por favor ingresa la URL o el ID de tu carpeta de Google Drive.");
@@ -37,15 +39,44 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
         folderId = targetFolder.split("folders/")[1].split("?")[0];
       }
 
-      const accessToken = "PUBLIC_OAUTH_SESSION_TOKEN";
-      await DriveSyncAPI.syncCourseDriveFolder(courseId, folderId, accessToken);
+      const items = await DriveSyncAPI.syncCourseDriveFolder(courseId, folderId, customToken);
+      if (items.length === 0) {
+        setErrorMessage("No se encontraron archivos en la carpeta especificada. Asegúrate de que la carpeta contenga archivos (PDFs, PPTs, Docs, XLSX) y tenga permisos de lectura.");
+      }
       await refetchCourse();
     } catch (err: any) {
       console.error("Error sincronizando cuaderno de Drive:", err);
-      setErrorMessage(err.message || "Error al conectar con Google Drive. Verifica que la carpeta sea accesible.");
+      setErrorMessage(err.message || "Error al conectar con Google Drive. Verifica que la carpeta sea pública o tenga acceso de lectura.");
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handlePickFolder = () => {
+    setErrorMessage(null);
+    if (!isLoaded) {
+      setErrorMessage("Cargando API de Google Drive... Intenta de nuevo en unos segundos.");
+      return;
+    }
+    openPicker(async (docs, token) => {
+      if (docs && docs.length > 0) {
+        const selected = docs[0];
+        const folderId = selected.mimeType === "application/vnd.google-apps.folder" ? selected.id : (selected.parentId || selected.id);
+        setFolderInput(folderId);
+        setIsSyncing(true);
+        try {
+          const items = await DriveSyncAPI.syncCourseDriveFolder(courseId, folderId, token);
+          if (items.length === 0) {
+            setErrorMessage("No se encontraron archivos dentro de la carpeta seleccionada.");
+          }
+          await refetchCourse();
+        } catch (err: any) {
+          setErrorMessage(err.message || "Error al sincronizar carpeta de Google Drive.");
+        } finally {
+          setIsSyncing(false);
+        }
+      }
+    });
   };
 
   const handleUnlink = async () => {
@@ -127,7 +158,7 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
               className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 placeholder:text-slate-500"
             />
             <button
-              onClick={handleSync}
+              onClick={() => handleSync()}
               disabled={isSyncing}
               className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-all flex items-center justify-center space-x-2 shadow-lg shadow-emerald-950/50"
             >
@@ -142,6 +173,15 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
                   <span>Escanear y Vincular</span>
                 </>
               )}
+            </button>
+            <button
+              onClick={handlePickFolder}
+              disabled={isSyncing || !isLoaded}
+              className="bg-[#4285F4]/20 hover:bg-[#4285F4]/30 text-[#4285F4] border border-[#4285F4]/40 font-semibold px-4 py-2.5 rounded-lg text-sm transition-all flex items-center justify-center space-x-2"
+              title="Abrir selector nativo de Google Drive para elegir tu carpeta"
+            >
+              <Cloud className="w-4 h-4" />
+              <span>Elegir con Google</span>
             </button>
           </div>
         </div>
@@ -181,7 +221,7 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
 
           <div className="flex flex-wrap gap-3 pt-1">
             <button
-              onClick={handleSync}
+              onClick={() => handleSync()}
               disabled={isSyncing}
               className="bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 border border-slate-700"
             >

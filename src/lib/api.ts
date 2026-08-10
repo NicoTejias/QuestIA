@@ -2676,40 +2676,44 @@ export const DriveSyncAPI = {
 
   async syncCourseDriveFolder(courseId: string, folderId: string, accessToken?: string) {
     const items: Array<{ id: string; name: string; mimeType: string; path: string; category: string }> = []
+    const apiKey = (import.meta as any).env?.VITE_GOOGLE_API_KEY || ''
 
     async function scanFolder(currentFolderId: string, currentPath: string) {
-      if (!accessToken || accessToken === "PUBLIC_OAUTH_SESSION_TOKEN") {
-        items.push(
-          { id: `${currentFolderId}-1`, name: "Syllabus_Programa_Asignatura.pdf", mimeType: "application/pdf", path: `${currentPath}/Syllabus_Programa_Asignatura.pdf`, category: "syllabus" },
-          { id: `${currentFolderId}-2`, name: "Clase_1_Introduccion.pptx", mimeType: "application/vnd.google-apps.presentation", path: `${currentPath}/Unidad 1/Clase_1_Introduccion.pptx`, category: "slides" },
-          { id: `${currentFolderId}-3`, name: "Guia_Ejercicios_1.pdf", mimeType: "application/pdf", path: `${currentPath}/Unidad 1/Guia_Ejercicios_1.pdf`, category: "guide" },
-          { id: `${currentFolderId}-4`, name: "Pauta_Evaluacion_Parcial_1.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", path: `${currentPath}/Evaluaciones/Pauta_Evaluacion_Parcial_1.docx`, category: "assessment" }
-        )
-        return
+      let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${currentFolderId}' in parents and trashed = false`)}&fields=files(id,name,mimeType)&pageSize=1000`
+      
+      const headers: Record<string, string> = {}
+      if (accessToken && accessToken !== "PUBLIC_OAUTH_SESSION_TOKEN") {
+        headers["Authorization"] = `Bearer ${accessToken}`
+      } else if (apiKey) {
+        url += `&key=${apiKey}`
       }
 
-      const query = encodeURIComponent(`'${currentFolderId}' in parents and trashed = false`)
-      const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType)&pageSize=1000`
-
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
+      const res = await fetch(url, { headers })
       if (!res.ok) {
-        throw new Error(`Error al conectar con Google Drive API: ${res.statusText}`)
+        const errData = await res.json().catch(() => ({}))
+        const msg = errData?.error?.message || res.statusText
+        throw new Error(`Google Drive API: ${msg}. Verifica que la carpeta tenga permisos de lectura ('Cualquier persona con el enlace puede ver').`)
       }
 
       const data = await res.json()
-      for (const file of data.files || []) {
-        const filePath = `${currentPath}/${file.name}`
+      const files = data.files || []
+
+      for (const file of files) {
+        const filePath = currentPath ? `${currentPath}/${file.name}` : `/${file.name}`
         if (file.mimeType === "application/vnd.google-apps.folder") {
           await scanFolder(file.id, filePath)
         } else {
           let category = "other"
           const lower = file.name.toLowerCase()
-          if (lower.includes("syllabus") || lower.includes("pda") || lower.includes("programa")) category = "syllabus"
-          else if (file.mimeType.includes("presentation") || lower.includes("clase") || lower.includes("ppt")) category = "slides"
-          else if (lower.includes("guia") || lower.includes("ejercicio") || lower.includes("taller")) category = "guide"
-          else if (lower.includes("evaluacion") || lower.includes("prueba") || lower.includes("pauta") || lower.includes("rubrica")) category = "assessment"
+          if (lower.includes("syllabus") || lower.includes("pda") || lower.includes("programa") || lower.includes("asignatura")) {
+            category = "syllabus"
+          } else if (file.mimeType.includes("presentation") || lower.includes("clase") || lower.includes("ppt")) {
+            category = "slides"
+          } else if (lower.includes("guia") || lower.includes("ejercicio") || lower.includes("taller") || lower.includes("practico")) {
+            category = "guide"
+          } else if (lower.includes("evaluacion") || lower.includes("prueba") || lower.includes("pauta") || lower.includes("rubrica") || lower.includes("examen")) {
+            category = "assessment"
+          }
 
           items.push({
             id: file.id,
