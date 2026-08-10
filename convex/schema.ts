@@ -92,6 +92,16 @@ export default defineSchema({
         linked_sheets_id: v.optional(v.string()),   // Google Sheets ID para sync automático
         linked_sheets_name: v.optional(v.string()),  // Nombre del archivo para mostrar en UI
         last_sheets_sync: v.optional(v.number()),    // Timestamp del último sync
+        drive_folder_id: v.optional(v.string()),    // ID de la carpeta de Google Drive como cuaderno
+        drive_folder_name: v.optional(v.string()),  // Nombre de la carpeta de Google Drive
+        last_drive_sync: v.optional(v.number()),    // Timestamp de última sincronización con Drive
+        drive_files_manifest: v.optional(v.array(v.object({
+            id: v.string(),
+            name: v.string(),
+            mimeType: v.string(),
+            path: v.string(),
+            category: v.optional(v.string()),
+        }))),
         schedule_config: v.optional(v.object({
             semestre: v.union(v.literal("2026-1"), v.literal("2026-2")),
             seccion: v.string(),
