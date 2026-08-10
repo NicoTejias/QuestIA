@@ -1,17 +1,17 @@
 import React, { useState } from "react";
-import { useAction, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
 import { FolderOpen, FileText, RefreshCw, Sparkles, CheckCircle, BookOpen } from "lucide-react";
+import { useSupabaseQuery } from "../../hooks/useSupabaseQuery";
+import { DriveSyncAPI } from "../../lib/api";
 
 interface CourseNotebookPanelProps {
-  courseId: Id<"courses">;
+  courseId: string;
 }
 
 export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ courseId }) => {
-  const course = useQuery(api.courses.getCourseById, { courseId });
-  const syncFolder = useAction(api.drive_sync.syncCourseDriveFolder);
-  const planCourse = useAction(api.drive_planning.planCourseFromDriveNotebook);
+  const { data: course, refetch: refetchCourse } = useSupabaseQuery(
+    () => DriveSyncAPI.getCourseNotebook(courseId),
+    [courseId]
+  );
 
   const [folderInput, setFolderInput] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
@@ -19,14 +19,12 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
   const [planningResult, setPlanningResult] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (!course) return null;
-
-  const manifest = course.drive_files_manifest || [];
+  const manifest: any[] = (course as any)?.drive_files_manifest || [];
 
   const handleSync = async () => {
-    const targetFolder = folderInput.trim() || course.drive_folder_id;
+    const targetFolder = folderInput.trim() || (course as any)?.drive_folder_id;
     if (!targetFolder) {
-      setErrorMessage("Por favor ingresa el ID o enlace de la carpeta de Google Drive.");
+      setErrorMessage("Por favor ingresa la URL o el ID de tu carpeta de Google Drive.");
       return;
     }
 
@@ -34,20 +32,14 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
     setIsSyncing(true);
 
     try {
-      // Extrae ID si ingresaron una URL completa de Google Drive
       let folderId = targetFolder;
       if (targetFolder.includes("folders/")) {
         folderId = targetFolder.split("folders/")[1].split("?")[0];
       }
 
-      // En el entorno del profesor, el token de acceso se obtiene vía la sesión OAuth de Google
       const accessToken = "PUBLIC_OAUTH_SESSION_TOKEN";
-
-      await syncFolder({
-        courseId,
-        folderId,
-        accessToken,
-      });
+      await DriveSyncAPI.syncCourseDriveFolder(courseId, folderId, accessToken);
+      await refetchCourse();
     } catch (err: any) {
       console.error("Error sincronizando cuaderno de Drive:", err);
       setErrorMessage(err.message || "Error al conectar con Google Drive. Verifica que la carpeta sea accesible.");
@@ -60,7 +52,7 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
     setErrorMessage(null);
     setIsPlanning(true);
     try {
-      const res = await planCourse({ courseId });
+      const res = await DriveSyncAPI.planCourseFromDriveNotebook(courseId);
       setPlanningResult(res);
     } catch (err: any) {
       console.error("Error al planificar curso con IA:", err);
@@ -86,9 +78,9 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
             </p>
           </div>
         </div>
-        {course.last_drive_sync && (
+        {(course as any)?.last_drive_sync && (
           <span className="text-xs px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-            Última sync: {new Date(course.last_drive_sync).toLocaleString("es-CL")}
+            Última sync: {new Date((course as any).last_drive_sync).toLocaleString("es-CL")}
           </span>
         )}
       </div>
@@ -100,7 +92,7 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
       )}
 
       {/* Selector/Ingreso de Carpeta */}
-      {(!course.drive_folder_id || manifest.length === 0) && (
+      {(!(course as any)?.drive_folder_id || manifest.length === 0) && (
         <div className="mb-5 space-y-3 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
           <label className="block text-sm font-medium text-slate-300">
             Vincular Carpeta de Google Drive del Ramo:
@@ -143,13 +135,13 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
                 <BookOpen className="w-4 h-4 text-emerald-400" />
                 Materiales e Insumos Detectados ({manifest.length})
               </span>
-              {course.drive_folder_id && (
-                <span className="text-xs text-slate-500 font-mono">ID: {course.drive_folder_id}</span>
+              {(course as any)?.drive_folder_id && (
+                <span className="text-xs text-slate-500 font-mono">ID: {(course as any).drive_folder_id}</span>
               )}
             </div>
 
             <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-              {manifest.map((file) => (
+              {manifest.map((file: any) => (
                 <div
                   key={file.id}
                   className="flex items-center justify-between py-2 px-3 bg-slate-900/80 hover:bg-slate-800/80 rounded-lg border border-slate-800/60 transition-colors"
