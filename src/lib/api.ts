@@ -2825,7 +2825,7 @@ export const DriveSyncAPI = {
 
     const notebookMarkdown = course.drive_notebook_text || (typeof localStorage !== 'undefined' ? localStorage.getItem(`questia_notebook_text_${courseId}`) : null)
     const contentTextPrompt = notebookMarkdown && notebookMarkdown.length > 50
-      ? `CUADERNO CONSOLIDADO DEL RAMO EN FORMATO MARKDOWN (.MD):\n${notebookMarkdown.substring(0, 50000)}`
+      ? `CUADERNO CONSOLIDADO DEL RAMO EN FORMATO MARKDOWN (.MD):\n${notebookMarkdown.substring(0, 500000)}`
       : `ESTRUCTURA DEL CUADERNO DEL CURSO (ARCHIVOS Y SUBCARPETAS):\n${fileTreeSummary}`
 
     const prompt = `Actúa como un experto en diseño instruccional y planificación académica. Tu tarea es organizar las sesiones de clases para el curso "${course.name}" (${course.code || ''}) basándote exclusivamente en el cuaderno Markdown y documentos entregados.

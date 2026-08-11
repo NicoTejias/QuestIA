@@ -20,7 +20,7 @@ export const planCourseFromDriveNotebook = action({
 
     const notebookMarkdown = (course as any).drive_notebook_text;
     const fileContentOrSummary = notebookMarkdown && notebookMarkdown.length > 50
-      ? `CUADERNO CONSOLIDADO DEL RAMO EN MARKDOWN (.MD):\n${notebookMarkdown.substring(0, 50000)}`
+      ? `CUADERNO CONSOLIDADO DEL RAMO EN MARKDOWN (.MD):\n${notebookMarkdown.substring(0, 500000)}`
       : `DOCUMENTOS Y ARCHIVOS DISPONIBLES EN EL CUADERNO DE DRIVE:\n${fileTreeSummary}`;
 
     const prompt = `Actúa como un experto en diseño instruccional y planificación académica. Tu tarea es organizar las sesiones de clases para el curso "${course.name}" (${course.code}) basándote exclusivamente en los documentos e insumos del cuaderno de Google Drive.
