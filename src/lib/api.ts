@@ -5,6 +5,7 @@
  */
 import { supabase } from './supabase'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { extractTextFromFile, getFileType } from '../utils/documentParser'
 
 export { supabase }
 
@@ -2656,7 +2657,7 @@ export const DriveSyncAPI = {
     try {
       const { data, error } = await supabase
         .from('courses')
-        .select('id, name, code, description, drive_folder_id, drive_folder_name, last_drive_sync, drive_files_manifest')
+        .select('id, name, code, description, drive_folder_id, drive_folder_name, last_drive_sync, drive_files_manifest, drive_notebook_text')
         .eq('id', courseId)
         .maybeSingle()
 
@@ -2683,6 +2684,7 @@ export const DriveSyncAPI = {
       drive_folder_name: parsedLocal.drive_folder_name || null,
       last_drive_sync: parsedLocal.last_drive_sync || null,
       drive_files_manifest: parsedLocal.drive_files_manifest || [],
+      drive_notebook_text: parsedLocal.drive_notebook_text || (typeof localStorage !== 'undefined' ? localStorage.getItem(`questia_notebook_text_${courseId}`) : null),
     }
   },
 
@@ -2740,13 +2742,59 @@ export const DriveSyncAPI = {
 
     await scanFolder(folderId, "")
 
+    // Extracción de texto y consolidación a Markdown (.md)
+    const markdownSections: string[] = []
+    markdownSections.push(`# 📚 Cuaderno Consolidado del Ramo\n`)
+    markdownSections.push(`> **Archivos Procesados**: ${items.length}\n> **Fecha de Sincronización**: ${new Date().toLocaleString('es-CL')}\n\n---`)
+
+    for (const item of items) {
+      try {
+        let extractedText = ""
+        if (item.mimeType === 'application/vnd.google-apps.document' || item.mimeType === 'application/vnd.google-apps.presentation') {
+          const exportRes = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}/export?mimeType=text/plain`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          })
+          if (exportRes.ok) extractedText = await exportRes.text()
+        } else if (item.mimeType === 'application/vnd.google-apps.spreadsheet') {
+          const exportRes = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}/export?mimeType=text/csv`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          })
+          if (exportRes.ok) extractedText = await exportRes.text()
+        } else {
+          const fileType = getFileType(item.name)
+          if (fileType) {
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${item.id}?alt=media`, {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            })
+            if (fileRes.ok) {
+              const blob = await fileRes.blob()
+              const file = new File([blob], item.name, { type: blob.type || 'application/octet-stream' })
+              extractedText = await extractTextFromFile(file)
+            }
+          }
+        }
+
+        const catLabel = item.category === 'syllabus' ? 'Syllabus / PDA' : item.category === 'slides' ? 'Presentación / Diapositivas' : item.category === 'guide' ? 'Guía de Trabajo' : item.category === 'assessment' ? 'Instrumento de Evaluación' : 'Material General'
+        const contentBody = extractedText.trim() || `[Sin texto directamente extraíble del archivo: ${item.name}]`
+
+        markdownSections.push(`\n## 📄 Archivo: ${item.path}\n**Categoría**: ${catLabel} | **ID**: \`${item.id}\`\n\n${contentBody}\n\n---`)
+      } catch (err) {
+        console.warn(`No se pudo extraer texto de ${item.name}:`, err)
+        markdownSections.push(`\n## 📄 Archivo: ${item.path}\n**Categoría**: ${item.category || 'General'}\n\n[Texto no disponible]\n\n---`)
+      }
+    }
+
+    const consolidatedMarkdown = markdownSections.join('\n')
+
     // Guardar en caché local inmediato
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(`questia_notebook_${courseId}`, JSON.stringify({
         drive_folder_id: folderId,
         drive_files_manifest: items,
+        drive_notebook_text: consolidatedMarkdown,
         last_drive_sync: Date.now(),
       }))
+      localStorage.setItem(`questia_notebook_text_${courseId}`, consolidatedMarkdown)
     }
 
     try {
@@ -2755,6 +2803,7 @@ export const DriveSyncAPI = {
         .update({
           drive_folder_id: folderId,
           drive_files_manifest: items,
+          drive_notebook_text: consolidatedMarkdown,
           last_drive_sync: Date.now(),
         })
         .eq('id', courseId)
@@ -2774,13 +2823,24 @@ export const DriveSyncAPI = {
       ? manifest.map((f: any) => `- [${f.category || 'documento'}] ${f.path}`).join("\n")
       : "Sin archivos indexados en el cuaderno de Google Drive aún."
 
-    const prompt = `Eres un experto pedagógico en diseño curricular para la educación superior.
-Analiza la siguiente estructura de archivos del Cuaderno de Google Drive del curso "${course.name}" (${course.code || ''}):
+    const notebookMarkdown = course.drive_notebook_text || (typeof localStorage !== 'undefined' ? localStorage.getItem(`questia_notebook_text_${courseId}`) : null)
+    const contentTextPrompt = notebookMarkdown && notebookMarkdown.length > 50
+      ? `CUADERNO CONSOLIDADO DEL RAMO EN FORMATO MARKDOWN (.MD):\n${notebookMarkdown.substring(0, 50000)}`
+      : `ESTRUCTURA DEL CUADERNO DEL CURSO (ARCHIVOS Y SUBCARPETAS):\n${fileTreeSummary}`
 
-ESTRUCTURA DEL CUADERNO DEL CURSO (ARCHIVOS Y SUBCARPETAS):
-${fileTreeSummary}
+    const prompt = `Actúa como un experto en diseño instruccional y planificación académica. Tu tarea es organizar las sesiones de clases para el curso "${course.name}" (${course.code || ''}) basándote exclusivamente en el cuaderno Markdown y documentos entregados.
 
-DESCRIPCIÓN Y OBJETIVOS DEL CURSO:
+INSTRUCCIONES DE ESTRUCTURA Y PEDAGOGÍA:
+- Distribución Temporal: La planificación debe cubrir 16 semanas. Cada semana cuenta con 1 sesión teórica (cátedra) y 1 sesión práctica/laboratorio.
+- Uso de Fuentes:
+  * Utiliza el PDA (Plan Didáctico de Aula) para definir la duración de cada Experiencia de Aprendizaje (EA) y las ponderaciones de las evaluaciones.
+  * Guíate por la 'Información de uso docente' de cada actividad para determinar el contenido y objetivo específico de cada sesión semana a semana.
+  * Asegura que los contenidos cubran los Indicadores de Logro (IL) detallados en el PA (Programa de Asignatura) y el PIA (Plan Instruccional).
+
+CONTENIDO COMPLETO EN MARKDOWN (.MD) EXTRAÍDO DE LOS ARCHIVOS DE DRIVE:
+${contentTextPrompt}
+
+DESCRIPCIÓN Y OBJETIVOS GENERALES DEL CURSO:
 ${course.description || 'Sin descripción previa'}
 
 TAREA:

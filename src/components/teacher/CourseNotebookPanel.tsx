@@ -20,8 +20,10 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
   const [isPlanning, setIsPlanning] = useState(false);
   const [planningResult, setPlanningResult] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
 
   const manifest: any[] = (course as any)?.drive_files_manifest || [];
+  const notebookText: string | null = (course as any)?.drive_notebook_text || (typeof localStorage !== 'undefined' ? localStorage.getItem(`questia_notebook_text_${courseId}`) : null);
 
   const handleSync = async (customToken?: string) => {
     const targetFolder = folderInput.trim() || (course as any)?.drive_folder_id;
@@ -227,6 +229,45 @@ export const CourseNotebookPanel: React.FC<CourseNotebookPanelProps> = ({ course
               ))}
             </div>
           </div>
+
+          {notebookText && (
+            <div className="bg-emerald-950/40 border border-emerald-800/40 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-emerald-300">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>
+                  <strong>Cuaderno Consolidado en Markdown (.md) activo</strong> ({notebookText.length.toLocaleString()} caracteres extraídos para la IA)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMarkdownPreview(!showMarkdownPreview)}
+                className="px-3 py-1 bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-200 font-semibold rounded-lg border border-emerald-700 transition-colors whitespace-nowrap"
+              >
+                {showMarkdownPreview ? "Ocultar Texto .md" : "Ver Texto .md"}
+              </button>
+            </div>
+          )}
+
+          {showMarkdownPreview && notebookText && (
+            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-800 text-xs font-bold text-slate-300">
+                <span>Vista Previa del Cuaderno Consolidado (.md)</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(notebookText);
+                    alert("Texto Markdown copiado al portapapeles");
+                  }}
+                  className="text-emerald-400 hover:text-emerald-300 text-[11px] underline"
+                >
+                  Copiar Markdown
+                </button>
+              </div>
+              <pre className="max-h-80 overflow-y-auto text-[11px] font-mono text-slate-300 bg-slate-900 p-3 rounded-lg border border-slate-800/80 custom-scrollbar whitespace-pre-wrap leading-relaxed">
+                {notebookText}
+              </pre>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-3 pt-1">
             <button

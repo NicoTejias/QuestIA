@@ -13,10 +13,15 @@ export const planCourseFromDriveNotebook = action({
       throw new Error("Curso no encontrado");
     }
 
-    const manifest = course.drive_files_manifest || [];
+    const manifest = (course as any).drive_files_manifest || [];
     const fileTreeSummary = manifest.length > 0
-      ? manifest.map(f => `- [${f.category || 'documento'}] ${f.path}`).join("\n")
+      ? manifest.map((f: any) => `- [${f.category || 'documento'}] ${f.path}`).join("\n")
       : "Sin archivos indexados en el cuaderno de Google Drive aún.";
+
+    const notebookMarkdown = (course as any).drive_notebook_text;
+    const fileContentOrSummary = notebookMarkdown && notebookMarkdown.length > 50
+      ? `CUADERNO CONSOLIDADO DEL RAMO EN MARKDOWN (.MD):\n${notebookMarkdown.substring(0, 50000)}`
+      : `DOCUMENTOS Y ARCHIVOS DISPONIBLES EN EL CUADERNO DE DRIVE:\n${fileTreeSummary}`;
 
     const prompt = `Actúa como un experto en diseño instruccional y planificación académica. Tu tarea es organizar las sesiones de clases para el curso "${course.name}" (${course.code}) basándote exclusivamente en los documentos e insumos del cuaderno de Google Drive.
 
@@ -33,8 +38,8 @@ INSTRUCCIONES DE ESTRUCTURA:
   * La Semana 15 debe reservarse exclusivamente para evaluaciones atrasadas, recuperativas y resolución de dudas finales.
   * La Semana 16 debe enfocarse en la preparación intensiva y simulacros para el Examen Transversal (ET).
 
-DOCUMENTOS Y ARCHIVOS DISPONIBLES EN EL CUADERNO DE DRIVE:
-${fileTreeSummary}
+CONTENIDO DEL CUADERNO CONSOLIDADO DE DRIVE (.MD):
+${fileContentOrSummary}
 
 DESCRIPCIÓN GENERAL DEL CURSO:
 ${course.description || "Sin descripción adicional."}
