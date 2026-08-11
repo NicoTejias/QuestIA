@@ -346,7 +346,11 @@ function RailAgenda({ courses, onTabChange }: { courses: any[]; onTabChange: (ta
             refetch()
         }
         window.addEventListener('questia:clases_updated', handleUpdate)
-        return () => window.removeEventListener('questia:clases_updated', handleUpdate)
+        window.addEventListener('questia:evaluaciones_updated', handleUpdate)
+        return () => {
+            window.removeEventListener('questia:clases_updated', handleUpdate)
+            window.removeEventListener('questia:evaluaciones_updated', handleUpdate)
+        }
     }, [refetch])
 
     if (isLoading) {

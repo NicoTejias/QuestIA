@@ -41,6 +41,9 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
 
   useEffect(() => {
     loadClases()
+    const handleUpdate = () => loadClases()
+    window.addEventListener('questia:clases_updated', handleUpdate)
+    return () => window.removeEventListener('questia:clases_updated', handleUpdate)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [course.id])
 

@@ -2091,6 +2091,28 @@ export const CalendarAPI = {
       .update(updates)
       .eq('id', claseId)
     if (error) throw error
+
+    if (updates.evaluacion_id || updates.tiene_evaluacion !== undefined) {
+      const { data: clase } = await supabase.from('clases_calendarizadas').select('*').eq('id', claseId).maybeSingle()
+      if (clase?.evaluacion_id) {
+        if (updates.tiene_evaluacion === false || updates.tipo_evaluacion === 'ninguna') {
+          await supabase.from('evaluaciones').delete().eq('id', clase.evaluacion_id)
+        } else {
+          const evalUpdates: Record<string, any> = {}
+          if (updates.titulo_evaluacion || updates.titulo) evalUpdates.titulo = updates.titulo_evaluacion || updates.titulo
+          if (updates.tipo_evaluacion) evalUpdates.tipo = updates.tipo_evaluacion
+          if (updates.fecha) evalUpdates.fecha = updates.fecha
+          if (Object.keys(evalUpdates).length > 0) {
+            await supabase.from('evaluaciones').update(evalUpdates).eq('id', clase.evaluacion_id)
+          }
+        }
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('questia:clases_updated'))
+      window.dispatchEvent(new Event('questia:evaluaciones_updated'))
+    }
   },
 
   async saveScheduleConfig(courseId: string, config: any) {
@@ -2107,6 +2129,14 @@ export const CalendarAPI = {
   },
 
   async limpiarCalendario(courseId: string, section?: string) {
+    try {
+      let evalQuery = supabase.from('evaluaciones').delete().eq('course_id', courseId)
+      if (section !== undefined) evalQuery = evalQuery.eq('section', section)
+      await evalQuery
+    } catch {
+      // Ignorar si no hay evaluaciones o la tabla no responde
+    }
+
     let query = supabase
       .from('clases_calendarizadas')
       .delete()
@@ -2115,6 +2145,11 @@ export const CalendarAPI = {
     if (section !== undefined) query = query.eq('section', section)
     const { error } = await query
     if (error) throw error
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('questia:clases_updated'))
+      window.dispatchEvent(new Event('questia:evaluaciones_updated'))
+    }
   },
 
   async bulkInsertClases(courseId: string, clases: any[], teacherId: string, section?: string) {
@@ -2185,6 +2220,7 @@ export const CalendarAPI = {
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('questia:clases_updated'))
+      window.dispatchEvent(new Event('questia:evaluaciones_updated'))
     }
   },
 

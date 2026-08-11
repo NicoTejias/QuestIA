@@ -1,7 +1,7 @@
 import { Calendar, Clock, FileText, PenSquare, Trash2, CheckCircle, Loader2 } from 'lucide-react'
 import { toast } from "sonner"
 import ConfirmModal from '../ConfirmModal'
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { EvaluationsAPI, supabase } from '../../lib/api'
 
@@ -17,11 +17,29 @@ export default function EvaluacionesPorCurso({ courseId }: EvaluacionesPorCursoP
     )
     const [deleteTarget, setDeleteTarget] = useState<any>(null)
 
+    useEffect(() => {
+        const handleUpdate = () => refetch()
+        window.addEventListener('questia:evaluaciones_updated', handleUpdate)
+        return () => window.removeEventListener('questia:evaluaciones_updated', handleUpdate)
+    }, [refetch])
+
     const handleDelete = async () => {
         if (!deleteTarget) return
         try {
             const { error } = await supabase.from('evaluaciones').delete().eq('id', deleteTarget.id)
             if (error) throw error
+
+            // Sincronizar en clases_calendarizadas desmarcando la evaluación
+            await supabase
+                .from('clases_calendarizadas')
+                .update({ tiene_evaluacion: false, evaluacion_id: null })
+                .eq('evaluacion_id', deleteTarget.id)
+
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event('questia:clases_updated'))
+                window.dispatchEvent(new Event('questia:evaluaciones_updated'))
+            }
+
             toast.success("Evaluación eliminada")
             setDeleteTarget(null)
             refetch()
