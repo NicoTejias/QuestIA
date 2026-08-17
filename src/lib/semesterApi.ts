@@ -183,34 +183,58 @@ export async function getProximasClases(
 
     const porId = new Map(courses.map(c => [c.id, c]))
 
-    // Desde el inicio del día de hoy: una clase de esta mañana sigue siendo relevante.
+    // Desde el inicio del día de hoy
     const hoy = new Date()
     hoy.setHours(0, 0, 0, 0)
+    const nowTimestamp = Date.now()
 
+    // Traemos un margen mayor para poder ordenar en memoria de forma precisa por fecha + hora_inicio y filtrar
     const { data: initialData, error } = await supabase
         .from('clases_calendarizadas')
-        .select('id, course_id, fecha, titulo, section, hora_inicio, tipo_bloque, es_feriado, estado')
+        .select('id, course_id, fecha, titulo, section, hora_inicio, hora_fin, tipo_bloque, es_feriado, estado')
         .in('course_id', [...porId.keys()])
         .gte('fecha', hoy.getTime())
         .order('fecha', { ascending: true })
-        .limit(limite)
+        .limit(limite * 4)
     if (error) throw error
 
     let data = initialData
 
-    // Fallback: si no hay clases futuras a partir de hoy, obtener las clases más recientes calendarizadas
+    // Fallback: si no hay clases futuras a partir de hoy, obtener las clases calendarizadas
     if (!data || data.length === 0) {
         const fallback = await supabase
             .from('clases_calendarizadas')
-            .select('id, course_id, fecha, titulo, section, hora_inicio, tipo_bloque, es_feriado, estado')
+            .select('id, course_id, fecha, titulo, section, hora_inicio, hora_fin, tipo_bloque, es_feriado, estado')
             .in('course_id', [...porId.keys()])
             .order('fecha', { ascending: true })
-            .limit(limite)
+            .limit(limite * 4)
         data = fallback.data || []
     }
 
-    return (data || []).map(cl => {
+    // Convertir a objetos y calcular timestamp exacto de inicio/fin para ordenamiento
+    const items = (data || []).map(cl => {
         const curso = porId.get(cl.course_id)
+        const fechaBase = new Date(Number(cl.fecha))
+        let startTimestamp = fechaBase.getTime()
+        let endTimestamp = fechaBase.getTime() + 24 * 60 * 60 * 1000 - 1
+
+        if (cl.hora_inicio) {
+            const [h, m] = String(cl.hora_inicio).split(':').map(Number)
+            const d = new Date(fechaBase)
+            d.setHours(h || 0, m || 0, 0, 0)
+            startTimestamp = d.getTime()
+        }
+
+        if (cl.hora_fin) {
+            const [h, m] = String(cl.hora_fin).split(':').map(Number)
+            const d = new Date(fechaBase)
+            d.setHours(h || 23, m || 59, 0, 0)
+            endTimestamp = d.getTime()
+        } else if (cl.hora_inicio) {
+            // Asumir al menos la hora de inicio como referencia
+            endTimestamp = startTimestamp
+        }
+
         return {
             id: cl.id,
             courseId: cl.course_id,
@@ -222,8 +246,31 @@ export async function getProximasClases(
             horaInicio: cl.hora_inicio,
             tipoBloque: cl.tipo_bloque,
             esFeriado: !!cl.es_feriado,
+            startTimestamp,
+            endTimestamp,
         }
     })
+
+    // Ordenar de la más próxima a la más lejana (cronológico ascendente: fecha y hora)
+    items.sort((a, b) => {
+        if (a.fecha !== b.fecha) return a.fecha - b.fecha
+        const horaA = a.horaInicio || '00:00'
+        const horaB = b.horaInicio || '00:00'
+        return horaA.localeCompare(horaB)
+    })
+
+    // Si hay clases futuras o en curso hoy, preferir las que aún no terminaron hoy (o todas las futuras si no)
+    const futurasOEnCurso = items.filter(item => {
+        // Si la clase es de hoy y tiene hora fin/inicio que ya pasó hace más de 1 hora, no considerarla como "próxima" a menos que no haya más
+        if (item.endTimestamp < nowTimestamp - 60 * 60 * 1000) {
+            return false
+        }
+        return true
+    })
+
+    const listaFinal = (futurasOEnCurso.length > 0 ? futurasOEnCurso : items).slice(0, limite)
+
+    return listaFinal.map(({ startTimestamp, endTimestamp, ...rest }) => rest)
 }
 
 export const SemesterAPI = {
