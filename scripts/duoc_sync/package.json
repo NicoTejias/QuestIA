@@ -1,0 +1,14 @@
+{
+  "name": "questia-duoc-sync",
+  "version": "1.0.0",
+  "description": "Script de sincronización de Duoc UC hacia QuestIA para Ubuntu Server",
+  "main": "duoc_scraper.js",
+  "scripts": {
+    "login": "node duoc_scraper.js --login",
+    "sync": "node duoc_scraper.js --sync"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "playwright": "^1.45.0"
+  }
+}
