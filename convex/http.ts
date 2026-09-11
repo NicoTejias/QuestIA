@@ -26,10 +26,10 @@ http.route({
         try {
             const body = await request.json();
 
-            if (!body.teacherEmail || !body.courseCode || !body.courseName) {
+            if (!body.teacherEmail) {
                 return new Response(
                     JSON.stringify({
-                        error: "Faltan campos requeridos: teacherEmail, courseCode, courseName",
+                        error: "Falta el campo requerido: teacherEmail",
                     }),
                     { status: 400, headers: { "Content-Type": "application/json" } }
                 );
@@ -37,6 +37,8 @@ http.route({
 
             const result = await ctx.runMutation(api.courses.syncDuocData, {
                 teacherEmail: body.teacherEmail,
+                reset_all_courses: body.reset_all_courses ?? false,
+                courses: body.courses,
                 courseCode: body.courseCode,
                 courseName: body.courseName,
                 courseDescription: body.courseDescription,

@@ -811,12 +811,33 @@ export const getGlobalRanking = query({
     },
 });
 
-// Mutación para sincronización externa de Duoc UC
+// Mutación para sincronización externa de Duoc UC (soporta reseteo previo y múltiples cursos/secciones)
 export const syncDuocData = mutation({
     args: {
         teacherEmail: v.string(),
-        courseCode: v.string(),
-        courseName: v.string(),
+        reset_all_courses: v.optional(v.boolean()), // Elimina todos los cursos anteriores si se solicita
+        courses: v.optional(v.array(v.object({
+            courseCode: v.string(),
+            courseName: v.string(),
+            courseDescription: v.optional(v.string()),
+            sections: v.array(v.string()),
+            students: v.optional(v.array(v.object({
+                identifier: v.string(),
+                name: v.optional(v.string()),
+                section: v.optional(v.string()),
+            }))),
+            evaluaciones: v.optional(v.array(v.object({
+                titulo: v.string(),
+                tipo: v.union(v.literal("prueba"), v.literal("trabajo"), v.literal("informe")),
+                fecha: v.number(),
+                hora: v.optional(v.string()),
+                puntos: v.optional(v.number()),
+                descripcion: v.optional(v.string()),
+            }))),
+        }))),
+        // Compatibilidad con llamada individual:
+        courseCode: v.optional(v.string()),
+        courseName: v.optional(v.string()),
         courseDescription: v.optional(v.string()),
         section: v.optional(v.string()),
         students: v.optional(v.array(v.object({
@@ -849,109 +870,173 @@ export const syncDuocData = mutation({
             teacher = await ctx.db.get(teacherId);
         }
 
-        if (!teacher) {
-            throw new Error("No se pudo resolver el usuario docente");
+        if (!teacher) throw new Error("No se pudo resolver el usuario docente");
+
+        // 1. Reseteo total de ramos si se solicita
+        if (args.reset_all_courses) {
+            const oldCourses = await ctx.db
+                .query("courses")
+                .withIndex("by_teacher", (q) => q.eq("teacher_id", teacher._id))
+                .collect();
+
+            for (const c of oldCourses) {
+                // Borrar datos asociados al ramo
+                const enrollments = await ctx.db.query("enrollments").withIndex("by_course", q => q.eq("course_id", c._id)).collect();
+                for (const e of enrollments) await ctx.db.delete(e._id);
+
+                const whitelists = await ctx.db.query("whitelists").withIndex("by_course", q => q.eq("course_id", c._id)).collect();
+                for (const w of whitelists) await ctx.db.delete(w._id);
+
+                const evals = await ctx.db.query("evaluaciones").withIndex("by_course", q => q.eq("course_id", c._id)).collect();
+                for (const ev of evals) await ctx.db.delete(ev._id);
+
+                const docs = await ctx.db.query("course_documents").withIndex("by_course", q => q.eq("course_id", c._id)).collect();
+                for (const d of docs) await ctx.db.delete(d._id);
+
+                const qz = await ctx.db.query("quizzes").withIndex("by_course", q => q.eq("course_id", c._id)).collect();
+                for (const q of qz) await ctx.db.delete(q._id);
+
+                await ctx.db.delete(c._id);
+            }
         }
 
-        let course = await ctx.db
-            .query("courses")
-            .withIndex("by_code", (q) => q.eq("code", args.courseCode))
-            .first();
+        // Construir lista unificada de cursos a procesar
+        const courseList: Array<{
+            courseCode: string;
+            courseName: string;
+            courseDescription?: string;
+            sections: string[];
+            students?: Array<{ identifier: string; name?: string; section?: string }>;
+            evaluaciones?: Array<{ titulo: string; tipo: "prueba" | "trabajo" | "informe"; fecha: number; hora?: string; puntos?: number; descripcion?: string }>;
+        }> = [];
 
-        if (!course) {
-            const newCourseId = await ctx.db.insert("courses", {
-                name: args.courseName,
-                code: args.courseCode,
-                teacher_id: teacher._id,
-                description: args.courseDescription || `Ramo ${args.courseName} sincronizado desde Duoc`,
+        if (args.courses && args.courses.length > 0) {
+            courseList.push(...args.courses);
+        } else if (args.courseCode && args.courseName) {
+            courseList.push({
+                courseCode: args.courseCode,
+                courseName: args.courseName,
+                courseDescription: args.courseDescription,
+                sections: args.section ? [args.section] : [],
+                students: args.students,
+                evaluaciones: args.evaluaciones,
             });
-            course = await ctx.db.get(newCourseId);
-        } else if (course.teacher_id !== teacher._id) {
-            await ctx.db.patch(course._id, { teacher_id: teacher._id });
         }
 
-        if (!course) throw new Error("Error al inicializar el curso");
+        const summary = [];
 
-        let studentsAdded = 0;
-        let studentsUpdated = 0;
+        for (const item of courseList) {
+            // Un ramo único por código base (ej: EAI4122)
+            let course = await ctx.db
+                .query("courses")
+                .withIndex("by_code", (q) => q.eq("code", item.courseCode))
+                .first();
 
-        if (args.students && args.students.length > 0) {
-            const existingWhitelist = await ctx.db
-                .query("whitelists")
-                .withIndex("by_course", (q) => q.eq("course_id", course!._id))
-                .collect();
+            const description = item.courseDescription || `Ramo ${item.courseName}. Secciones: ${item.sections.join(", ")}`;
 
-            const existingMap = new Map(
-                existingWhitelist.map((w) => [normalizeRut(w.student_identifier), w])
-            );
-
-            for (const student of args.students) {
-                const normId = normalizeRut(student.identifier);
-                if (!normId) continue;
-
-                const studentSection = student.section || args.section;
-                const existing = existingMap.get(normId);
-
-                if (existing) {
-                    if (
-                        (student.name && existing.student_name !== student.name) ||
-                        (studentSection && existing.section !== studentSection)
-                    ) {
-                        await ctx.db.patch(existing._id, {
-                            student_name: student.name || existing.student_name,
-                            section: studentSection || existing.section,
-                        });
-                        studentsUpdated++;
-                    }
-                } else {
-                    await ctx.db.insert("whitelists", {
-                        course_id: course._id,
-                        student_identifier: normId,
-                        student_name: student.name,
-                        section: studentSection,
-                    });
-                    studentsAdded++;
-                }
+            if (!course) {
+                const newCourseId = await ctx.db.insert("courses", {
+                    name: item.courseName,
+                    code: item.courseCode,
+                    teacher_id: teacher._id,
+                    description,
+                });
+                course = await ctx.db.get(newCourseId);
+            } else {
+                await ctx.db.patch(course._id, {
+                    name: item.courseName,
+                    teacher_id: teacher._id,
+                    description,
+                });
             }
-        }
 
-        let evaluacionesAdded = 0;
-        if (args.evaluaciones && args.evaluaciones.length > 0) {
-            const existingEvals = await ctx.db
-                .query("evaluaciones")
-                .withIndex("by_course", (q) => q.eq("course_id", course!._id))
-                .collect();
+            if (!course) continue;
 
-            for (const ev of args.evaluaciones) {
-                const exists = existingEvals.some(
-                    (e) => e.titulo.trim().toLowerCase() === ev.titulo.trim().toLowerCase()
+            let studentsAdded = 0;
+            let studentsUpdated = 0;
+
+            if (item.students && item.students.length > 0) {
+                const existingWhitelist = await ctx.db
+                    .query("whitelists")
+                    .withIndex("by_course", (q) => q.eq("course_id", course._id))
+                    .collect();
+
+                const existingMap = new Map(
+                    existingWhitelist.map((w) => [normalizeRut(w.student_identifier), w])
                 );
-                if (!exists) {
-                    await ctx.db.insert("evaluaciones", {
-                        course_id: course._id,
-                        teacher_id: teacher._id,
-                        titulo: ev.titulo,
-                        tipo: ev.tipo,
-                        fecha: ev.fecha,
-                        hora: ev.hora,
-                        puntos: ev.puntos,
-                        descripcion: ev.descripcion,
-                        section: args.section,
-                        activo: true,
-                        created_at: Date.now(),
-                    });
-                    evaluacionesAdded++;
+
+                for (const student of item.students) {
+                    const normId = normalizeRut(student.identifier);
+                    if (!normId) continue;
+
+                    const existing = existingMap.get(normId);
+                    if (existing) {
+                        if (
+                            (student.name && existing.student_name !== student.name) ||
+                            (student.section && existing.section !== student.section)
+                        ) {
+                            await ctx.db.patch(existing._id, {
+                                student_name: student.name || existing.student_name,
+                                section: student.section || existing.section,
+                            });
+                            studentsUpdated++;
+                        }
+                    } else {
+                        await ctx.db.insert("whitelists", {
+                            course_id: course._id,
+                            student_identifier: normId,
+                            student_name: student.name,
+                            section: student.section,
+                        });
+                        studentsAdded++;
+                    }
                 }
             }
+
+            let evaluacionesAdded = 0;
+            if (item.evaluaciones && item.evaluaciones.length > 0) {
+                const existingEvals = await ctx.db
+                    .query("evaluaciones")
+                    .withIndex("by_course", (q) => q.eq("course_id", course._id))
+                    .collect();
+
+                for (const ev of item.evaluaciones) {
+                    const exists = existingEvals.some(
+                        (e) => e.titulo.trim().toLowerCase() === ev.titulo.trim().toLowerCase()
+                    );
+                    if (!exists) {
+                        await ctx.db.insert("evaluaciones", {
+                            course_id: course._id,
+                            teacher_id: teacher._id,
+                            titulo: ev.titulo,
+                            tipo: ev.tipo,
+                            fecha: ev.fecha,
+                            hora: ev.hora,
+                            puntos: ev.puntos,
+                            descripcion: ev.descripcion,
+                            activo: true,
+                            created_at: Date.now(),
+                        });
+                        evaluacionesAdded++;
+                    }
+                }
+            }
+
+            summary.push({
+                courseId: course._id,
+                code: item.courseCode,
+                name: item.courseName,
+                sections: item.sections,
+                studentsAdded,
+                studentsUpdated,
+                evaluacionesAdded,
+            });
         }
 
         return {
             success: true,
-            courseId: course._id,
-            courseCode: course.code,
-            studentsAdded,
-            studentsUpdated,
-            evaluacionesAdded,
+            coursesProcessed: summary.length,
+            summary,
         };
     },
 });
