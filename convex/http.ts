@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api } from "./_generated/api";
 import { auth } from "./auth";
 
 const http = httpRouter();
@@ -35,7 +35,7 @@ http.route({
                 );
             }
 
-            const result = await ctx.runMutation(internal.duoc_sync.syncDuocData, {
+            const result = await ctx.runMutation(api.courses.syncDuocData, {
                 teacherEmail: body.teacherEmail,
                 courseCode: body.courseCode,
                 courseName: body.courseName,
