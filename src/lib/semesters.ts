@@ -92,3 +92,24 @@ export function opcionesDeSemestre(existentes: string[] = []): string[] {
     ])
     return [...base].sort(compararSemestresDesc)
 }
+
+/**
+ * Fecha de inicio oficial recomendada según el calendario académico institucional.
+ * Semestre 1: Segundo lunes de marzo (ej: 2026-03-09)
+ * Semestre 2: Segundo lunes de agosto (ej: 2026-08-10)
+ */
+export function fechaInicioPorDefectoSemestre(semestreStr: string): string {
+    const p = parseSemestre(semestreStr)
+    if (!p) {
+        const hoy = new Date()
+        return `${hoy.getFullYear()}-08-10`
+    }
+    if (p.periodo === 1) {
+        // Marzo: buscar el primer o segundo lunes de marzo
+        return `${p.anio}-03-09`
+    } else {
+        // Agosto: segundo lunes de agosto
+        return `${p.anio}-08-10`
+    }
+}
+

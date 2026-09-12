@@ -173,10 +173,14 @@ export interface ProximaClase {
 export async function getProximasClases(
     teacherId: string,
     role: string,
-    limite = 5
+    limite = 5,
+    semestre?: string
 ): Promise<ProximaClase[]> {
-    let cq = supabase.from('courses').select('id, name, code')
+    let cq = supabase.from('courses').select('id, name, code, semester')
     if (role !== 'admin') cq = cq.eq('teacher_id', teacherId)
+    if (semestre && semestre !== '__todos__' && semestre !== '__sin_semestre__') {
+        cq = cq.eq('semester', semestre)
+    }
     const { data: courses, error: cErr } = await cq
     if (cErr) throw cErr
     if (!courses || courses.length === 0) return []
@@ -200,14 +204,17 @@ export async function getProximasClases(
 
     let data = initialData
 
-    // Fallback: si no hay clases futuras a partir de hoy, obtener las clases calendarizadas
+    // Fallback: si no hay clases futuras a partir de hoy y no se especificó un semestre estricto que deba comenzar después
     if (!data || data.length === 0) {
-        const fallback = await supabase
+        // Si el docente está en un semestre futuro o actual (ej: 2026-2), buscar desde la fecha de inicio del semestre
+        let queryFallback = supabase
             .from('clases_calendarizadas')
             .select('id, course_id, fecha, titulo, section, hora_inicio, hora_fin, tipo_bloque, es_feriado, estado')
             .in('course_id', [...porId.keys()])
             .order('fecha', { ascending: true })
             .limit(limite * 4)
+        
+        const fallback = await queryFallback
         data = fallback.data || []
     }
 

@@ -3,7 +3,7 @@ import { Calendar, Upload, Loader2, Info, CheckCircle2, Plus, X } from 'lucide-r
 import { toast } from 'sonner'
 import { CalendarAPI, DocumentsAPI, InventarioPanolAPI, supabase } from '../../lib/api'
 import { extractTextFromFile, getFileType } from '../../utils/documentParser'
-import { esSemestreValido, semestreDeFecha, opcionesDeSemestre, formatSemestre } from '../../lib/semesters'
+import { esSemestreValido, semestreDeFecha, opcionesDeSemestre, formatSemestre, fechaInicioPorDefectoSemestre } from '../../lib/semesters'
 
 // Módulos horarios individuales de Duoc UC (40 minutos c/u, 10 min de recreo cada 2 módulos)
 const BLOQUES_DUOC = [
@@ -67,13 +67,11 @@ const nuevaSeccion = (nombre = ''): SeccionConfig => ({
 
 export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboardingProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  // El semestre lo define el ramo; si aún no lo tiene, se propone el del calendario.
-  const [semestre, setSemestre] = useState<string>(
-    esSemestreValido(course.semester) ? course.semester : semestreDeFecha()
-  )
+  const semestreInicial = esSemestreValido(course.semester) ? course.semester : semestreDeFecha()
+  const [semestre, setSemestre] = useState<string>(semestreInicial)
   const [semanas, setSemanas] = useState(18)
   // Fecha de inicio única para todo el semestre (común a todas las secciones).
-  const [fechaInicioSemestre, setFechaInicioSemestre] = useState('')
+  const [fechaInicioSemestre, setFechaInicioSemestre] = useState(fechaInicioPorDefectoSemestre(semestreInicial))
 
   // Secciones del ramo: el docente puede configurar el horario de cada una.
   const [secciones, setSecciones] = useState<SeccionConfig[]>([nuevaSeccion('Sección 1')])
@@ -171,6 +169,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
     let activo = true
     ;(async () => {
       try {
+        // Cargar documentos del ramo
         const docs = await DocumentsAPI.getDocumentsByCourse(course.id)
         if (!activo) return
         const disponibles = (docs || []).filter((d: any) => d.content_text)
@@ -180,8 +179,32 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
         } else {
           setFuente('nuevo')
         }
+
+        // Cargar secciones oficiales de whitelists para este curso
+        const { data: wData } = await supabase
+          .from('whitelists')
+          .select('section')
+          .eq('course_id', course.id)
+        
+        if (activo && wData && wData.length > 0) {
+          const seccionesUnicas = Array.from(
+            new Set(wData.map((item: any) => item.section?.trim()).filter(Boolean))
+          ).sort() as string[]
+
+          if (seccionesUnicas.length > 0) {
+            setSecciones(seccionesUnicas.map((secName: string) => {
+              const esVesp = secName.toUpperCase().endsWith('V')
+              return {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                nombre: secName,
+                regimen: esVesp ? 'vespertino' : 'diurno',
+                selectedBlocks: {}
+              }
+            }))
+          }
+        }
       } catch (err) {
-        console.error('Error cargando documentos del ramo', err)
+        console.error('Error cargando datos del ramo', err)
         setFuente('nuevo')
       } finally {
         if (activo) setDocsLoading(false)
@@ -493,7 +516,11 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
             <label className="block text-slate-300 text-sm font-medium mb-2">Semestre</label>
             <select
               value={semestre}
-              onChange={(e) => setSemestre(e.target.value)}
+              onChange={(e) => {
+                const nuevo = e.target.value
+                setSemestre(nuevo)
+                setFechaInicioSemestre(fechaInicioPorDefectoSemestre(nuevo))
+              }}
               className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
               {opcionesDeSemestre([semestre]).map(s => (

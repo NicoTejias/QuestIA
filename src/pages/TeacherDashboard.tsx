@@ -336,9 +336,10 @@ function TeacherDashboardInner({
  */
 function RailAgenda({ courses, onTabChange }: { courses: any[]; onTabChange: (tab: string) => void }) {
     const { user } = useProfile()
+    const { semestreActivo } = useSemester()
     const { data: clases, isLoading, refetch } = useSupabaseQuery<ProximaClase[]>(
-        () => (user ? getProximasClases(user.clerk_id, user.role, 5) : Promise.resolve([])),
-        [user?.clerk_id, courses.length]
+        () => (user ? getProximasClases(user.clerk_id, user.role, 5, semestreActivo) : Promise.resolve([])),
+        [user?.clerk_id, courses.length, semestreActivo]
     )
 
     useEffect(() => {
