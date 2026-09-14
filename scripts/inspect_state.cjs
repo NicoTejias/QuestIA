@@ -1,31 +1,49 @@
-const fs = require('fs');
+const WebSocket = require('ws');
+const http = require('http');
 
-async function main() {
-  const url = 'https://wzkwmiyzszegekpuqnaz.supabase.co';
-  const key = 'sb_publishable_8SlWG-0qPUkcPMvg36hhEA_RFdk8zqb';
+http.get('http://192.168.0.202:9222/json', (res) => {
+  let data = '';
+  res.on('data', chunk => data += chunk);
+  res.on('end', () => {
+    const list = JSON.parse(data);
+    const bb = list.find(t => t.url && t.url.includes('campusvirtual.duoc.cl/ultra/course'));
+    if (!bb) {
+      console.log('No Blackboard course tab found.');
+      return;
+    }
+    console.log('Connecting to BB tab:', bb.title);
+    const wsUrl = bb.webSocketDebuggerUrl.replace('localhost:9222', '192.168.0.202:9222');
+    const ws = new WebSocket(wsUrl);
 
-  const headers = {
-    'apikey': key,
-    'Authorization': `Bearer ${key}`
-  };
+    ws.on('open', () => {
+      ws.send(JSON.stringify({
+        id: 1,
+        method: 'Runtime.evaluate',
+        params: {
+          expression: `(() => {
+            return {
+              origin: window.location.origin,
+              href: window.location.href,
+              cookies: document.cookie,
+              localStorageKeys: Object.keys(localStorage)
+            };
+          })()`,
+          returnByValue: true
+        }
+      }));
+    });
 
-  const cRes = await fetch(`${url}/rest/v1/courses?select=id,name,code,semester`, { headers });
-  const courses = await cRes.json();
-  console.log('--- COURSES ---');
-  console.log(courses);
+    ws.on('message', (msg) => {
+      const resp = JSON.parse(msg);
+      if (resp.id === 1) {
+        console.log('BB State:', JSON.stringify(resp.result?.result?.value, null, 2));
+        ws.close();
+        process.exit(0);
+      }
+    });
 
-  const dRes = await fetch(`${url}/rest/v1/course_documents?select=*`, { headers });
-  const docs = await dRes.json();
-  console.log('--- COURSE DOCUMENTS ---');
-  console.log(Array.isArray(docs) ? docs.map(d => ({ id: d.id, course_id: d.course_id, title: d.title, file_name: d.file_name, type: d.document_type || d.type })) : docs);
-
-  const clRes = await fetch(`${url}/rest/v1/clases_calendarizadas?select=id,course_id,fecha,titulo,section&limit=20`, { headers });
-  const clases = await clRes.json();
-  console.log('--- CLASES CALENDARIZADAS COUNT ---');
-  console.log('Total clases:', clases.length);
-  if (clases.length > 0) {
-    console.log('Sample clases:', clases.slice(0, 5));
-  }
-}
-
-main().catch(console.error);
+    ws.on('error', (err) => {
+      console.error('WS error:', err.message);
+    });
+  });
+});
