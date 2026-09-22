@@ -1565,10 +1565,12 @@ export const NotificationsAPI = {
 // ANALYTICS
 // ============================================================
 export const AnalyticsAPI = {
-  async getTeacherStats(teacherId: string, role: string) {
-    // 1. Get Courses
+  async getTeacherStats(teacherId: string, _role?: string, courseIdsFilter?: string[]) {
+    // 1. Get Courses: Por defecto solo mostramos los ramos del docente, incluso si es admin.
     let query = supabase.from('courses').select('*')
-    if (role !== 'admin') {
+    if (courseIdsFilter && courseIdsFilter.length > 0) {
+      query = query.in('id', courseIdsFilter)
+    } else {
       query = query.eq('teacher_id', teacherId)
     }
     const { data: courses, error: cErr } = await query

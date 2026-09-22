@@ -77,12 +77,13 @@ function TeacherDashboardInner({
 
     // Todo el dashboard trabaja sobre los ramos del semestre activo.
     const courses = useMemo(() => filtrarPorSemestre(allCourses), [allCourses, filtrarPorSemestre])
+    const courseIds = useMemo(() => (courses || []).map((c: any) => c.id), [courses])
 
     // Stats a nivel de layout: la barra lateral es fija, así que sus datos ya no
     // pueden vivir dentro de la pestaña de Inicio.
     const { data: stats } = useSupabaseQuery(
-        () => (user ? AnalyticsAPI.getTeacherStats(user.clerk_id, user.role) : Promise.resolve(null)),
-        [user?.clerk_id]
+        () => (user ? AnalyticsAPI.getTeacherStats(user.clerk_id, user.role, courseIds) : Promise.resolve(null)),
+        [user?.clerk_id, courseIds.join(',')]
     )
 
     const [sidebarOpen, setSidebarOpen] = useState(false)

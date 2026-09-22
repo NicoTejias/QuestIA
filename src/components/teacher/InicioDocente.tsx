@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Sparkles, FileText, Trophy, ArrowRightLeft, Target, User } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
@@ -20,9 +21,10 @@ interface Props {
 }
 
 export default function InicioDocente({ user, courses, onTabChange }: Props) {
+    const courseIds = useMemo(() => (courses || []).map((c: any) => c.id), [courses])
     const { data: stats } = useSupabaseQuery(
-        () => AnalyticsAPI.getTeacherStats(user.clerk_id, user.role),
-        [user]
+        () => (user ? AnalyticsAPI.getTeacherStats(user.clerk_id, user.role, courseIds) : Promise.resolve(null)),
+        [user?.clerk_id, courseIds.join(',')]
     )
 
     const coursesCount = courses.length
@@ -61,6 +63,16 @@ export default function InicioDocente({ user, courses, onTabChange }: Props) {
             pct,
         }
     })
+
+    // Filtrar estrictamente el gráfico de registro solo por los ramos del docente activo
+    const chartData = useMemo(() => {
+        if (!stats?.courseStats) return []
+        if (courseIds.length > 0) {
+            const allowedIds = new Set(courseIds)
+            return stats.courseStats.filter((cs: any) => allowedIds.has(cs.id))
+        }
+        return stats.courseStats
+    }, [stats?.courseStats, courseIds])
 
     return (
         // La barra lateral (calendario, primeros pasos, agenda) vive en el layout
@@ -110,7 +122,7 @@ export default function InicioDocente({ user, courses, onTabChange }: Props) {
                 />
 
                 {/* Detalle: registro por ramo */}
-                {stats && stats.courseStats?.length > 0 && (
+                {chartData.length > 0 && (
                     <div className="qi-card p-5 mb-5">
                         <h2 className="qi-card-title flex items-center gap-2">
                             <User className="w-4 h-4 text-iris-light" />
@@ -118,7 +130,7 @@ export default function InicioDocente({ user, courses, onTabChange }: Props) {
                         </h2>
                         <div className="h-[280px] w-full">
                             <ResponsiveContainer width="100%" height={280} minWidth={0}>
-                                <BarChart data={stats.courseStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                                     <XAxis
                                         dataKey="name"
