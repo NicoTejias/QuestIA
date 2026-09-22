@@ -67,7 +67,13 @@ En el panel docente de QuestIA (`/teacher`):
 1. Ingresa a la sección **"Mis Ramos"** o haz clic en el banner superior **"Sincronizar Vivo Duoc"**.
 2. Verás el componente `DuocSyncPanel` indicando el estado del servidor (`192.168.0.202:9222`).
 3. Si cambias de IP o puerto, puedes configurarlo directamente en el modal de ajustes con un clic.
-4. Presiona **"Sincronizar Ahora"**: el sistema cargará automáticamente las 5 asignaturas (`EAI4122`, `GDP4475`, `PEI1110`, `TAEX1061`, `PEI1108`), las 10 secciones y los 190 estudiantes con sus respectivos RUTs y registros curriculares.
+4. Presiona **"Sincronizar Ahora"**: el sistema cargará automáticamente las asignaturas oficiales con sus respectivas secciones y estudiantes:
+   - **EAI4122**: MANTENIMIENTO DE INSTALACIONES ELÉCTRICAS Y AUTOMÁTICAS (Secciones `008D`, `019D`, `020D`)
+   - **GDP4475**: GESTIÓN DE PROYECTOS II (Secciones `002D`, `006V`)
+   - **PEI1110**: INSTALACIONES ELÉCTRICAS / ILUMINACIÓN (Secciones `003D`, `004D`, `011D`, `012D`)
+   - **TAEX1061**: PINTURA (Sección `01D`)
+   - **PEI1108**: DIBUJO DE PLANOS ELÉCTRICOS (Sección `001D`)
+   Totalizando las secciones oficiales y los 190 estudiantes con sus respectivos RUTs y registros curriculares.
 
 ---
 

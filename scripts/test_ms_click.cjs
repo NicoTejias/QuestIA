@@ -6,21 +6,22 @@ http.get('http://192.168.0.202:9222/json', (res) => {
   res.on('data', c => data += c);
   res.on('end', () => {
     const list = JSON.parse(data);
-    const loginTab = list[0];
+    const loginTab = list.find(t => t.url && t.url.includes('login.microsoftonline.com'));
+    if (!loginTab) {
+      console.log('No loginTab found');
+      return;
+    }
     const wsUrl = loginTab.webSocketDebuggerUrl.replace('localhost:9222', '192.168.0.202:9222');
     const ws = new WebSocket(wsUrl);
     ws.on('open', () => {
       const code = `
         (() => {
-          const div = Array.from(document.querySelectorAll('div')).find(d => d.innerText && d.innerText.includes('ni.tejias@profesor.duoc.cl') && d.classList.contains('content'));
-          const row = div ? div.closest('.table-row') || div.closest('[role="button"]') || div.parentElement : null;
-          if (row) {
-            row.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-            row.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-            row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-            return 'Dispatched click on: ' + row.className + ' / ' + row.tagName;
-          }
-          return 'Row not found';
+          return {
+            title: document.title,
+            url: window.location.href,
+            text: document.body.innerText,
+            inputs: Array.from(document.querySelectorAll('input, button, [role="button"]')).map(el => ({ tag: el.tagName, id: el.id, text: el.innerText || el.value, class: el.className }))
+          };
         })()
       `;
       ws.send(JSON.stringify({
@@ -30,7 +31,7 @@ http.get('http://192.168.0.202:9222/json', (res) => {
       }));
     });
     ws.on('message', m => {
-      console.log('Result:', JSON.parse(m).result?.result?.value);
+      console.log('Result:', JSON.stringify(JSON.parse(m).result?.result?.value, null, 2));
       ws.close();
     });
   });
