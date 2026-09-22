@@ -1100,59 +1100,5 @@ export const DUOC_OFFICIAL_COURSES_2026_2: DuocSyncCourse[] = [
         "descripcion": "Entrega final y defensa de proyecto integrador"
       }
     ]
-  },
-  {
-    "code": "PEI1108",
-    "name": "DIBUJO DE PLANOS ELÉCTRICOS",
-    "description": "Sincronizado desde Vivo Duoc / AVA (Blackboard) • Escuela de Ingeniería y Recursos Naturales",
-    "semester": "2026-2",
-    "sections": [
-      "001D"
-    ],
-    "students": [
-      {
-        "identifier": "20876543-K",
-        "name": "GONZALEZ SILVA CRISTOBAL",
-        "section": "001D"
-      },
-      {
-        "identifier": "21345678-9",
-        "name": "RODRIGUEZ PEREZ MATIAS",
-        "section": "001D"
-      },
-      {
-        "identifier": "21987654-1",
-        "name": "HERNANDEZ VALDES JAVIERA",
-        "section": "001D"
-      },
-      {
-        "identifier": "22123456-7",
-        "name": "CASTRO MORALES BENJAMIN",
-        "section": "001D"
-      }
-    ],
-    "evaluaciones": [
-      {
-        "titulo": "Evaluación 1: Simbología y Normativa SEC (EA1)",
-        "tipo": "prueba",
-        "fecha": 1790525120425,
-        "puntos": 100,
-        "descripcion": "Dibujo e interpretación de planos bajo normativa RIC N°01 al N°19"
-      },
-      {
-        "titulo": "Taller Práctico: Plano Unilineal y Cuadros de Carga (EA2)",
-        "tipo": "trabajo",
-        "fecha": 1791648320425,
-        "puntos": 150,
-        "descripcion": "Diseño en CAD de instalación domiciliaria y comercial"
-      },
-      {
-        "titulo": "Proyecto Final TE1: Carpeta Técnica Completa (EA3)",
-        "tipo": "informe",
-        "fecha": 1793549120425,
-        "puntos": 200,
-        "descripcion": "Memoria explicativa, cubicación y juego de planos"
-      }
-    ]
   }
 ];

@@ -126,11 +126,13 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
 
         await DocumentsAPI.saveDocument({
             course_id: selectedCourse,
-            file_id: storageId,
+            file_path: storageId,
             file_name: file.name,
             file_type: fileType,
             file_size: file.size,
             content_text: contentText,
+            uploaded_at: Date.now(),
+            teacher_id: selectedCourseObj?.teacher_id,
             is_master_doc: finalType !== 'none',
             master_doc_type: finalType !== 'none' ? finalType as any : undefined
         })

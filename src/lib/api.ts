@@ -780,20 +780,36 @@ export const DocumentsAPI = {
     is_master_doc: boolean;
     master_doc_type?: string;
     teacher_id?: string;
+    uploaded_at?: number;
   }) {
     let teacherId = data.teacher_id
     if (!teacherId) {
-      const { data: curso } = await supabase.from('courses').select('teacher_id').eq('id', data.course_id).single()
+      const { data: curso } = await supabase.from('courses').select('teacher_id').eq('id', data.course_id).maybeSingle()
       teacherId = curso?.teacher_id || 'user_3BAuEJEUMRcSXZ7t1EM6pMkVLug'
     }
-    const { error } = await supabase.from('course_documents').insert({ ...data, teacher_id: teacherId, created_at: new Date().toISOString() })
+
+    const payload = {
+      course_id: data.course_id,
+      teacher_id: teacherId,
+      file_name: data.file_name,
+      file_type: data.file_type,
+      file_size: data.file_size,
+      file_path: data.file_path || data.file_id || `${data.course_id}/${Date.now()}_${data.file_name}`,
+      content_text: data.content_text || '',
+      uploaded_at: data.uploaded_at || Date.now(),
+      is_master_doc: !!data.is_master_doc,
+      master_doc_type: data.master_doc_type || null,
+      created_at: new Date().toISOString()
+    }
+
+    const { error } = await supabase.from('course_documents').insert(payload)
     if (error) throw error
   },
 
   async deleteDocument(docId: string) {
-    const { data: doc } = await supabase.from('course_documents').select('file_id').eq('id', docId).single()
-    if (doc?.file_id) {
-        await supabase.storage.from('course_documents').remove([doc.file_id])
+    const { data: doc } = await supabase.from('course_documents').select('file_path').eq('id', docId).maybeSingle()
+    if (doc?.file_path) {
+        await supabase.storage.from('course_documents').remove([doc.file_path])
     }
     const { error } = await supabase.from('course_documents').delete().eq('id', docId)
     if (error) throw error
@@ -2774,15 +2790,20 @@ export const DriveSyncAPI = {
   },
 
   async getCourseNotebook(courseId: string) {
+    const localText = typeof localStorage !== 'undefined' ? localStorage.getItem(`questia_notebook_text_${courseId}`) : null
+
     try {
       const { data, error } = await supabase
         .from('courses')
-        .select('id, name, code, description, drive_folder_id, drive_folder_name, last_drive_sync, drive_files_manifest, drive_notebook_text')
+        .select('id, name, code, description, drive_folder_id, drive_folder_name, last_drive_sync, drive_files_manifest')
         .eq('id', courseId)
         .maybeSingle()
 
       if (!error && data) {
-        return data
+        return {
+          ...data,
+          drive_notebook_text: localText
+        }
       }
     } catch {
       // Ignorar error de columna faltante en Supabase cache
@@ -2804,7 +2825,7 @@ export const DriveSyncAPI = {
       drive_folder_name: parsedLocal.drive_folder_name || null,
       last_drive_sync: parsedLocal.last_drive_sync || null,
       drive_files_manifest: parsedLocal.drive_files_manifest || [],
-      drive_notebook_text: parsedLocal.drive_notebook_text || (typeof localStorage !== 'undefined' ? localStorage.getItem(`questia_notebook_text_${courseId}`) : null),
+      drive_notebook_text: parsedLocal.drive_notebook_text || localText,
     }
   },
 
