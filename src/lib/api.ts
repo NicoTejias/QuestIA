@@ -771,15 +771,22 @@ export const DocumentsAPI = {
 
   async saveDocument(data: {
     course_id: string;
-    file_id: string;
+    file_id?: string;
+    file_path?: string;
     file_name: string;
     file_type: string;
     file_size: number;
     content_text: string;
     is_master_doc: boolean;
     master_doc_type?: string;
+    teacher_id?: string;
   }) {
-    const { error } = await supabase.from('course_documents').insert({ ...data, created_at: Date.now() })
+    let teacherId = data.teacher_id
+    if (!teacherId) {
+      const { data: curso } = await supabase.from('courses').select('teacher_id').eq('id', data.course_id).single()
+      teacherId = curso?.teacher_id || 'user_3BAuEJEUMRcSXZ7t1EM6pMkVLug'
+    }
+    const { error } = await supabase.from('course_documents').insert({ ...data, teacher_id: teacherId, created_at: new Date().toISOString() })
     if (error) throw error
   },
 

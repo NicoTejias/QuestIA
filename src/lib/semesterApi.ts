@@ -207,7 +207,7 @@ export async function getProximasClases(
     // Fallback: si no hay clases futuras a partir de hoy y no se especificó un semestre estricto que deba comenzar después
     if (!data || data.length === 0) {
         // Si el docente está en un semestre futuro o actual (ej: 2026-2), buscar desde la fecha de inicio del semestre
-        let queryFallback = supabase
+        const queryFallback = supabase
             .from('clases_calendarizadas')
             .select('id, course_id, fecha, titulo, section, hora_inicio, hora_fin, tipo_bloque, es_feriado, estado')
             .in('course_id', [...porId.keys()])

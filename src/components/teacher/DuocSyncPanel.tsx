@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, CheckCircle2, Server, BookOpen, Users, Wifi, Settings2, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { CoursesAPI } from '../../lib/api'
@@ -19,7 +19,7 @@ export default function DuocSyncPanel({ user, onCoursesSynced }: Props) {
     const [tempIp, setTempIp] = useState(serverIp)
 
     // Verificar conectividad con Ubuntu Server
-    const checkServerStatus = async () => {
+    const checkServerStatus = useCallback(async () => {
         setChecking(true)
         try {
             // Intentar consultar endpoint o fallback a fetch liviano
@@ -38,11 +38,11 @@ export default function DuocSyncPanel({ user, onCoursesSynced }: Props) {
         } finally {
             setChecking(false)
         }
-    }
+    }, [serverIp])
 
     useEffect(() => {
         checkServerStatus()
-    }, [serverIp])
+    }, [checkServerStatus])
 
     const handleSync = async () => {
         if (!user?.clerk_id) {

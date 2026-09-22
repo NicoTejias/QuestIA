@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import ConfirmModal from '../ConfirmModal'
-import { FileText, Upload, Trash2, Loader2, X, CheckCircle, Eye, EyeOff, BookOpen, Cloud, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
+import { FileText, Upload, Trash2, Loader2, X, CheckCircle, Eye, EyeOff, BookOpen, Cloud, Sparkles, ChevronDown, ChevronUp, Briefcase, Calendar, Award, Layers } from 'lucide-react'
 import { extractTextFromFile, getFileType, getFileIcon, formatFileSize } from '../../utils/documentParser'
 import { useGooglePicker } from '../../hooks/useGooglePicker'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { DocumentsAPI } from '../../lib/api'
 import { CourseNotebookPanel } from './CourseNotebookPanel'
+import { MaletaDidacticaService, parsearInformacionDocente } from '../../services/maletaDidacticaService'
 
 export default function MaterialPanel({ courses }: { courses: any[] }) {
     const { data: documents } = useSupabaseQuery(() => DocumentsAPI.getMyDocuments(), [])
@@ -23,6 +24,65 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
     const [collapsedCourses, setCollapsedCourses] = useState<Set<string>>(new Set())
     const [collapsedMasterVault, setCollapsedMasterVault] = useState(false)
     const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; docId: any }>({ open: false, docId: null })
+    const [vincularMaletaLoading, setVincularMaletaLoading] = useState(false)
+    const [sincronizarPlanLoading, setSincronizarPlanLoading] = useState(false)
+
+    const selectedCourseObj = useMemo(() => {
+        return courses.find((c: any) => c.id === selectedCourse)
+    }, [courses, selectedCourse])
+
+    const maletaDocs = useMemo(() => {
+        if (!documents || !selectedCourse) return []
+        return documents.filter((d: any) => d.course_id === selectedCourse && (d.is_master_doc || ['PA', 'PDA', 'PIA'].includes(d.master_doc_type)))
+    }, [documents, selectedCourse])
+
+    const estructuraMaleta = useMemo(() => {
+        if (!maletaDocs.length) return null
+        const combined = maletaDocs.map((d: any) => `=== ARCHIVO: ${d.file_name} ===\n${d.content_text || ''}`).join('\n\n')
+        const names = maletaDocs.map((d: any) => d.file_name).join(' ')
+        return parsearInformacionDocente(combined, names)
+    }, [maletaDocs])
+
+    const handleVincularMaletaOficial = async () => {
+        if (!selectedCourseObj) return
+        setVincularMaletaLoading(true)
+        setError('')
+        try {
+            const res = await MaletaDidacticaService.vincularMaletaPreconfigurada(
+                selectedCourseObj.id,
+                selectedCourseObj.code,
+                selectedCourseObj.teacher_id || ''
+            )
+            setSuccess(`✅ Maleta Didáctica vinculada exitosamente. Se sincronizaron ${res.documentosAgregados} documentos oficiales (PA, PDA, PIA).`)
+            setTimeout(() => window.location.reload(), 1500)
+        } catch (err: any) {
+            setError(err.message || 'Error vinculando maleta didáctica')
+        } finally {
+            setVincularMaletaLoading(false)
+        }
+    }
+
+    const handleSincronizarPlanificacion = async () => {
+        if (!selectedCourseObj || !estructuraMaleta) return
+        setSincronizarPlanLoading(true)
+        setError('')
+        try {
+            const res = await MaletaDidacticaService.sincronizarPlanificacionDesdeMaleta({
+                courseId: selectedCourseObj.id,
+                teacherId: selectedCourseObj.teacher_id || '',
+                seccion: selectedCourseObj.section || '001D',
+                semestre: selectedCourseObj.semester || '2026-2',
+                fechaInicio: Date.now(),
+                diasSemana: [1, 3],
+                diasTipo: { 1: 'catedra', 3: 'laboratorio' }
+            })
+            setSuccess(`✅ Planificación sincronizada. Se generaron ${res.evaluacionesCreadas} evaluaciones oficiales.`)
+        } catch (err: any) {
+            setError(err.message || 'Error sincronizando planificación')
+        } finally {
+            setSincronizarPlanLoading(false)
+        }
+    }
 
     const ACCEPTED_TYPES = '.pdf,.docx,.pptx,.xlsx,.xls'
     const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
@@ -223,6 +283,123 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                         </div>
                     </div>
                 </div>
+
+                {/* Banner / Tarjeta de Maleta Didáctica del Ramo */}
+                {selectedCourse && (
+                    <div className="mt-4">
+                        {estructuraMaleta ? (
+                            <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 rounded-2xl p-5 space-y-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-400">
+                                            <Briefcase className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-white font-bold text-sm">
+                                                    Maleta Didáctica Vinculada
+                                                </h4>
+                                                <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-black border border-amber-500/30">
+                                                    OFICIAL AVA
+                                                </span>
+                                            </div>
+                                            <p className="text-slate-400 text-xs">
+                                                {estructuraMaleta.nombreAsignatura} ({estructuraMaleta.sigla}) • {estructuraMaleta.horasTotales} Horas • {estructuraMaleta.semanasProgramacion} Semanas
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${estructuraMaleta.documentosEncontrados.pa ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/5 text-slate-500'}`}>
+                                            PA {estructuraMaleta.documentosEncontrados.pa ? '✓' : '—'}
+                                        </span>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${estructuraMaleta.documentosEncontrados.pda ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-slate-500'}`}>
+                                            PDA {estructuraMaleta.documentosEncontrados.pda ? '✓' : '—'}
+                                        </span>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${estructuraMaleta.documentosEncontrados.pia ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-white/5 text-slate-500'}`}>
+                                            PIA {estructuraMaleta.documentosEncontrados.pia ? '✓' : '—'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Experiencias de Aprendizaje detectadas */}
+                                {estructuraMaleta.experiencias.length > 0 && (
+                                    <div className="bg-black/20 rounded-xl p-3 border border-white/5">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                            <Layers className="w-3.5 h-3.5 text-amber-400" />
+                                            Experiencias de Aprendizaje (EAs) para Desafíos
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                            {estructuraMaleta.experiencias.map(ea => (
+                                                <div key={ea.id} className="bg-surface/80 border border-white/5 rounded-lg p-2.5">
+                                                    <span className="text-[9px] font-black text-amber-400 block">{ea.codigo} • {ea.horas}h</span>
+                                                    <p className="text-white text-xs font-medium line-clamp-2 mt-0.5">{ea.titulo}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Evaluaciones Oficiales extraídas */}
+                                {estructuraMaleta.evaluaciones.length > 0 && (
+                                    <div className="bg-black/20 rounded-xl p-3 border border-white/5">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                            <Award className="w-3.5 h-3.5 text-amber-400" />
+                                            Evaluaciones Oficiales y Ponderaciones para Calendario
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {estructuraMaleta.evaluaciones.map(ev => (
+                                                <div key={ev.id} className="bg-surface/80 border border-white/5 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                                                    <span className="text-white text-xs font-medium">{ev.titulo}</span>
+                                                    <span className={`text-[10px] font-black px-1.5 py-0.2 rounded ${ev.ponderacionParcial > 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-700 text-slate-300'}`}>
+                                                        {ev.ponderacionParcial}%
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Botones de Acción Docente */}
+                                <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+                                    <button
+                                        onClick={handleSincronizarPlanificacion}
+                                        disabled={sincronizarPlanLoading}
+                                        className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all"
+                                    >
+                                        {sincronizarPlanLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+                                        Sincronizar Planificación y Evaluaciones con Calendario
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-surface border border-dashed border-white/10 rounded-2xl p-5 text-center space-y-3">
+                                <div className="p-3 bg-white/5 rounded-2xl w-fit mx-auto text-slate-400">
+                                    <Briefcase className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h4 className="text-white font-bold text-sm">Este ramo aún no tiene vinculada su Maleta Didáctica</h4>
+                                    <p className="text-slate-400 text-xs mt-1 max-w-lg mx-auto">
+                                        Vincula los documentos oficiales (PA, PDA, PIA) para extraer la información docente y generar desafíos formativos y planificación semestral con IA.
+                                    </p>
+                                </div>
+                                {selectedCourseObj?.code === 'PEI1108' ? (
+                                    <button
+                                        onClick={handleVincularMaletaOficial}
+                                        disabled={vincularMaletaLoading}
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl font-black text-xs shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all cursor-pointer"
+                                    >
+                                        {vincularMaletaLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-950" /> : <Sparkles className="w-4 h-4 text-slate-950" />}
+                                        Vincular Maleta Didáctica Oficial de PEI1108 (3 Documentos Listos)
+                                    </button>
+                                ) : (
+                                    <p className="text-slate-500 text-xs">
+                                        Selecciona "PDA", "PIA" o "PA" arriba y arrastra los archivos correspondientes a continuación.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Drag & Drop Zone */}
                 <div

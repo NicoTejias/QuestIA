@@ -65,14 +65,15 @@ export default function InicioDocente({ user, courses, onTabChange }: Props) {
     })
 
     // Filtrar estrictamente el gráfico de registro solo por los ramos del docente activo
+    const rawCourseStats = stats?.courseStats
     const chartData = useMemo(() => {
-        if (!stats?.courseStats) return []
+        if (!rawCourseStats) return []
         if (courseIds.length > 0) {
             const allowedIds = new Set(courseIds)
-            return stats.courseStats.filter((cs: any) => allowedIds.has(cs.id))
+            return rawCourseStats.filter((cs: any) => allowedIds.has(cs.id))
         }
-        return stats.courseStats
-    }, [stats?.courseStats, courseIds])
+        return rawCourseStats
+    }, [rawCourseStats, courseIds])
 
     return (
         // La barra lateral (calendario, primeros pasos, agenda) vive en el layout

@@ -616,14 +616,27 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
                             {sel && <CheckCircle2 className="w-3 h-3 text-white" />}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm text-slate-200 font-medium truncate">{doc.file_name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-slate-200 font-medium truncate">{doc.file_name}</p>
+                              {doc.master_doc_type && (
+                                <span className="bg-amber-500/20 text-amber-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-amber-500/30 shrink-0">
+                                  MALETA {doc.master_doc_type}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-slate-500">
-                              {doc.master_doc_type ? `Maestro: ${doc.master_doc_type}` : 'Documento'} · {(doc.content_text?.length || 0).toLocaleString()} caracteres
+                              {doc.master_doc_type ? `Documento oficial Duoc UC` : 'Documento complementario'} · {(doc.content_text?.length || 0).toLocaleString()} caracteres
                             </p>
                           </div>
                         </button>
                       )
                     })}
+                    {docsRamo.some(d => d.master_doc_type && docsSeleccionados.includes(d.id)) && (
+                      <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center gap-2 text-amber-300 text-xs">
+                        <Info className="w-4 h-4 shrink-0 text-amber-400" />
+                        <span>Documentos de la Maleta Didáctica seleccionados. Se extraerán las Experiencias de Aprendizaje (EA) y las ponderaciones oficiales del PIA y PDA.</span>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

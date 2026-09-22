@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Loader2, CheckCircle, Flame, Sparkles, AlertTriangle } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Loader2, CheckCircle, Flame, Sparkles, AlertTriangle, Briefcase } from 'lucide-react'
 import { toast } from 'sonner'
 import { getFileIcon, formatFileSize } from '../../utils/documentParser'
 import { MissionsAPI, QuizzesAPI, DocumentsAPI } from '../../lib/api'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
+import { MaletaDidacticaService, parsearInformacionDocente } from '../../services/maletaDidacticaService'
 
 const GAME_TYPES = [
     { id: 'multiple_choice', label: 'Quiz Clásico', icon: '🎯', desc: 'Opción múltiple con 4 alternativas', color: 'accent' },
@@ -33,6 +34,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
         { enabled: !!quizCourse }
     )
     const [selectedDoc, setSelectedDoc] = useState('')
+    const [selectedEA, setSelectedEA] = useState<{ codigo: string; titulo: string } | null>(null)
     const [numQuestions, setNumQuestions] = useState(5)
     const [difficulty, setDifficulty] = useState('medio')
     const [quizType, setQuizType] = useState('multiple_choice')
@@ -41,6 +43,13 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
     const [quizPreview, setQuizPreview] = useState<any>(null)
 
     const hasMasterDocs = masterDocs && masterDocs.length > 0
+
+    const estructuraMaleta = useMemo(() => {
+        if (!masterDocs || masterDocs.length === 0) return null
+        const combined = masterDocs.map((d: any) => `=== ${d.file_name} ===\n${d.content_text || ''}`).join('\n\n')
+        const names = masterDocs.map((d: any) => d.file_name).join(' ')
+        return parsearInformacionDocente(combined, names)
+    }, [masterDocs])
 
     const handleCreate = async () => {
         if (!formData.course_id || !formData.title || !formData.points) return
@@ -63,20 +72,28 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
     }
 
     const handleGenerateQuiz = async () => {
-        if (!selectedDoc) return
+        if (!selectedDoc && !selectedEA) {
+            setError('Por favor selecciona una Experiencia de Aprendizaje o un documento.')
+            return
+        }
         setGenerating(true)
         setError('')
         setQuizPreview(null)
         try {
-            const result = await QuizzesAPI.generateQuiz({
-                document_id: selectedDoc,
-                num_questions: numQuestions,
-                difficulty,
-                quiz_type: quizType,
-                max_attempts: maxAttempts
+            const courseObj = courses.find((c: any) => c.id === quizCourse)
+            const result = await MaletaDidacticaService.generarDesafioDesdeMaleta({
+                courseId: quizCourse,
+                teacherId: courseObj?.teacher_id || '',
+                eaCodigo: selectedEA?.codigo,
+                eaTitulo: selectedEA?.titulo,
+                documentId: selectedDoc || undefined,
+                numQuestions,
+                difficulty: difficulty as any,
+                quizType,
+                maxAttempts
             })
             setQuizPreview(result)
-            setSuccess(`✅ "${result.title}" generado con ${result.numQuestions} preguntas.`)
+            setSuccess(`✅ "${result.title}" generado con ${result.num_questions || numQuestions} preguntas y alineado a la Maleta Didáctica.`)
             setTimeout(() => setSuccess(''), 5000)
         } catch (err: any) {
             setError(err.data || err.message || 'Error al generar el quiz')
@@ -153,41 +170,100 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                         </div>
 
                         {quizCourse && (
-                            <div>
-                                <label className="text-sm font-medium text-slate-300 mb-2 block">2. Selecciona el Documento</label>
-                                {documents && documents.length > 0 ? (
-                                    <div className="grid gap-2">
-                                        {documents.map((doc: any) => (
-                                            <div key={doc.id} className="space-y-1">
+                            <div className="space-y-4">
+                                {estructuraMaleta && estructuraMaleta.experiencias.length > 0 && (
+                                    <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4 space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <Briefcase className="w-4 h-4 text-amber-400" />
+                                            <h4 className="text-white font-bold text-xs uppercase tracking-wider">
+                                                Maleta Didáctica Oficial: Selecciona Experiencia de Aprendizaje (EA)
+                                            </h4>
+                                        </div>
+                                        <p className="text-slate-400 text-xs">
+                                            La IA alineará las preguntas directamente con los Indicadores de Logro y contenidos oficiales de la EA seleccionada.
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => { setSelectedEA(null); if (!selectedDoc && masterDocs?.[0]) setSelectedDoc(masterDocs[0].id) }}
+                                                className={`p-3 rounded-xl border text-left transition-all ${!selectedEA
+                                                    ? 'bg-amber-500/20 border-amber-500/50 text-white ring-1 ring-amber-500/30'
+                                                    : 'bg-surface border-white/10 text-slate-400 hover:text-white'
+                                                }`}
+                                            >
+                                                <div className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Global</div>
+                                                <p className="text-xs font-bold text-white mt-1">Toda la Maleta Didáctica</p>
+                                                <p className="text-[10px] text-slate-500 mt-0.5">Visión integrada del ramo</p>
+                                            </button>
+                                            {estructuraMaleta.experiencias.map(ea => (
                                                 <button
-                                                    onClick={() => setSelectedDoc(doc.id)}
-                                                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-center gap-3 ${selectedDoc === doc.id
-                                                        ? 'bg-accent/10 border-accent/40 text-white ring-1 ring-accent/20'
-                                                        : 'bg-surface border-white/10 text-slate-300 hover:bg-white/5'
-                                                        }`}
+                                                    key={ea.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedEA({ codigo: ea.codigo, titulo: ea.titulo })
+                                                        if (!selectedDoc && masterDocs?.[0]) setSelectedDoc(masterDocs[0].id)
+                                                    }}
+                                                    className={`p-3 rounded-xl border text-left transition-all ${selectedEA?.codigo === ea.codigo
+                                                        ? 'bg-amber-500/20 border-amber-500/50 text-white ring-1 ring-amber-500/30 shadow-lg shadow-amber-500/10'
+                                                        : 'bg-surface border-white/10 text-slate-400 hover:text-white'
+                                                    }`}
                                                 >
-                                                    <span className="text-2xl">{getFileIcon(doc.file_type)}</span>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-bold truncate text-sm">{doc.file_name}</p>
-                                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{formatFileSize(doc.file_size)} · {doc.content_text?.length?.toLocaleString()} caracteres</p>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">{ea.codigo}</span>
+                                                        <span className="text-[9px] text-slate-500 font-mono">{ea.horas}h</span>
                                                     </div>
-                                                    {selectedDoc === doc.id && <CheckCircle className="w-5 h-5 text-accent-light shrink-0" />}
+                                                    <p className="text-xs font-bold text-white line-clamp-2 mt-1">{ea.titulo}</p>
                                                 </button>
-                                                
-                                                {/* Lista de juegos ya creados para este documento */}
-                                                <QuizList documentId={doc.id} />
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="bg-surface border border-dashed border-white/10 rounded-xl p-6 text-center">
-                                        <p className="text-slate-500 text-sm">No hay documentos en este ramo. Sube material en <strong className="text-slate-300">Material</strong> primero.</p>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
+
+                                <div>
+                                    <label className="text-sm font-medium text-slate-300 mb-2 block">
+                                        2. O bien, selecciona un Documento Específico
+                                    </label>
+                                    {documents && documents.length > 0 ? (
+                                        <div className="grid gap-2">
+                                            {documents.map((doc: any) => (
+                                                <div key={doc.id} className="space-y-1">
+                                                    <button
+                                                        onClick={() => { setSelectedDoc(doc.id); }}
+                                                        className={`w-full text-left p-4 rounded-xl border transition-all flex items-center gap-3 ${selectedDoc === doc.id
+                                                            ? 'bg-accent/10 border-accent/40 text-white ring-1 ring-accent/20'
+                                                            : 'bg-surface border-white/10 text-slate-300 hover:bg-white/5'
+                                                            }`}
+                                                    >
+                                                        <span className="text-2xl">{getFileIcon(doc.file_type)}</span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-bold truncate text-sm">{doc.file_name}</p>
+                                                                {doc.is_master_doc && (
+                                                                    <span className="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[8px] font-black border border-amber-500/30">
+                                                                        MALETA {doc.master_doc_type}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{formatFileSize(doc.file_size)} · {doc.content_text?.length?.toLocaleString()} caracteres</p>
+                                                        </div>
+                                                        {selectedDoc === doc.id && <CheckCircle className="w-5 h-5 text-accent-light shrink-0" />}
+                                                    </button>
+                                                    
+                                                    {/* Lista de juegos ya creados para este documento */}
+                                                    <QuizList documentId={doc.id} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="bg-surface border border-dashed border-white/10 rounded-xl p-6 text-center">
+                                            <p className="text-slate-500 text-sm">No hay documentos en este ramo. Sube o vincula la maleta en <strong className="text-slate-300">Material</strong> primero.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
 
-                        {selectedDoc && (
+                        {(selectedDoc || selectedEA) && (
                             <>
                                 <div>
                                     <label className="text-sm font-medium text-slate-300 mb-2 block">3. Tipo de Juego</label>
@@ -291,7 +367,7 @@ export default function CrearMisionPanel({ courses }: { courses: any[] }) {
                                     {generating ? (
                                         <><Loader2 className="w-5 h-5 animate-spin" /> Generando con IA... (~15s)</>
                                     ) : (
-                                        <><Sparkles className="w-5 h-5" /> 🚀 Generar Desafío con IA</>
+                                        <><Sparkles className="w-5 h-5" /> {selectedEA ? `🚀 Generar Desafío para ${selectedEA.codigo} con IA` : '🚀 Generar Desafío con IA'}</>
                                     )}
                                 </button>
                             </>
