@@ -250,6 +250,80 @@ export const CoursesAPI = {
     return course
   },
 
+  async syncDuocData(teacherId: string, customCourses?: any[]) {
+    const { DUOC_OFFICIAL_COURSES_2026_2 } = await import('../data/duocCoursesData')
+    const listToSync = customCourses && customCourses.length > 0 ? customCourses : DUOC_OFFICIAL_COURSES_2026_2
+
+    let totalStudentsAdded = 0
+    let totalCoursesSynced = 0
+    const results: any[] = []
+
+    for (const item of listToSync) {
+      const { data: existingCourse } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('teacher_id', teacherId)
+        .eq('code', item.code)
+        .maybeSingle()
+
+      let courseId = existingCourse?.id
+      const sectionsStr = item.sections ? item.sections.join(', ') : (item.section || '001D')
+
+      if (!courseId) {
+        const { data: newCourse, error: cErr } = await supabase
+          .from('courses')
+          .insert({
+            name: item.name,
+            code: item.code,
+            description: item.description || `Sincronizado desde Vivo Duoc / AVA. Secciones: ${sectionsStr}`,
+            teacher_id: teacherId,
+            semester: item.semester || '2026-2',
+            section: sectionsStr
+          })
+          .select()
+          .single()
+
+        if (cErr) {
+          console.error(`Error al crear curso ${item.code}:`, cErr)
+          continue
+        }
+        courseId = newCourse.id
+      } else {
+        await supabase
+          .from('courses')
+          .update({
+            name: item.name,
+            description: item.description || `Sincronizado desde Vivo Duoc / AVA. Secciones: ${sectionsStr}`,
+            semester: item.semester || '2026-2',
+            section: sectionsStr
+          })
+          .eq('id', courseId)
+      }
+
+      totalCoursesSynced++
+
+      if (item.students && item.students.length > 0) {
+        const res = await CoursesAPI.batchUploadWhitelist(courseId, teacherId, item.students, false)
+        totalStudentsAdded += (res.added + res.updated)
+      }
+
+      results.push({
+        code: item.code,
+        name: item.name,
+        sections: item.sections || [sectionsStr],
+        studentsCount: item.students?.length || 0
+      })
+    }
+
+    return {
+      success: true,
+      syncedCourses: totalCoursesSynced,
+      totalStudents: totalStudentsAdded,
+      details: results,
+      timestamp: new Date().toISOString()
+    }
+  },
+
   async updateCourse(courseId: string, data: any) {
     const { error } = await supabase.from('courses').update(data).eq('id', courseId)
     if (error) throw error
@@ -2309,6 +2383,7 @@ export const CalendarAPI = {
     // Cascada de modelos: si uno está saturado (503) o con cuota (429), se pasa al siguiente.
     // Se ordenan del más capaz al más disponible bajo alta demanda.
     const MODELOS_CASCADA = [
+      "gemini-3-flash-preview",
       "gemini-2.5-flash",
       "gemini-2.5-flash-lite",
       "gemini-2.0-flash",
@@ -2925,9 +3000,18 @@ Responde strictly en formato JSON con la siguiente estructura:
 
     const { GoogleGenerativeAI } = await import('@google/generative-ai')
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { responseMimeType: "application/json" } })
-    const result = await model.generateContent(prompt)
-    const responseText = result.response.text()
+    let responseText = ""
+    const modelsToTry = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"]
+    for (const mName of modelsToTry) {
+      try {
+        const model = genAI.getGenerativeModel({ model: mName, generationConfig: { responseMimeType: "application/json" } })
+        const result = await model.generateContent(prompt)
+        responseText = result.response.text()
+        if (responseText) break
+      } catch (err: any) {
+        console.warn(`Fallback modelo ${mName} en análisis:`, err?.message)
+      }
+    }
 
     try {
       return JSON.parse(responseText)

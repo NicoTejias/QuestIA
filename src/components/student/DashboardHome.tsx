@@ -1,4 +1,4 @@
-import { Target, Trophy, Gift, User } from 'lucide-react'
+import { Target, Trophy, Gift, User, Sparkles, ArrowRight, Flame } from 'lucide-react'
 import EvaluacionesPanel from './EvaluacionesPanel'
 import {
     PageHeading,
@@ -98,6 +98,40 @@ export default function DashboardHome({
                 <PageHeading>{dateLabel}</PageHeading>
 
                 <StatCards stats={statItems} />
+
+                {/* Misión Pedagógica del Día (Buenas prácticas de docencia Duoc UC) */}
+                <div className="qi-card p-4 sm:p-5 mb-6 border-l-4 border-l-iris bg-gradient-to-r from-iris/10 via-black/20 to-transparent flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3.5">
+                        <div className="w-10 h-10 rounded-2xl bg-iris/20 text-iris-light flex items-center justify-center shrink-0 mt-0.5">
+                            <Sparkles className="w-5 h-5 text-amber-300" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-iris-light bg-iris/20 px-2 py-0.5 rounded-full border border-iris/30">
+                                    Misión Pedagógica de Hoy
+                                </span>
+                                <span className="text-[11px] text-orange-400 font-bold flex items-center gap-1">
+                                    <Flame className="w-3.5 h-3.5" /> Protege tu Racha
+                                </span>
+                            </div>
+                            <h3 className="text-sm sm:text-base font-bold text-white mt-1">
+                                {courses.length > 0 ? `Repaso activo: Experiencia de Aprendizaje en ${courses[0].name}` : 'Explora tus ramos y resuelve tu primer desafío'}
+                            </h3>
+                            <p className="text-xs text-quiet mt-0.5 leading-relaxed">
+                                Dedica 3 minutos a revisar los contenidos y autoevaluarte con IA para asegurar tu preparación antes de la prueba oficial.
+                            </p>
+                        </div>
+                    </div>
+                    {courses.length > 0 && (
+                        <button
+                            onClick={() => onSelectCourse(courses[0].id)}
+                            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-iris hover:bg-iris-light active:scale-95 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md shadow-iris/30 transition-all shrink-0"
+                        >
+                            <span>Estudiar Ahora</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                </div>
 
                 <section className="mb-6">
                     <h2 className="text-base font-bold mb-3 text-text-main">Mis evaluaciones</h2>

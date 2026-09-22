@@ -21,6 +21,7 @@ import CompleteProfileModal from '../components/student/CompleteProfileModal'
 import BartlePopup from '../components/student/BartlePopup'
 import { BartleProfileDisplay } from '../components/student/BartleTest'
 import RetentionProgressWidget from '../components/student/RetentionProgressWidget'
+import StudentBottomNav from '../components/student/StudentBottomNav'
 import FAQSection from '../components/FAQSection'
 import ErrorBoundary from '../components/ErrorBoundary'
 
@@ -126,7 +127,7 @@ export default function StudentDashboard() {
                     totalSpendablePoints={totalSpendablePoints}
                 />
 
-                <div className="p-4 md:p-6 flex-1 overflow-y-auto">
+                <div className="p-4 md:p-6 pb-24 lg:pb-6 flex-1 overflow-y-auto">
                     {selectedCourseId ? (
                         <CourseDetailView
                             courseId={selectedCourseId as any}
@@ -167,6 +168,14 @@ export default function StudentDashboard() {
                         </>
                     )}
                 </div>
+
+                {/* Mobile Bottom Navigation */}
+                <StudentBottomNav
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    selectedCourseId={selectedCourseId}
+                    setSelectedCourseId={setSelectedCourseId}
+                />
             </main>
 
             {/* Modals */}

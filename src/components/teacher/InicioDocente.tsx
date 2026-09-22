@@ -169,6 +169,12 @@ export default function InicioDocente({ user, courses, onTabChange }: Props) {
                             sub: 'Aprueba recompensas',
                             onClick: () => onTabChange('canjes'),
                         },
+                        {
+                            icon: <span className="text-sm">🎓</span>,
+                            text: 'Vivo Duoc & AVA',
+                            sub: 'Sincronizar listas y ramos',
+                            onClick: () => onTabChange('ramos'),
+                        },
                     ]}
                 />
         </div>

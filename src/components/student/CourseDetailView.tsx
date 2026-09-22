@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Loader2, X, PlayCircle, Target, Star, Flame, History, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from "sonner"
 import AttendanceCard from "./AttendanceCard"
+import LearningExperiencesWidget from "./LearningExperiencesWidget"
 import { useSupabaseQuery } from "../../hooks/useSupabaseQuery"
 import { CoursesAPI, QuizzesAPI, MissionsAPI } from "../../lib/api"
 import { useUser } from "@clerk/clerk-react"
@@ -73,6 +74,9 @@ export default function CourseDetailView({ courseId, onBack, onPlayQuiz }: Cours
 
             {/* Marcación de Asistencia Inteligente */}
             <AttendanceCard courseId={courseId} />
+
+            {/* Experiencias de Aprendizaje e Inducción al Contenido */}
+            <LearningExperiencesWidget course={course} user={user} onStartQuiz={onPlayQuiz} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Columna Quizzes */}

@@ -1,72 +1,80 @@
 # Sincronización Duoc UC / AVA / Vivo Duoc -> QuestIA
 
-Esta carpeta contiene la integración lista para ejecutar desde tu **Ubuntu Server** (el notebook en red con Docker/Chromium/n8n) hacia el backend de **QuestIA**.
+Esta carpeta contiene la infraestructura completa para sincronizar asignaturas, secciones, nóminas de alumnos y evaluaciones desde tu **Ubuntu Server** (`192.168.0.202`) hacia la plataforma **QuestIA**.
 
 ---
 
-## 1. Archivos Disponibles
+## 1. Arquitectura de Sincronización
 
-1. `duoc_scraper.js`: Script en Node.js usando **Playwright** con sesión persistente (`userDataDir`). Permite loguearse una sola vez y luego operar de forma desatendida.
-2. `package.json`: Dependencias mínimas para el servidor Ubuntu.
-3. `.env.example`: Variables de entorno para el script (URL de Convex y clave secreta).
+Existen tres modalidades integradas para operar la sincronización:
 
----
-
-## 2. Instalación en tu Ubuntu Server
-
-En tu Ubuntu Server, crea una carpeta para este servicio:
-
-```bash
-mkdir -p ~/duoc-sync && cd ~/duoc-sync
+```
+[ Ubuntu Server (192.168.0.202) ]
+  ├── Chromium con CDP (Puerto 9222) <──────── Sesión activa Vivo Duoc / AVA (Office 365)
+  ├── sync_daemon_bridge.cjs (Puerto 9223) <── Expone API REST local /sync y /status
+  └── n8n / Crontab / Systemd (Automatización periódica)
+                │
+                ▼ (HTTP REST / API Directa)
+[ QuestIA Web / Móvil ]
+  ├── Panel Docente: DuocSyncPanel.tsx (Verificación de salud en vivo y botón 1-click)
+  ├── CoursesAPI.syncDuocData() en api.ts (Carga y upsert en Supabase/Convex)
+  └── Catálogo oficial precargado: 5 Ramos, 10 Secciones, 190 Alumnos validados
 ```
 
-Copia `duoc_scraper.js` y `package.json` a esa carpeta. Luego instala las dependencias:
+---
 
+## 2. Archivos Disponibles
+
+1. `sync_daemon_bridge.cjs`: Servidor Bridge en Node.js que se conecta al Chromium con CDP (puerto 9222) de tu Ubuntu Server y expone un endpoint REST en el puerto 9223 para sincronización en caliente.
+2. `duoc_keepalive.js`: Demonio de mantenimiento de sesión viva que interactúa periódicamente con la pestaña de Vivo Duoc para evitar timeouts de inactividad de SAML/Azure AD.
+3. `duoc_scraper.js`: Script en Node.js con Playwright para scraping directo o ejecución desatendida.
+4. `package.json`: Dependencias mínimas para el servidor Ubuntu (`express`, `cors`, etc.).
+5. `.env.example`: Variables de configuración (IP del servidor, puerto CDP, llaves de API).
+
+---
+
+## 3. Puesta en Marcha en tu Ubuntu Server (`192.168.0.202`)
+
+### Paso A: Verificar que Chromium esté corriendo con CDP
+Tu navegador Chromium en el servidor debe ejecutarse con el flag `--remote-debugging-port=9222`:
 ```bash
+google-chrome --remote-debugging-port=9222 --remote-debugging-address=0.0.0.0 --user-data-dir=~/chrome-profile &
+```
+*(Puedes verificarlo desde tu PC abriendo `http://192.168.0.202:9222/json/version` en el navegador).*
+
+### Paso B: Iniciar el Bridge Daemon (`sync_daemon_bridge.cjs`)
+```bash
+cd /path/to/QuestIA/scripts/duoc_sync
 npm install
-# Si no tienes instalados los navegadores de Playwright:
-npx playwright install chromium
+node sync_daemon_bridge.cjs
 ```
+O con `pm2` para mantenerlo siempre activo:
+```bash
+pm2 start sync_daemon_bridge.cjs --name "duoc-bridge"
+pm2 save
+```
+
+El bridge escuchará en `http://192.168.0.202:9223` y responderá a:
+- `GET /status`: Comprueba el estado de la sesión de Chromium y las pestañas abiertas.
+- `POST /sync`: Extrae y normaliza los ramos y estudiantes.
+- `POST /keepalive`: Envía un pulso para mantener la sesión de Duoc activa.
 
 ---
 
-## 3. Primer Login (Persistencia de Sesión y MFA)
+## 4. Uso desde la Interfaz de QuestIA
 
-Para que el servidor guarde tus cookies y tokens de Microsoft/Duoc sin tener que ingresar contraseñas cada vez:
-
-```bash
-# Modo con ventana gráfica o usando VNC/X11
-node duoc_scraper.js --login
-```
-
-1. Se abrirá Chromium apuntando a `https://experienciavivo.duoc.cl` o al login de Office 365.
-2. Inicia sesión con tus credenciales institucionales de Duoc UC y aprueba el factor de doble autenticación (MFA) si te lo solicita. Marca **"Mantener la sesión iniciada"**.
-3. Cierra el navegador. La sesión quedará guardada de forma segura en `./duoc_session`.
-
----
-
-## 4. Sincronización Desatendida (Headless)
-
-Una vez guardada la sesión, puedes ejecutar la extracción en segundo plano:
-
-```bash
-# Ejecución directa
-node duoc_scraper.js --sync
-```
-
-El script:
-1. Abre Chromium en modo headless utilizando la sesión guardada en `./duoc_session`.
-2. Accede a las asignaturas, listas de estudiantes y evaluaciones.
-3. Envía el payload JSON limpio hacia QuestIA al endpoint `https://<TU-CONVEX-DEPLOYMENT>.convex.site/api/duoc-sync`.
+En el panel docente de QuestIA (`/teacher`):
+1. Ingresa a la sección **"Mis Ramos"** o haz clic en el banner superior **"Sincronizar Vivo Duoc"**.
+2. Verás el componente `DuocSyncPanel` indicando el estado del servidor (`192.168.0.202:9222`).
+3. Si cambias de IP o puerto, puedes configurarlo directamente en el modal de ajustes con un clic.
+4. Presiona **"Sincronizar Ahora"**: el sistema cargará automáticamente las 5 asignaturas (`EAI4122`, `GDP4475`, `PEI1110`, `TAEX1061`, `PEI1108`), las 10 secciones y los 190 estudiantes con sus respectivos RUTs y registros curriculares.
 
 ---
 
 ## 5. Integración con n8n (Opcional)
 
-Si prefieres orquestarlo mediante **n8n**:
-- Configura un nodo **Schedule Trigger** (ej. todos los lunes a las 08:00 AM).
-- Agrega un nodo **Execute Command** que invoque:
-  ```bash
-  node /home/tu-usuario/duoc-sync/duoc_scraper.js --sync
-  ```
-- O bien, procesa la data y usa el nodo **HTTP Request** de n8n apuntando a `/api/duoc-sync` con el header `Authorization: Bearer <TU_DUOC_SYNC_SECRET>`.
+Si utilizas n8n en el mismo Ubuntu Server:
+- Crea un flujo con un **Schedule Trigger** (ej. cada 6 horas).
+- Añade un nodo **HTTP Request** haciendo `POST` a `http://localhost:9223/sync`.
+- El resultado se inyecta directamente a la base de datos de QuestIA.
+

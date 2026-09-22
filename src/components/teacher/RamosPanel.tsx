@@ -16,6 +16,7 @@ import {
     formatSemestre,
     formatSemestreCorto,
 } from '../../lib/semesters'
+import DuocSyncPanel from './DuocSyncPanel'
 
 export default function RamosPanel({
     courses,
@@ -141,6 +142,9 @@ export default function RamosPanel({
                     Probar como Alumno
                 </button>
             </div>
+
+            {/* Panel de Sincronización Vivo Duoc & AVA */}
+            <DuocSyncPanel user={user} onCoursesSynced={onCoursesChanged} />
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex-1 w-full flex flex-col sm:flex-row gap-3">

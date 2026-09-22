@@ -16,6 +16,7 @@ import AdminPanel from '../components/teacher/AdminPanel'
 import CierreSemestrePanel from '../components/teacher/CierreSemestrePanel'
 import InicioDocente from '../components/teacher/InicioDocente'
 import TeacherTour from '../components/teacher/TeacherTour'
+import TeacherBottomNav from '../components/teacher/TeacherBottomNav'
 import ContactWidget from '../components/ContactWidget'
 import { useProfile } from '../hooks/useProfile'
 import { useSupabaseQuery } from '../hooks/useSupabaseQuery'
@@ -268,7 +269,7 @@ function TeacherDashboardInner({
                     El rail es hermano del área de scroll, no hijo: así queda fijo
                     y solo el cuerpo se desplaza al cambiar de sección. */}
                 <div className="flex-1 flex min-h-0 overflow-hidden">
-                    <div className="flex-1 min-w-0 overflow-y-auto px-7 py-[26px] pb-safe">
+                    <div className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-7 py-[26px] pb-24 lg:pb-safe">
                         {activeTab === 'inicio' && (
                             <InicioDocente
                                 user={user}
@@ -305,6 +306,9 @@ function TeacherDashboardInner({
                         <RailAgenda courses={courses || []} onTabChange={setActiveTab} />
                     </SideRail>
                 </div>
+
+                {/* Mobile Bottom Navigation Docente */}
+                <TeacherBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
             </main>
 
             {showHelp && (

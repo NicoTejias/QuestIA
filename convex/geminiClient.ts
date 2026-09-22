@@ -9,8 +9,8 @@
  * npx convex env set OPENAI_API_KEY sk-...
  */
 
-// Cascada de modelos reales, del más capaz al más disponible bajo alta demanda.
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"];
+// Cascada de modelos reales, priorizando gemini-3-flash-preview para contenido académico.
+const GEMINI_MODELS = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"];
 
 // Errores transitorios: cuota (429) o sobrecarga del modelo (503). En ambos casos
 // tiene sentido probar el siguiente modelo de la cascada.
