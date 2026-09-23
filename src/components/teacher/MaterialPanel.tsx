@@ -6,7 +6,8 @@ import { useGooglePicker } from '../../hooks/useGooglePicker'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
 import { DocumentsAPI } from '../../lib/api'
 import { CourseNotebookPanel } from './CourseNotebookPanel'
-import { MaletaDidacticaService, parsearInformacionDocente } from '../../services/maletaDidacticaService'
+import { parsearInformacionDocente } from '../../services/maletaDidacticaService'
+import CalendarioAutomaticoModal from './CalendarioAutomaticoModal'
 
 export default function MaterialPanel({ courses }: { courses: any[] }) {
     const { data: documents } = useSupabaseQuery(() => DocumentsAPI.getMyDocuments(), [])
@@ -24,8 +25,7 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
     const [collapsedCourses, setCollapsedCourses] = useState<Set<string>>(new Set())
     const [collapsedMasterVault, setCollapsedMasterVault] = useState(false)
     const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; docId: any }>({ open: false, docId: null })
-    const [vincularMaletaLoading, setVincularMaletaLoading] = useState(false)
-    const [sincronizarPlanLoading, setSincronizarPlanLoading] = useState(false)
+    const [showAutoPlanModal, setShowAutoPlanModal] = useState(false)
 
     const selectedCourseObj = useMemo(() => {
         return courses.find((c: any) => c.id === selectedCourse)
@@ -42,47 +42,6 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
         const names = maletaDocs.map((d: any) => d.file_name).join(' ')
         return parsearInformacionDocente(combined, names)
     }, [maletaDocs])
-
-    const handleVincularMaletaOficial = async () => {
-        if (!selectedCourseObj) return
-        setVincularMaletaLoading(true)
-        setError('')
-        try {
-            const res = await MaletaDidacticaService.vincularMaletaPreconfigurada(
-                selectedCourseObj.id,
-                selectedCourseObj.code,
-                selectedCourseObj.teacher_id || ''
-            )
-            setSuccess(`✅ Maleta Didáctica vinculada exitosamente. Se sincronizaron ${res.documentosAgregados} documentos oficiales (PA, PDA, PIA).`)
-            setTimeout(() => window.location.reload(), 1500)
-        } catch (err: any) {
-            setError(err.message || 'Error vinculando maleta didáctica')
-        } finally {
-            setVincularMaletaLoading(false)
-        }
-    }
-
-    const handleSincronizarPlanificacion = async () => {
-        if (!selectedCourseObj || !estructuraMaleta) return
-        setSincronizarPlanLoading(true)
-        setError('')
-        try {
-            const res = await MaletaDidacticaService.sincronizarPlanificacionDesdeMaleta({
-                courseId: selectedCourseObj.id,
-                teacherId: selectedCourseObj.teacher_id || '',
-                seccion: selectedCourseObj.section || '001D',
-                semestre: selectedCourseObj.semester || '2026-2',
-                fechaInicio: Date.now(),
-                diasSemana: [1, 3],
-                diasTipo: { 1: 'catedra', 3: 'laboratorio' }
-            })
-            setSuccess(`✅ Planificación sincronizada. Se generaron ${res.evaluacionesCreadas} evaluaciones oficiales.`)
-        } catch (err: any) {
-            setError(err.message || 'Error sincronizando planificación')
-        } finally {
-            setSincronizarPlanLoading(false)
-        }
-    }
 
     const ACCEPTED_TYPES = '.pdf,.docx,.pptx,.xlsx,.xls'
     const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
@@ -364,12 +323,11 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                                 {/* Botones de Acción Docente */}
                                 <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
                                     <button
-                                        onClick={handleSincronizarPlanificacion}
-                                        disabled={sincronizarPlanLoading}
-                                        className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all"
+                                        onClick={() => setShowAutoPlanModal(true)}
+                                        className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
                                     >
-                                        {sincronizarPlanLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
-                                        Sincronizar Planificación y Evaluaciones con Calendario
+                                        <Sparkles className="w-4 h-4" />
+                                        Planificación Oficial y Calendario (18 Semanas)
                                     </button>
                                 </div>
                             </div>
@@ -384,20 +342,25 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                                         Vincula los documentos oficiales (PA, PDA, PIA) para extraer la información docente y generar desafíos formativos y planificación semestral con IA.
                                     </p>
                                 </div>
-                                {selectedCourseObj?.code === 'PEI1108' ? (
+                                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                                     <button
-                                        onClick={handleVincularMaletaOficial}
-                                        disabled={vincularMaletaLoading}
-                                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl font-black text-xs shadow-lg shadow-amber-500/20 hover:brightness-110 transition-all cursor-pointer"
+                                        onClick={() => {
+                                            setUploadType('PDA')
+                                            fileRef.current?.click()
+                                        }}
+                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
                                     >
-                                        {vincularMaletaLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-950" /> : <Sparkles className="w-4 h-4 text-slate-950" />}
-                                        Vincular Maleta Didáctica Oficial de PEI1108 (3 Documentos Listos)
+                                        <Upload className="w-4 h-4" />
+                                        Subir PDA / PIA / PA
                                     </button>
-                                ) : (
-                                    <p className="text-slate-500 text-xs">
-                                        Selecciona "PDA", "PIA" o "PA" arriba y arrastra los archivos correspondientes a continuación.
-                                    </p>
-                                )}
+                                    <button
+                                        onClick={() => setShowAutoPlanModal(true)}
+                                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
+                                    >
+                                        <Calendar className="w-4 h-4" />
+                                        Abrir Planificador de 18 Semanas
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -622,6 +585,14 @@ export default function MaterialPanel({ courses }: { courses: any[] }) {
                     <h4 className="text-white font-semibold mb-2">Sin material adicional</h4>
                     <p className="text-slate-400 text-sm">Sube documentos para complementar tus ramos.</p>
                 </div>
+            )}
+
+            {selectedCourseObj && (
+                <CalendarioAutomaticoModal
+                    course={selectedCourseObj}
+                    isOpen={showAutoPlanModal}
+                    onClose={() => setShowAutoPlanModal(false)}
+                />
             )}
         </div>
     )

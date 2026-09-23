@@ -265,8 +265,8 @@ export function parsearInformacionDocente(contentText: string, fileName: string 
   }
 
   return {
-    sigla: sigla || 'PEI1108',
-    nombreAsignatura: nombreAsignatura || 'DIBUJO DE PLANOS ELÉCTRICOS',
+    sigla: sigla || '',
+    nombreAsignatura: nombreAsignatura || '',
     horasTotales,
     semanasProgramacion,
     experiencias,

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Calendar, List, CheckSquare, Edit, AlertTriangle, ChevronLeft, ChevronRight, X, Save, Loader2 } from 'lucide-react'
+import { Calendar, List, CheckSquare, Edit, AlertTriangle, ChevronLeft, ChevronRight, X, Save, Loader2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { CalendarAPI } from '../../lib/api'
+import CalendarioAutomaticoModal from './CalendarioAutomaticoModal'
 
 interface CalendarDashboardProps {
   course: any
@@ -22,6 +23,7 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
   const [selectedSemana, setSelectedSemana] = useState(1)
   const [selectedClase, setSelectedClase] = useState<any | null>(null)
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
+  const [showAutoPlanModal, setShowAutoPlanModal] = useState(false)
 
   // Para la vista de calendario
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -237,10 +239,17 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
             </button>
           </div>
           <button
-            onClick={onResetConfig}
-            className="text-xs text-red-400 hover:text-red-300 font-semibold border border-red-500/20 hover:border-red-500/50 bg-red-500/10 px-3 py-2 rounded-lg transition-all"
+            onClick={() => setShowAutoPlanModal(true)}
+            className="flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white font-bold border border-indigo-500/30 hover:border-indigo-500/60 bg-indigo-500/20 hover:bg-indigo-500/30 px-3 py-2 rounded-lg transition-all shadow-md shadow-indigo-500/10 cursor-pointer"
           >
-            Regenerar
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            Planificación Automática (18 Semanas)
+          </button>
+          <button
+            onClick={onResetConfig}
+            className="text-xs text-red-400 hover:text-red-300 font-semibold border border-red-500/20 hover:border-red-500/50 bg-red-500/10 px-3 py-2 rounded-lg transition-all cursor-pointer"
+          >
+            Reconfigurar
           </button>
         </div>
       </div>
@@ -370,24 +379,53 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
           {activeTab === 'timeline' && (
             <div className="space-y-6">
               {/* Slider de Semanas */}
-              <div className="flex items-center justify-center gap-4 bg-slate-950/80 p-3 rounded-lg border border-slate-800">
-                <button
-                  disabled={selectedSemana <= 1}
-                  onClick={() => setSelectedSemana(s => s - 1)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white disabled:text-slate-700 transition-all"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <span className="text-white font-bold text-lg select-none">
-                  Semana {selectedSemana} de {maxSemanas}
-                </span>
-                <button
-                  disabled={selectedSemana >= maxSemanas}
-                  onClick={() => setSelectedSemana(s => s + 1)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white disabled:text-slate-700 transition-all"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
+              <div className="flex flex-col items-center justify-center gap-2 bg-slate-950/80 p-3 rounded-lg border border-slate-800">
+                <div className="flex items-center gap-4">
+                  <button
+                    disabled={selectedSemana <= 1}
+                    onClick={() => setSelectedSemana(s => s - 1)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white disabled:text-slate-700 transition-all cursor-pointer"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <span className="text-white font-bold text-lg select-none">
+                    Semana {selectedSemana} de {maxSemanas}
+                  </span>
+                  <button
+                    disabled={selectedSemana >= maxSemanas}
+                    onClick={() => setSelectedSemana(s => s + 1)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white disabled:text-slate-700 transition-all cursor-pointer"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* Hitos Pedagógicos Duoc UC */}
+                {selectedSemana === 5 && (
+                  <span className="text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 animate-in fade-in">
+                    🎯 Evaluación Formativa 1 (Hito EA 1)
+                  </span>
+                )}
+                {selectedSemana === 10 && (
+                  <span className="text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 animate-in fade-in">
+                    🎯 Evaluación Formativa 2 (Hito EA 2)
+                  </span>
+                )}
+                {selectedSemana === 15 && (
+                  <span className="text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 animate-in fade-in">
+                    🎯 Evaluación Formativa 3 (Hito EA 3 - Previa a Examen)
+                  </span>
+                )}
+                {(selectedSemana === 16 || selectedSemana === 17) && (
+                  <span className="text-xs font-bold text-rose-300 bg-rose-500/10 border border-rose-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 animate-in fade-in">
+                    🏆 Examen Transversal (ET) {selectedSemana === 16 ? '· Parte 1 (Entrega)' : '· Parte 2 (Defensa)'}
+                  </span>
+                )}
+                {selectedSemana === 18 && (
+                  <span className="text-xs font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 animate-in fade-in">
+                    🔄 Semana 18: Recuperaciones, Evaluaciones Pendientes y Cierre de Actas
+                  </span>
+                )}
               </div>
 
               {/* Lista de Tarjetas agrupadas por sesión (Cátedra / Práctico) */}
@@ -799,6 +837,14 @@ export default function CalendarDashboard({ course, onResetConfig }: CalendarDas
           </div>
         </div>
       )}
+
+      {/* Modal de Planificación Automática Oficial de 18 Semanas */}
+      <CalendarioAutomaticoModal
+        course={course}
+        isOpen={showAutoPlanModal}
+        onClose={() => setShowAutoPlanModal(false)}
+        onSuccess={loadClases}
+      />
     </div>
   )
 }

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { Calendar, Upload, Loader2, Info, CheckCircle2, Plus, X } from 'lucide-react'
+import { Calendar, Upload, Loader2, Info, CheckCircle2, Plus, X, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { CalendarAPI, DocumentsAPI, InventarioPanolAPI, supabase } from '../../lib/api'
 import { extractTextFromFile, getFileType } from '../../utils/documentParser'
 import { esSemestreValido, semestreDeFecha, opcionesDeSemestre, formatSemestre, fechaInicioPorDefectoSemestre } from '../../lib/semesters'
+import CalendarioAutomaticoModal from './CalendarioAutomaticoModal'
 
 // Módulos horarios individuales de Duoc UC (40 minutos c/u, 10 min de recreo cada 2 módulos)
 const BLOQUES_DUOC = [
@@ -80,6 +81,7 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
   // Uno o varios archivos (maleta didáctica: varias presentaciones = varias sesiones en orden).
   const [pdaFiles, setPdaFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
+  const [showAutoPlanModal, setShowAutoPlanModal] = useState(false)
 
   // Wizard: paso actual (1: datos comunes, 2: secciones, 3: horarios).
   const [paso, setPaso] = useState<1 | 2 | 3>(1)
@@ -483,6 +485,32 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           <h2 className="text-2xl font-bold text-white">Configuración del Calendario Académico</h2>
           <p className="text-slate-400 text-sm">Completa el horario y sube tu PDA para estructurar el semestre automáticamente.</p>
         </div>
+      </div>
+
+      {/* Banner de Sincronización Automática Oficial */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/30 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
+              Generación Oficial Duoc UC
+            </span>
+          </div>
+          <p className="text-sm font-semibold text-white">
+            ¿Deseas calendarizar las 18 semanas oficiales en 1 clic?
+          </p>
+          <p className="text-xs text-slate-400">
+            Aplica inicio oficial del calendario académico (10 de agosto), feriados, formativas (sem 5, 10, 15), examen transversal y semana 18 de recuperaciones.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowAutoPlanModal(true)}
+          className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4" />
+          Planificar 18 Semanas Oficiales
+        </button>
       </div>
 
       {/* Indicador de pasos */}
@@ -915,6 +943,13 @@ export default function CalendarOnboarding({ course, onSuccess }: CalendarOnboar
           )}
         </div>
       </form>
+
+      <CalendarioAutomaticoModal
+        course={course}
+        isOpen={showAutoPlanModal}
+        onClose={() => setShowAutoPlanModal(false)}
+        onSuccess={onSuccess}
+      />
     </div>
   )
 }
